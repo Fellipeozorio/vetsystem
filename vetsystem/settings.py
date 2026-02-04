@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'billing',
     'inventory',
     'sales',
+    'vetsystem',
 ]
 
 MIDDLEWARE = [
