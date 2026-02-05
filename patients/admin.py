@@ -8,3 +8,5 @@ class PetAdmin(admin.ModelAdmin):
     list_filter = ('especie', 'sexo')
     search_fields = ('nome', 'tutor__nome_completo')
     autocomplete_fields = ('especie', 'raca')
+    class Media:
+        js = ('cadastros/js/forward_especie.js',)
