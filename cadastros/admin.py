@@ -30,11 +30,42 @@ admin.site.register(FilaAtendimento, BaseCadastroAdmin)
 admin.site.register(Patologia, BaseCadastroAdmin)
 admin.site.register(TipoAtendimento, BaseCadastroAdmin)
 admin.site.register(Vacina, BaseCadastroAdmin)
-admin.site.register(Exame, BaseCadastroAdmin)
+
+
+class AtributoExameInline(admin.TabularInline):
+    model = AtributoExame
+    extra = 0
+    fields = ('nome', 'unidade', 'valor_referencia')
+
+
+class ReferenciaExameInline(admin.TabularInline):
+    model = ReferenciaExame
+    extra = 0
+    fields = ('descricao',)
+
+
+class ExameAdmin(BaseCadastroAdmin):
+    list_display = ('nome', 'descricao', 'ativo')
+    search_fields = ('nome', 'descricao')
+    inlines = (AtributoExameInline, ReferenciaExameInline)
+
+admin.site.register(Exame, ExameAdmin)
 admin.site.register(OrigemCliente, BaseCadastroAdmin)
 
 
-admin.site.register(AtributoExame)
-admin.site.register(ReferenciaExame)
+class AtributoExameAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'exame', 'unidade', 'valor_referencia')
+    list_filter = ('exame',)
+    search_fields = ('nome', 'exame__nome')
+
+
+class ReferenciaExameAdmin(admin.ModelAdmin):
+    list_display = ('descricao', 'exame')
+    list_filter = ('exame',)
+    search_fields = ('descricao', 'exame__nome')
+
+
+admin.site.register(AtributoExame, AtributoExameAdmin)
+admin.site.register(ReferenciaExame, ReferenciaExameAdmin)
 admin.site.register(ModeloReceita)
 admin.site.register(ModeloDocumento)

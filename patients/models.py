@@ -1,5 +1,6 @@
 from django.db import models
 from clients.models import Client
+from cadastros.models import Especie, Raca, Pelagem
 
 
 class Pet(models.Model):
@@ -9,12 +10,6 @@ class Pet(models.Model):
         ('F', 'Fêmea'),
     ]
 
-    ESPECIE_CHOICES = [
-        ('CAO', 'Cão'),
-        ('GATO', 'Gato'),
-        ('OUTRO', 'Outro'),
-    ]
-
     tutor = models.ForeignKey(
         Client,
         on_delete=models.CASCADE,
@@ -22,8 +17,24 @@ class Pet(models.Model):
     )
 
     nome = models.CharField(max_length=100)
-    especie = models.CharField(max_length=10, choices=ESPECIE_CHOICES)
-    raca = models.CharField(max_length=100, blank=True, null=True)
+
+    especie = models.ForeignKey(
+        Especie,
+        on_delete=models.PROTECT
+    )
+
+    raca = models.ForeignKey(
+        Raca,
+        on_delete=models.PROTECT
+    )
+
+    pelagem = models.ForeignKey(
+        Pelagem,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
     sexo = models.CharField(max_length=1, choices=SEXO_CHOICES)
 
     data_nascimento = models.DateField(blank=True, null=True)
@@ -37,7 +48,6 @@ class Pet(models.Model):
     )
 
     porte = models.CharField(max_length=50, blank=True, null=True)
-    cor_pelagem = models.CharField(max_length=100, blank=True, null=True)
     caracteristicas = models.TextField(blank=True, null=True)
 
     microchip = models.CharField(max_length=50, blank=True, null=True)

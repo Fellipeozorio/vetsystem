@@ -35,6 +35,7 @@ class FilaAtendimento(BaseCadastro):
 
 class Patologia(BaseCadastro):
     codigo = models.CharField(max_length=50, blank=True, null=True)
+    descricao = models.TextField(blank=True, null=True)
 
 
 class TipoAtendimento(BaseCadastro):
@@ -45,7 +46,7 @@ class TipoAtendimento(BaseCadastro):
 
 
 class Vacina(BaseCadastro):
-    fabricante = models.CharField(max_length=150, blank=True, null=True)
+    grupo = models.CharField(max_length=150, blank=True, null=True)
 
 
 class Exame(BaseCadastro):
