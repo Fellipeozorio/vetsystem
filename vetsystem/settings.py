@@ -127,6 +127,9 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Use BigAutoField for auto-created primary keys
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 MIDDLEWARE.insert(
     1,
     'whitenoise.middleware.WhiteNoiseMiddleware'
