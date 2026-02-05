@@ -8,8 +8,23 @@ class BaseCadastroAdmin(admin.ModelAdmin):
     search_fields = ('nome',)
 
 
+class RacaAdmin(BaseCadastroAdmin):
+    search_fields = ('nome',)
+
+    def get_search_results(self, request, queryset, search_term):
+        # Try to filter by especie passed as GET parameter. The admin
+        # autocomplete can forward parameters; try common keys.
+        especie_id = request.GET.get('especie') or request.GET.get('forward[especie]') or request.GET.get('forward.especie')
+        if especie_id:
+            try:
+                queryset = queryset.filter(especie_id=especie_id)
+            except Exception:
+                pass
+        return super().get_search_results(request, queryset, search_term)
+
+
 admin.site.register(Especie, BaseCadastroAdmin)
-admin.site.register(Raca, BaseCadastroAdmin)
+admin.site.register(Raca, RacaAdmin)
 admin.site.register(Pelagem, BaseCadastroAdmin)
 admin.site.register(FilaAtendimento, BaseCadastroAdmin)
 admin.site.register(Patologia, BaseCadastroAdmin)
