@@ -1,3 +1,3 @@
-# Views for inventory app
 from django.shortcuts import render
 
+# Create your views here.

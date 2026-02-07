@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 ALLOWED_HOSTS = ['*']
 
@@ -65,11 +65,10 @@ ROOT_URLCONF = 'vetsystem.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
-                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -113,9 +112,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'pt-br'
+LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'America/Sao_Paulo'
+TIME_ZONE = 'UTC'
 
 USE_I18N = True
 
@@ -127,31 +126,11 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
 
 # Use BigAutoField for auto-created primary keys
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
-
-# Login settings
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/accounts/login/'
-
-# Email Configuration
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.filebased.EmailBackend')
-EMAIL_FILE_PATH = config('EMAIL_FILE_PATH', default=BASE_DIR / 'emails')
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_USE_SSL = False  # Gmail usa TLS, não SSL
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='atendepetsltda@gmail.com')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='gwurxcoygmybwrvd')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='atendepetsltda@gmail.com')
-EMAIL_TIMEOUT = 30  # Timeout de 30 segundos
-
-# Password Reset Settings
-PASSWORD_RESET_TIMEOUT = 86400  # 24 horas em segundos
+MIDDLEWARE.insert(
+    1,
+    'whitenoise.middleware.WhiteNoiseMiddleware'
+)

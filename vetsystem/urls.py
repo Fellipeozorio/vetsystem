@@ -15,37 +15,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
-from django.contrib.auth import views as auth_views
-from django.conf import settings
-from django.conf.urls.static import static
-from core_views import (
-    dashboard_view, 
-    logout_view,
-    CustomPasswordResetView,
-    CustomPasswordResetDoneView,
-    CustomPasswordResetConfirmView,
-    CustomPasswordResetCompleteView
-)
+from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('accounts/logout/', logout_view, name='logout'),
-    
-    # URLs de autenticação do Django (login)
-    path('accounts/login/', auth_views.LoginView.as_view(), name='login'),
-    
-    # URLs customizadas de password reset
-    path('accounts/password_reset/', CustomPasswordResetView.as_view(), name='password_reset'),
-    path('accounts/password_reset/done/', CustomPasswordResetDoneView.as_view(), name='password_reset_done'),
-    path('accounts/reset/<uidb64>/<token>/', CustomPasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('accounts/reset/done/', CustomPasswordResetCompleteView.as_view(), name='password_reset_complete'),
-    
-    path('', dashboard_view, name='dashboard'),
-    path('clientes/', include('clients.urls')),
 ]
-
-# Servir arquivos estáticos em modo DEBUG
-if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
