@@ -1,0 +1,50 @@
+/* VetSystem Theme Customization */
+
+:root {
+  --tblr-primary: #066fd1;
+  --tblr-primary-rgb: 6, 111, 209;
+  --tblr-border-radius: 0.5rem;
+  --tblr-font-sans-serif: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+body {
+  font-family: var(--tblr-font-sans-serif);
+}
+
+/* Apply border-radius to common elements */
+.card, .btn, .form-control, .form-select, .dropdown-menu, .modal-content, .alert {
+  border-radius: var(--tblr-border-radius) !important;
+}
+
+/* Primary color override */
+.btn-primary {
+  --tblr-btn-bg: var(--tblr-primary);
+  --tblr-btn-border-color: var(--tblr-primary);
+  --tblr-btn-hover-bg: #0559a8;
+  --tblr-btn-hover-border-color: #0559a8;
+}
+
+a {
+  color: var(--tblr-primary);
+}
+
+a:hover {
+  color: #0559a8;
+}
+
+/* Sidebar active indicator (left bar) */
+.navbar-vertical .nav-link.active {
+  background: rgba(var(--tblr-primary-rgb), 0.06);
+  position: relative;
+}
+
+.navbar-vertical .nav-link.active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--tblr-primary);
+  border-radius: 0;
+}

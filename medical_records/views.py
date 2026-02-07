@@ -1,3 +1,3 @@
+# Views for medical_records app
 from django.shortcuts import render
 
-# Create your views here.
