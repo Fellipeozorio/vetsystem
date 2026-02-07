@@ -1,0 +1,113 @@
+{% extends 'core/base.html' %}
+
+{% block title %}{% if object %}Editar{% else %}Novo{% endif %} Cliente - VetSystem{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">{% if object %}Editar{% else %}Novo{% endif %} Cliente</h2>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row row-cards">
+    <div class="col-12">
+        <form method="post" class="card">
+            {% csrf_token %}
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label required">Tipo de Pessoa</label>
+                            {{ form.person_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label required">Nome Completo</label>
+                            {{ form.nome_completo }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">CPF</label>
+                            {{ form.cpf }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">RG</label>
+                            {{ form.rg }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">CNPJ</label>
+                            {{ form.cnpj }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Razão Social</label>
+                            {{ form.razao_social }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Nacionalidade</label>
+                            {{ form.nacionalidade }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Sexo</label>
+                            {{ form.sexo }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label required">Celular</label>
+                            {{ form.celular }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email</label>
+                            {{ form.email }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">CEP</label>
+                            {{ form.cep }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Endereço</label>
+                            {{ form.endereco }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Número</label>
+                                    {{ form.numero }}
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label">Bairro</label>
+                                    {{ form.bairro }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label class="form-label">Cidade</label>
+                                    {{ form.cidade }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Estado</label>
+                                    {{ form.estado }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer text-end">
+                <a href="{% url 'clients:list' %}" class="btn">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
