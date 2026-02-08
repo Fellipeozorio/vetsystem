@@ -1,0 +1,325 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Gerenciar Usuários - VetSystem{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <div class="page-pretitle">Administração</div>
+        <h2 class="page-title">Gerenciar Usuários</h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <a href="#" class="btn btn-primary d-none d-sm-inline-block" data-bs-toggle="modal" data-bs-target="#modal-user-create">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+            Novo Usuário
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Usuários do Sistema</h3>
+    <div class="ms-auto">
+      <form method="get" class="d-flex">
+        <div class="input-icon">
+          <input type="text" class="form-control" name="search" placeholder="Buscar usuário..." value="{{ search }}" autocomplete="off">
+          <span class="input-icon-addon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
+          </span>
+        </div>
+      </form>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Usuário</th>
+          <th>CPF</th>
+          <th>Grupo</th>
+          <th>Status</th>
+          <th class="w-1"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>
+            <div class="d-flex py-1 align-items-center">
+              {% if u.userprofile.avatar %}
+              <span class="avatar me-2" style="background-image: url({{ u.userprofile.avatar.url }})"></span>
+              {% else %}
+              <span class="avatar me-2" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ u.get_full_name|default:u.username }})"></span>
+              {% endif %}
+              <div class="flex-fill">
+                <div class="font-weight-medium">{{ u.get_full_name|default:u.username }}</div>
+                <div class="text-secondary"><a href="#" class="text-reset">{{ u.username }}</a></div>
+              </div>
+            </div>
+          </td>
+          <td class="text-secondary">{{ u.userprofile.get_cpf_formatted|default:"-" }}</td>
+          <td class="text-secondary">
+            {% with u.groups.first as group %}
+              {% if group %}
+                <span class="badge bg-blue-lt">{{ group.name }}</span>
+              {% else %}
+                <span class="text-muted">-</span>
+              {% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            {% if u.is_active %}
+              <span class="badge bg-success-lt">Ativo</span>
+            {% else %}
+              <span class="badge bg-danger-lt">Inativo</span>
+            {% endif %}
+            {% if u.is_superuser %}
+              <span class="badge bg-purple-lt" style="line-height: 1.2;">Administrador do Sistema</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="btn-list" style="flex-wrap: nowrap;">
+              <a href="{% url 'accounts:user_edit' u.id %}" class="btn btn-ghost-primary btn-icon" title="Editar">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+              </a>
+              <a href="#" class="btn btn-ghost-danger btn-icon" title="Excluir" onclick="confirmDelete({{ u.id }}, '{{ u.username }}'); return false;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-secondary">Nenhum usuário encontrado.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if users.has_other_pages %}
+  <div class="card-footer d-flex align-items-center">
+    <p class="m-0 text-secondary">Mostrando <span>{{ users.start_index }}</span> a <span>{{ users.end_index }}</span> de <span>{{ users.paginator.count }}</span> usuários</p>
+    <ul class="pagination m-0 ms-auto">
+      {% if users.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ users.previous_page_number }}{% if search %}&search={{ search }}{% endif %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+          anterior
+        </a>
+      </li>
+      {% endif %}
+      {% for num in users.paginator.page_range %}
+        {% if users.number == num %}
+        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+        {% elif num > users.number|add:'-3' and num < users.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}">{{ num }}</a></li>
+        {% endif %}
+      {% endfor %}
+      {% if users.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ users.next_page_number }}{% if search %}&search={{ search }}{% endif %}">
+          próximo
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Modal de Criação de Usuário -->
+<div class="modal modal-blur fade" id="modal-user-create" tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Novo Usuário</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="form-create-user" method="post">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Nome de Usuário <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="username" id="username" required placeholder="usuario123">
+              <small class="form-hint">Usado para login no sistema.</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">CPF <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="cpf" id="cpf" required placeholder="000.000.000-00" maxlength="14">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email <span class="text-danger">*</span></label>
+              <input type="email" class="form-control" name="email" id="email" required placeholder="email@exemplo.com">
+              <small class="form-hint">Será enviado link para criar senha.</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Grupo <span class="text-danger">*</span></label>
+              <select class="form-select" name="group" id="group" required>
+                <option value="">Selecione um grupo...</option>
+                {% for group in all_groups %}
+                <option value="{{ group.id }}">{{ group.name }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nome</label>
+              <input type="text" class="form-control" name="first_name" id="first_name" placeholder="Nome">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Sobrenome</label>
+              <input type="text" class="form-control" name="last_name" id="last_name" placeholder="Sobrenome">
+            </div>
+          </div>
+          <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Criar Usuário</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal modal-blur fade" id="modal-delete-confirm" tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/></svg>
+        <h3>Tem certeza?</h3>
+        <div class="text-secondary">Deseja realmente excluir o usuário <strong id="delete-username"></strong>? Esta ação não pode ser desfeita.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-danger w-100" id="confirm-delete-btn">Excluir</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Formulário oculto para excluir usuário via POST (usado pelo modal) -->
+<form id="form-delete-user" method="post" style="display:none;">
+  {% csrf_token %}
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Máscara de CPF
+  document.getElementById('cpf').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      e.target.value = value;
+    }
+  });
+
+  // Criar usuário via AJAX
+  document.getElementById('form-create-user').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const errorDiv = document.getElementById('error-message');
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...';
+    errorDiv.style.display = 'none';
+    
+    fetch('{% url "accounts:user_create_ajax" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Fechar modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('modal-user-create'));
+        modal.hide();
+        
+        // Limpar formulário
+        document.getElementById('form-create-user').reset();
+        
+        // Mostrar mensagem de sucesso
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.innerHTML = `
+          <strong>Sucesso!</strong> ${data.message}
+          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container-xl').insertBefore(alertDiv, document.querySelector('.card'));
+        
+        // Auto-fechar após 5 segundos
+        setTimeout(() => {
+          alertDiv.remove();
+        }, 5000);
+        
+        // Recarregar página após 2 segundos
+        setTimeout(() => {
+          location.reload();
+        }, 2000);
+      } else {
+        errorDiv.textContent = data.error;
+        errorDiv.style.display = 'block';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Criar Usuário';
+      }
+    })
+    .catch(error => {
+      errorDiv.textContent = 'Erro ao criar usuário. Tente novamente.';
+      errorDiv.style.display = 'block';
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Criar Usuário';
+    });
+  });
+
+  // Confirmação de exclusão
+  let deleteUserId = null;
+
+  window.confirmDelete = function(userId, username) {
+    deleteUserId = userId;
+    document.getElementById('delete-username').textContent = username;
+    const modal = new bootstrap.Modal(document.getElementById('modal-delete-confirm'));
+    modal.show();
+  };
+
+  document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+    if (!deleteUserId) return;
+
+    // Fechar o modal
+    const modalEl = document.getElementById('modal-delete-confirm');
+    const modal = bootstrap.Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    // Submeter o formulário oculto para garantir CSRF e comportamento padrão do Django
+    const form = document.getElementById('form-delete-user');
+    form.action = `/accounts/usuarios/${deleteUserId}/excluir/`;
+    form.submit();
+  });
+});
+</script>
+{% endblock %}

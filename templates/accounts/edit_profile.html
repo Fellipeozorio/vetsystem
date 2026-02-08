@@ -1,0 +1,177 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Editar Perfil - VetSystem{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="page-pretitle">Conta</div>
+    <h2 class="page-title">Editar Perfil</h2>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="row g-0">
+    <div class="col-12 col-md-3 border-end">
+      <div class="card-body">
+        <h4 class="subheader">Configurações da Conta</h4>
+        <div class="list-group list-group-transparent">
+          <a href="{% url 'accounts:profile' %}" class="list-group-item list-group-item-action d-flex align-items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M12 10m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M6.168 18.849a4 4 0 0 1 3.832 -2.849h4a4 4 0 0 1 3.834 2.855"/></svg>
+            Meu Perfil
+          </a>
+          <a href="{% url 'accounts:edit_profile' %}" class="list-group-item list-group-item-action d-flex align-items-center active">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+            Editar Perfil
+          </a>
+          <a href="{% url 'accounts:change_password' %}" class="list-group-item list-group-item-action d-flex align-items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg>
+            Alterar Senha
+          </a>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-md-9 d-flex flex-column">
+      <div class="card-body">
+        <h2 class="mb-4">Editar Perfil</h2>
+        
+        <form method="post" enctype="multipart/form-data">
+          {% csrf_token %}
+          
+          <div class="row mb-3 align-items-center">
+            <div class="col-auto">
+              {% if profile.avatar %}
+              <span class="avatar avatar-xl" style="background-image: url({{ profile.avatar.url }})"></span>
+              {% else %}
+              <span class="avatar avatar-xl" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ user.get_full_name|default:user.username }})"></span>
+              {% endif %}
+            </div>
+            <div class="col-auto">
+              <label class="form-label">Avatar</label>
+              {{ form.avatar }}
+              {% if form.avatar.errors %}
+                <div class="invalid-feedback d-block">{{ form.avatar.errors.0 }}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label required">Usuário</label>
+              <input type="text" class="form-control" value="{{ user.username }}" disabled>
+              <small class="form-hint">O nome de usuário não pode ser alterado.</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">E-mail <span class="text-danger">*</span></label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Nome</label>
+              {{ form.first_name }}
+              {% if form.first_name.errors %}
+                <div class="invalid-feedback d-block">{{ form.first_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Sobrenome</label>
+              {{ form.last_name }}
+              {% if form.last_name.errors %}
+                <div class="invalid-feedback d-block">{{ form.last_name.errors.0 }}</div>
+              {% endif %}
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">CPF <span class="text-danger">*</span></label>
+              {{ form.cpf }}
+              {% if form.cpf.errors %}
+                <div class="invalid-feedback d-block">{{ form.cpf.errors.0 }}</div>
+              {% endif %}
+              <small class="form-hint">Apenas números. Ex: 12345678900</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Celular</label>
+              {{ form.celular }}
+              {% if form.celular.errors %}
+                <div class="invalid-feedback d-block">{{ form.celular.errors.0 }}</div>
+              {% endif %}
+              <small class="form-hint">Ex: (11) 99999-9999</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">CRMV</label>
+              {{ form.crmv }}
+              {% if form.crmv.errors %}
+                <div class="invalid-feedback d-block">{{ form.crmv.errors.0 }}</div>
+              {% endif %}
+              <small class="form-hint">Ex: CRMV-SP 12345</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">MAPA</label>
+              {{ form.mapa }}
+              {% if form.mapa.errors %}
+                <div class="invalid-feedback d-block">{{ form.mapa.errors.0 }}</div>
+              {% endif %}
+              <small class="form-hint">Ex: MAPA 123456</small>
+            </div>
+          </div>
+
+          <div class="mt-4">
+            <button type="submit" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg>
+              Salvar Alterações
+            </button>
+            <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary ms-2">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Máscaras de CPF e Celular
+document.addEventListener('DOMContentLoaded', function() {
+  // Máscara CPF: 000.000.000-00
+  const cpfInput = document.querySelector('input[name="cpf"]');
+  if (cpfInput) {
+    cpfInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length <= 11) {
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        e.target.value = value;
+      } else {
+        e.target.value = value.substring(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      }
+    });
+  }
+  
+  // Máscara Celular: (00) 00000-0000 ou (00) 0000-0000
+  const celularInput = document.querySelector('input[name="celular"]');
+  if (celularInput) {
+    celularInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length <= 11) {
+        if (value.length <= 10) {
+          value = value.replace(/(\d{2})(\d)/, '($1) $2');
+          value = value.replace(/(\d{4})(\d)/, '$1-$2');
+        } else {
+          value = value.replace(/(\d{2})(\d)/, '($1) $2');
+          value = value.replace(/(\d{5})(\d)/, '$1-$2');
+        }
+        e.target.value = value;
+      } else {
+        e.target.value = value.substring(0, 11).replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

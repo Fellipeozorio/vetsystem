@@ -1,0 +1,425 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Editar Usuário - {{ editing_user.username }} - VetSystem{% endblock %}
+
+{% block extra_css %}
+<style>
+  .permission-box {
+    height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--tblr-border-color);
+    border-radius: var(--tblr-border-radius);
+  }
+  .permission-box .list-group-item {
+    padding: 0.5rem 0.75rem;
+    cursor: pointer;
+    border: none;
+    border-bottom: 1px solid var(--tblr-border-color);
+  }
+  .permission-box .list-group-item:last-child {
+    border-bottom: none;
+  }
+  .permission-box .list-group-item:hover {
+    background-color: var(--tblr-bg-surface-secondary);
+  }
+  .permission-box .list-group-item.selected {
+    background-color: var(--tblr-primary-lt);
+  }
+  .permission-controls {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+  .app-header {
+    font-weight: 600;
+    background-color: var(--tblr-bg-surface-secondary);
+    padding: 0.25rem 0.75rem;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--tblr-secondary);
+  }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary btn-icon me-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+        </a>
+      </div>
+      <div class="col">
+        <div class="page-pretitle">Editar Usuário</div>
+        <h2 class="page-title">{{ editing_user.get_full_name|default:editing_user.username }}</h2>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  
+  <div class="row">
+    <!-- Informações Básicas -->
+    <div class="col-lg-4">
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Informações Básicas</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3 text-center">
+            {% if editing_user.userprofile.avatar %}
+            <span class="avatar avatar-xl mb-3" style="background-image: url({{ editing_user.userprofile.avatar.url }})"></span>
+            {% else %}
+            <span class="avatar avatar-xl mb-3" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ editing_user.get_full_name|default:editing_user.username }})"></span>
+            {% endif %}
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Usuário</label>
+            <input type="text" class="form-control" value="{{ editing_user.username }}" disabled>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">CPF <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="cpf" id="id_cpf" value="{{ editing_user.userprofile.cpf }}" required maxlength="14" placeholder="000.000.000-00">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Celular</label>
+            <input type="text" class="form-control" name="celular" id="id_celular" value="{{ editing_user.userprofile.celular }}" maxlength="15" placeholder="(11) 99999-9999">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">E-mail <span class="text-danger">*</span></label>
+            {{ form.email }}
+          </div>
+          
+          <div class="row">
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Nome</label>
+                {{ form.first_name }}
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Sobrenome</label>
+                {{ form.last_name }}
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-check">
+              {{ form.is_active }}
+              <span class="form-check-label">Usuário ativo</span>
+            </label>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-check">
+              {{ form.is_superuser }}
+              <span class="form-check-label">{{ form.is_superuser.label }}</span>
+            </label>
+            <small class="form-hint d-block mt-1">{{ form.is_superuser.help_text }}</small>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Grupo e Permissões -->
+    <div class="col-lg-8">
+      <!-- Grupo -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Grupo do Usuário</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label">Selecione o Grupo do Usuário</label>
+            {{ form.group }}
+            <small class="form-hint mt-2">Ao selecionar um grupo, as permissões do grupo serão adicionadas automaticamente. Você pode ajustar as permissões individualmente abaixo.</small>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Permissões -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Permissões do Usuário</h3>
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-5">
+              <label class="form-label">Permissões Disponíveis</label>
+              <div class="permission-box" id="available-permissions">
+                <div class="list-group list-group-flush">
+                  {% for app, perms in permissions_by_app.items %}
+                    <div class="app-header">{{ app }}</div>
+                    {% for perm in perms %}
+                      {% if perm not in editing_user.user_permissions.all %}
+                      <div class="list-group-item" data-id="{{ perm.id }}" data-app="{{ app }}">{{ perm.name }}</div>
+                      {% endif %}
+                    {% endfor %}
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-2 permission-controls">
+              <button type="button" class="btn btn-outline-primary btn-sm" id="add-permission" title="Adicionar permissão selecionada">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+              </button>
+              <button type="button" class="btn btn-outline-primary btn-sm" id="add-all-permissions" title="Adicionar todas">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7l5 5l-5 5"/><path d="M13 7l5 5l-5 5"/></svg>
+              </button>
+              <button type="button" class="btn btn-outline-primary btn-sm" id="remove-permission" title="Remover permissão selecionada">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+              </button>
+              <button type="button" class="btn btn-outline-primary btn-sm" id="remove-all-permissions" title="Remover todas">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 7l-5 5l5 5"/><path d="M11 7l-5 5l5 5"/></svg>
+              </button>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label">Permissões Selecionadas</label>
+              <div class="permission-box" id="selected-permissions">
+                <div class="list-group list-group-flush">
+                  {% for perm in editing_user.user_permissions.all %}
+                  <div class="list-group-item" data-id="{{ perm.id }}" data-app="{{ perm.content_type.app_label }}">{{ perm.name }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <small class="form-hint mt-2">Essas são permissões específicas do usuário, além das herdadas dos grupos.</small>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Hidden inputs para permissões -->
+  <div id="hidden-permissions">
+    {% for perm in editing_user.user_permissions.all %}
+    <input type="hidden" name="user_permissions" value="{{ perm.id }}">
+    {% endfor %}
+  </div>
+  
+  <div class="mt-3">
+    <button type="submit" class="btn btn-primary">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg>
+      Salvar Alterações
+    </button>
+    <a href="{% url 'accounts:user_list' %}" class="btn btn-outline-secondary ms-2">Cancelar</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Máscaras de CPF e Celular
+  const cpfInput = document.getElementById('id_cpf');
+  if (cpfInput) {
+    cpfInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length <= 11) {
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+        e.target.value = value;
+      } else {
+        e.target.value = value.substring(0, 11).replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+      }
+    });
+  }
+  
+  const celularInput = document.getElementById('id_celular');
+  if (celularInput) {
+    celularInput.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length <= 11) {
+        if (value.length <= 10) {
+          value = value.replace(/(\d{2})(\d)/, '($1) $2');
+          value = value.replace(/(\d{4})(\d)/, '$1-$2');
+        } else {
+          value = value.replace(/(\d{2})(\d)/, '($1) $2');
+          value = value.replace(/(\d{5})(\d)/, '$1-$2');
+        }
+        e.target.value = value;
+      } else {
+        e.target.value = value.substring(0, 11).replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+      }
+    });
+  }
+  
+  // Listener para mudança de grupo - carregar permissões
+  const groupSelect = document.getElementById('id_group');
+  if (groupSelect) {
+    groupSelect.addEventListener('change', function() {
+      const groupId = this.value;
+      if (groupId) {
+        loadGroupPermissions(groupId);
+      }
+    });
+  }
+  
+  // Selecionar/deselecionar itens
+  function setupSelection(containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.addEventListener('click', function(e) {
+      const item = e.target.closest('.list-group-item');
+      if (item && !item.classList.contains('app-header')) {
+        // Deselecionar outros no mesmo container
+        container.querySelectorAll('.list-group-item.selected').forEach(el => el.classList.remove('selected'));
+        item.classList.add('selected');
+      }
+    });
+  }
+  
+  setupSelection('available-permissions');
+  setupSelection('selected-permissions');
+  
+  // Mover permissão
+  document.getElementById('add-permission').addEventListener('click', function() {
+    const selected = document.querySelector('#available-permissions .list-group-item.selected');
+    if (selected) {
+      movePermissionToSelected(selected);
+    }
+  });
+  
+  document.getElementById('remove-permission').addEventListener('click', function() {
+    const selected = document.querySelector('#selected-permissions .list-group-item.selected');
+    if (selected) {
+      movePermissionToAvailable(selected);
+    }
+  });
+  
+  document.getElementById('add-all-permissions').addEventListener('click', function() {
+    const items = Array.from(document.querySelectorAll('#available-permissions .list-group-item:not(.app-header)'));
+    items.forEach(item => {
+      movePermissionToSelected(item);
+    });
+  });
+  
+  document.getElementById('remove-all-permissions').addEventListener('click', function() {
+    const items = Array.from(document.querySelectorAll('#selected-permissions .list-group-item'));
+    items.forEach(item => {
+      movePermissionToAvailable(item);
+    });
+  });
+  
+  function movePermissionToSelected(item) {
+    const permId = item.dataset.id;
+    const permName = item.textContent.trim();
+    const appLabel = item.dataset.app;
+    
+    // Verificar se já existe
+    if (document.querySelector(`#selected-permissions .list-group-item[data-id="${permId}"]`)) {
+      return;
+    }
+    
+    // Mover para selecionados
+    item.remove();
+    item.classList.remove('selected');
+    const newItem = document.createElement('div');
+    newItem.className = 'list-group-item';
+    newItem.setAttribute('data-id', permId);
+    if (appLabel) newItem.setAttribute('data-app', appLabel);
+    newItem.textContent = permName;
+    document.querySelector('#selected-permissions .list-group').appendChild(newItem);
+    
+    // Atualizar hidden input (se não existir)
+    if (!document.querySelector(`#hidden-permissions input[value="${permId}"]`)) {
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = 'user_permissions';
+      input.value = permId;
+      document.getElementById('hidden-permissions').appendChild(input);
+    }
+    
+    // Cleanup - remover app headers vazios
+    cleanupEmptyHeaders();
+  }
+  
+  function movePermissionToAvailable(item) {
+    const permId = item.dataset.id;
+    const permName = item.textContent.trim();
+    const appLabel = item.dataset.app || 'outros';
+    
+    // Verificar se já existe nos disponíveis
+    if (document.querySelector(`#available-permissions .list-group-item[data-id="${permId}"]`)) {
+      item.remove();
+      // Remover hidden input
+      const hiddenInput = document.querySelector(`#hidden-permissions input[value="${permId}"]`);
+      if (hiddenInput) hiddenInput.remove();
+      return;
+    }
+    
+    // Mover para disponíveis (adicionar no final)
+    item.remove();
+    item.classList.remove('selected');
+    const newItem = document.createElement('div');
+    newItem.className = 'list-group-item';
+    newItem.setAttribute('data-id', permId);
+    newItem.setAttribute('data-app', appLabel);
+    newItem.textContent = permName;
+    document.querySelector('#available-permissions .list-group').appendChild(newItem);
+    
+    // Remover hidden input
+    const hiddenInput = document.querySelector(`#hidden-permissions input[value="${permId}"]`);
+    if (hiddenInput) hiddenInput.remove();
+  }
+  
+  function cleanupEmptyHeaders() {
+    document.querySelectorAll('#available-permissions .app-header').forEach(header => {
+      let next = header.nextElementSibling;
+      if (!next || next.classList.contains('app-header')) {
+        header.remove();
+      }
+    });
+  }
+  
+  // Carregar permissões do grupo via AJAX
+  function loadGroupPermissions(groupId) {
+    fetch(`/accounts/api/group-permissions/${groupId}/`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.permissions) {
+          data.permissions.forEach(perm => {
+            // Encontrar a permissão nos disponíveis
+            const availableItem = document.querySelector(`#available-permissions .list-group-item[data-id="${perm.id}"]`);
+            if (availableItem) {
+              movePermissionToSelected(availableItem);
+            }
+          });
+        }
+      })
+      .catch(error => console.error('Erro ao carregar permissões do grupo:', error));
+  }
+  
+  // Suporte duplo-clique para mover permissões
+  document.getElementById('available-permissions').addEventListener('dblclick', function(e) {
+    const item = e.target.closest('.list-group-item');
+    if (item && !item.classList.contains('app-header')) {
+      item.classList.add('selected');
+      document.getElementById('add-permission').click();
+    }
+  });
+  
+  document.getElementById('selected-permissions').addEventListener('dblclick', function(e) {
+    const item = e.target.closest('.list-group-item');
+    if (item) {
+      item.classList.add('selected');
+      document.getElementById('remove-permission').click();
+    }
+  });
+});
+</script>
+{% endblock %}
