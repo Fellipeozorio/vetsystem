@@ -75,11 +75,12 @@
       </h1>
       <div class="navbar-nav flex-row order-md-last">
         <div class="nav-item dropdown">
+          {% load avatar_extras %}
           <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown" aria-label="Open user menu">
             {% if user.userprofile.avatar %}
-            <span class="avatar avatar-sm" style="background-image: url({{ user.userprofile.avatar.url }})"></span>
+              <span class="avatar avatar-sm" style="background-image: url({{ user.userprofile.avatar.url }})"></span>
             {% else %}
-            <span class="avatar avatar-sm" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ user.get_full_name|default:user.username }})"></span>
+              <span class="avatar avatar-sm bg-primary text-white">{{ user|get_initials }}</span>
             {% endif %}
             <div class="d-none d-xl-block ps-2">
               <div>{{ user.get_full_name|default:user.username }}</div>
