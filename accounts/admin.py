@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin, GroupAdmin as BaseGroupAdmin
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import User, Group, Permission
 from .models import UserProfile
 
 
@@ -67,6 +67,36 @@ class CustomUserAdmin(BaseUserAdmin):
         if not obj:
             return list()
         return super(CustomUserAdmin, self).get_inline_instances(request, obj)
+
+    def save_related(self, request, form, formsets, change):
+        """Sincroniza `user_permissions` com a união de permissões explícitas selecionadas
+        no formulário e permissões derivadas dos grupos atribuídos.
+        Isso garante que ao adicionar/remover grupos no Admin as permissões reflitam
+        corretamente os grupos atuais sem perder permissões explicitamente definidas.
+        """
+        super().save_related(request, form, formsets, change)
+        user = form.instance
+        try:
+            # Permissões explicitamente selecionadas no formulário (m2m do admin)
+            explicit_perms = form.cleaned_data.get('user_permissions') if hasattr(form, 'cleaned_data') else None
+            if explicit_perms is None:
+                explicit_perms = user.user_permissions.all()
+
+            # Permissões derivadas dos grupos atuais do usuário
+            group_perms = Permission.objects.filter(group__in=user.groups.all()).distinct()
+
+            # União: manter permissões explícitas + permissões dos grupos
+            final_perms = set(explicit_perms) | set(group_perms)
+
+            # Aplicar no usuário (substitui quaisquer permissões que não estejam
+            # na união explícita+grupos)
+            user.user_permissions.set(list(final_perms))
+        except Exception:
+            # Não bloquear o fluxo do admin caso algo falhe aqui
+            pass
+
+    class Media:
+        js = ("/static/accounts/js/admin_group_permissions.js",)
 
 
 # Desregistrar os modelos padrão do Django admin

@@ -14,6 +14,7 @@ from django.utils.encoding import force_bytes
 from django.conf import settings
 from .models import UserProfile
 from .forms import UserProfileForm, UserEditForm, CustomPasswordChangeForm
+from django.urls import reverse
 
 
 def can_manage_users(user):
@@ -322,6 +323,13 @@ def user_create_ajax(request):
                     
                     # Adicionar ao grupo dentro da transação
                     user.groups.add(group)
+                    # Copiar permissões do grupo para user_permissions para que apareçam no admin
+                    try:
+                        perms = list(group.permissions.all())
+                        if perms:
+                            user.user_permissions.add(*perms)
+                    except Exception:
+                        pass
                 finally:
                     # Reconectar signals
                     from accounts.models import create_user_profile, save_user_profile
@@ -332,8 +340,9 @@ def user_create_ajax(request):
             token = default_token_generator.make_token(user)
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             
-            # Construir link de reset
-            reset_link = f"{request.scheme}://{request.get_host()}/reset/{uid}/{token}/"
+            # Construir link de reset usando URL nomeada
+            reset_path = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+            reset_link = request.build_absolute_uri(reset_path)
             
             # Enviar email
             subject = 'Bem-vindo(a) ao VetSystem - Crie sua senha'
@@ -409,19 +418,23 @@ def user_delete_view(request, user_id):
     user = get_object_or_404(User, pk=user_id)
     username = user.username
 
-    # Suportar exclusão via POST (AJAX) retornando JSON
-    if request.method == 'POST' or request.headers.get('x-requested-with') == 'XMLHttpRequest':
+    # Suportar exclusão via AJAX retornando JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         try:
             user.delete()
             return JsonResponse({'success': True, 'message': f'Usuário "{username}" excluído com sucesso.'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': f'Erro ao excluir usuário: {str(e)}'})
 
-    try:
-        user.delete()
-        messages.success(request, f'Usuário "{username}" excluído com sucesso.')
-    except Exception as e:
-        messages.error(request, f'Erro ao excluir usuário: {str(e)}')
+    # POST normal - sempre redirecionar
+    if request.method == 'POST':
+        try:
+            user.delete()
+            messages.success(request, f'Usuário "{username}" excluído com sucesso.')
+        except Exception as e:
+            messages.error(request, f'Erro ao excluir usuário: {str(e)}')
+        return redirect('accounts:user_list')
 
+    # GET - redirecionar também
     return redirect('accounts:user_list')
 

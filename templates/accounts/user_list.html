@@ -254,9 +254,14 @@ document.addEventListener('DOMContentLoaded', function() {
         'X-Requested-With': 'XMLHttpRequest'
       }
     })
-    .then(response => response.json())
+    .then(response => {
+      console.log('Response status:', response.status);
+      return response.json();
+    })
     .then(data => {
+      console.log('Response data:', data);
       if (data.success) {
+        console.log('Success branch reached');
         // Fechar modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('modal-user-create'));
         modal.hide();
@@ -264,24 +269,46 @@ document.addEventListener('DOMContentLoaded', function() {
         // Limpar formulário
         document.getElementById('form-create-user').reset();
         
-        // Mostrar mensagem de sucesso
-        const alertDiv = document.createElement('div');
-        alertDiv.className = 'alert alert-success alert-dismissible fade show';
-        alertDiv.innerHTML = `
-          <strong>Sucesso!</strong> ${data.message}
-          <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        // Mostrar mensagem de sucesso como card sobreposto (overlay) centralizado
+        const overlay = document.createElement('div');
+        overlay.style.position = 'fixed';
+        overlay.style.top = 0;
+        overlay.style.left = 0;
+        overlay.style.width = '100vw';
+        overlay.style.height = '100vh';
+        overlay.style.display = 'flex';
+        overlay.style.alignItems = 'center';
+        overlay.style.justifyContent = 'center';
+        overlay.style.backgroundColor = 'rgba(0,0,0,0.35)';
+        overlay.style.zIndex = 2000;
+
+        const cardDiv = document.createElement('div');
+        cardDiv.className = 'card card-md';
+        cardDiv.style.maxWidth = '480px';
+        cardDiv.innerHTML = `
+          <div class="card-body text-center">
+            <div class="mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check text-success" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M5 12l5 5l10 -10"></path></svg>
+            </div>
+            <h4 class="card-title mb-2">Usuário criado com sucesso!</h4>
+            <p class="text-muted mb-3">${data.message}</p>
+            <div class="d-flex justify-content-center">
+              <button type="button" class="btn btn-primary" id="overlay-close-btn">Fechar</button>
+            </div>
+          </div>
         `;
-        document.querySelector('.container-xl').insertBefore(alertDiv, document.querySelector('.card'));
-        
-        // Auto-fechar após 5 segundos
-        setTimeout(() => {
-          alertDiv.remove();
-        }, 5000);
-        
-        // Recarregar página após 2 segundos
-        setTimeout(() => {
+
+        overlay.appendChild(cardDiv);
+        document.body.appendChild(overlay);
+
+        // Fechar overlay ao clicar no botão e recarregar a lista
+        document.getElementById('overlay-close-btn').addEventListener('click', function() {
+          if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+          console.log('Overlay closed by user - reloading');
           location.reload();
-        }, 2000);
+        });
+
+        console.log('Showing overlay success card (manual close)');
       } else {
         errorDiv.textContent = data.error;
         errorDiv.style.display = 'block';
@@ -297,29 +324,58 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Confirmação de exclusão
+  // Confirmação de exclusão (overlay centralizado)
   let deleteUserId = null;
 
   window.confirmDelete = function(userId, username) {
     deleteUserId = userId;
-    document.getElementById('delete-username').textContent = username;
-    const modal = new bootstrap.Modal(document.getElementById('modal-delete-confirm'));
-    modal.show();
+
+    // Criar overlay
+    const overlayDel = document.createElement('div');
+    overlayDel.style.position = 'fixed';
+    overlayDel.style.top = 0;
+    overlayDel.style.left = 0;
+    overlayDel.style.width = '100vw';
+    overlayDel.style.height = '100vh';
+    overlayDel.style.display = 'flex';
+    overlayDel.style.alignItems = 'center';
+    overlayDel.style.justifyContent = 'center';
+    overlayDel.style.backgroundColor = 'rgba(0,0,0,0.35)';
+    overlayDel.style.zIndex = 2000;
+
+    const cardDiv = document.createElement('div');
+    cardDiv.className = 'card card-md';
+    cardDiv.style.maxWidth = '480px';
+    cardDiv.innerHTML = `
+      <div class="card-body text-center">
+        <div class="mb-3">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-triangle text-warning" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 9v2m0 4v.01"></path><path d="M10.29 3.86l-7.29 12.64a2 2 0 0 0 1.73 3h14.56a2 2 0 0 0 1.73-3l-7.29-12.64a2 2 0 0 0-3.14 0z"></path></svg>
+        </div>
+        <h4 class="card-title mb-2">Confirmar exclusão</h4>
+        <p class="text-muted mb-3">Deseja excluir o usuário <strong>${username}</strong>? Esta ação não pode ser desfeita.</p>
+        <div class="d-flex justify-content-center gap-2">
+          <button type="button" class="btn btn-secondary" id="overlay-cancel-btn">Cancelar</button>
+          <button type="button" class="btn btn-danger" id="overlay-delete-btn">Excluir</button>
+        </div>
+      </div>
+    `;
+
+    overlayDel.appendChild(cardDiv);
+    document.body.appendChild(overlayDel);
+
+    // Cancelar
+    document.getElementById('overlay-cancel-btn').addEventListener('click', function() {
+      if (overlayDel && overlayDel.parentNode) overlayDel.parentNode.removeChild(overlayDel);
+      deleteUserId = null;
+    });
+
+    // Confirmar exclusão: submeter o formulário oculto
+    document.getElementById('overlay-delete-btn').addEventListener('click', function() {
+      const form = document.getElementById('form-delete-user');
+      form.action = `/accounts/usuarios/${deleteUserId}/excluir/`;
+      form.submit();
+    });
   };
-
-  document.getElementById('confirm-delete-btn').addEventListener('click', function() {
-    if (!deleteUserId) return;
-
-    // Fechar o modal
-    const modalEl = document.getElementById('modal-delete-confirm');
-    const modal = bootstrap.Modal.getInstance(modalEl);
-    if (modal) modal.hide();
-
-    // Submeter o formulário oculto para garantir CSRF e comportamento padrão do Django
-    const form = document.getElementById('form-delete-user');
-    form.action = `/accounts/usuarios/${deleteUserId}/excluir/`;
-    form.submit();
-  });
 });
 </script>
 {% endblock %}

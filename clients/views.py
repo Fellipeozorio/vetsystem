@@ -1,3 +1,8 @@
 from django.shortcuts import render
+from django.contrib.auth.decorators import login_required
 
-# Create your views here.
+
+@login_required
+def client_list(request):
+    """Lista simples de clientes (placeholder)."""
+    return render(request, 'clients/list.html')

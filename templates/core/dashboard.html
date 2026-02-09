@@ -1,0 +1,102 @@
+{% extends 'core/base.html' %}
+
+{% block title %}Dashboard - VetSystem{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">Dashboard</h2>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row row-deck row-cards">
+  
+  <!-- Welcome Card -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body">
+        <h3 class="card-title">Bem-vindo, {{ user.get_full_name|default:user.username }}!</h3>
+        <p class="text-secondary">Este é o painel principal do VetSystem. Use o menu lateral para navegar pelas diferentes seções do sistema.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">Clientes</div>
+        </div>
+        <div class="h1 mb-3">-</div>
+        <div class="d-flex mb-2">
+          <div>Em breve</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">Pets</div>
+        </div>
+        <div class="h1 mb-3">-</div>
+        <div class="d-flex mb-2">
+          <div>Em breve</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">Consultas</div>
+        </div>
+        <div class="h1 mb-3">-</div>
+        <div class="d-flex mb-2">
+          <div>Em breve</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-6 col-lg-3">
+    <div class="card">
+      <div class="card-body">
+        <div class="d-flex align-items-center">
+          <div class="subheader">Receita do Mês</div>
+        </div>
+        <div class="h1 mb-3">-</div>
+        <div class="d-flex mb-2">
+          <div>Em breve</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Activities -->
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Atividades Recentes</h3>
+      </div>
+      <div class="card-body">
+        <div class="text-secondary">
+          Nenhuma atividade recente para exibir.
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

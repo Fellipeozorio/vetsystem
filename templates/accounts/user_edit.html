@@ -1,7 +1,7 @@
 {% extends 'core/base.html' %}
 {% load static %}
 
-{% block title %}Editar Usuário - {{ editing_user.username }} - VetSystem{% endblock %}
+{% block title %}Editar Usuário - VetSystem{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -261,9 +261,20 @@ document.addEventListener('DOMContentLoaded', function() {
   // Listener para mudança de grupo - carregar permissões
   const groupSelect = document.getElementById('id_group');
   if (groupSelect) {
+    // Carregar permissões do grupo atual ao abrir a página
+    const currentGroupId = groupSelect.value;
+    if (currentGroupId) {
+      loadGroupPermissions(currentGroupId);
+    }
+    
     groupSelect.addEventListener('change', function() {
       const groupId = this.value;
       if (groupId) {
+        // Limpar permissões atuais antes de carregar novas
+        const items = Array.from(document.querySelectorAll('#selected-permissions .list-group-item'));
+        items.forEach(item => {
+          movePermissionToAvailable(item);
+        });
         loadGroupPermissions(groupId);
       }
     });

@@ -26,10 +26,16 @@ def logout_view(request):
 
 class CustomPasswordResetView(PasswordResetView):
     """View customizada para reset de senha"""
-    template_name = 'registration/password_reset_form.html'
+    template_name = 'registration/password_reset.html'
     email_template_name = 'registration/password_reset_email.html'
     subject_template_name = 'registration/password_reset_subject.txt'
     success_url = '/accounts/password_reset/done/'
+    html_email_template_name = 'registration/password_reset_email.html'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['site_name'] = 'VetSystem'
+        return context
 
 
 class CustomPasswordResetDoneView(PasswordResetDoneView):
@@ -41,6 +47,12 @@ class CustomPasswordResetConfirmView(PasswordResetConfirmView):
     """View customizada para definir nova senha"""
     template_name = 'registration/password_reset_confirm.html'
     success_url = '/accounts/reset/done/'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.validlink:
+            context['validlink'] = True
+        return context
 
 
 class CustomPasswordResetCompleteView(PasswordResetCompleteView):

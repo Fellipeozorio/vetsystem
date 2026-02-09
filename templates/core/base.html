@@ -7,9 +7,55 @@
 
   <title>{% block title %}VetSystem{% endblock %}</title>
 
-  <!-- Tabler CSS -->
-  <link rel="stylesheet" href="{% static 'tabler/css/tabler.min.css' %}"/>
-  <link rel="stylesheet" href="{% static 'tabler/css/custom.css' %}"/>
+  <!-- Tabler CSS via CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css" rel="stylesheet"/>
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.3.0/dist/tabler-icons.min.css" rel="stylesheet"/>
+  
+  <style>
+    /* Ensure active indicator shows on sidebar */
+    .navbar-vertical .nav-link.active {
+      background-color: rgba(32, 107, 196, 0.06);
+      color: #206bc4;
+    }
+    .navbar-vertical .nav-link.active::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background-color: #206bc4;
+    }
+    .navbar-vertical .nav-link {
+      position: relative;
+    }
+    /* Negrito nos itens do sidebar */
+    .navbar-vertical .nav-link-title {
+      font-weight: 600;
+    }
+    /* Ajustar espaçamento do menu do usuário */
+    .navbar .nav-link.d-flex {
+      padding: 0.5rem 1rem;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .navbar .dropdown-menu {
+      margin-top: 0.25rem;
+    }
+    .navbar .dropdown-item {
+      padding: 0.5rem 1rem;
+    }
+    .navbar .dropdown-divider {
+      margin: 0.5rem 0;
+    }
+    /* Espaçamento consistente no avatar e texto */
+    .navbar .nav-link .avatar {
+      margin-right: 0.5rem;
+    }
+    .navbar .nav-link .ps-2 {
+      padding-left: 0.5rem !important;
+    }
+  </style>
 
   {% block extra_css %}{% endblock %}
 </head>
@@ -48,7 +94,7 @@
             <a href="{% url 'accounts:profile' %}" class="dropdown-item">Perfil</a>
             <a href="{% url 'accounts:change_password' %}" class="dropdown-item">Alterar Senha</a>
             {% if perms.auth.view_permission or perms.auth.add_permission or perms.auth.change_permission or perms.auth.delete_permission %}
-            <a href="{% url 'accounts:user_list' %}" class="dropdown-item">Editar Usuários</a>
+            <a href="{% url 'accounts:user_list' %}" class="dropdown-item">Gerenciar Usuários</a>
             {% endif %}
             <div class="dropdown-divider"></div>
             <a href="{% url 'logout' %}" class="dropdown-item">Sair</a>
@@ -124,13 +170,6 @@
     <footer class="footer footer-transparent d-print-none">
       <div class="container-xl">
         <div class="row text-center align-items-center flex-row-reverse">
-          <div class="col-lg-auto ms-lg-auto">
-            <ul class="list-inline list-inline-dots mb-0">
-              <li class="list-inline-item">
-                <a href="#" class="link-secondary">Documentação</a>
-              </li>
-            </ul>
-          </div>
           <div class="col-12 col-lg-auto mt-3 mt-lg-0">
             <ul class="list-inline list-inline-dots mb-0">
               <li class="list-inline-item">
@@ -145,8 +184,8 @@
   </div>
 </div>
 
-<!-- Tabler JS -->
-<script src="{% static 'tabler/js/tabler.min.js' %}"></script>
+<!-- Tabler JS via CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/js/tabler.min.js"></script>
 
 <script>
   // Mark active nav item based on current URL
@@ -154,34 +193,23 @@
     const currentPath = window.location.pathname;
     const navLinks = document.querySelectorAll('.navbar-vertical .nav-link');
     
-    // Remove all active classes first
-    navLinks.forEach(link => link.classList.remove('active'));
-    
-    // Find and mark the matching link
-    let matched = false;
     navLinks.forEach(link => {
       const href = link.getAttribute('href');
       if (!href) return;
       
-      // Exact match first (for root/dashboard)
+      // Exact match
       if (currentPath === href) {
         link.classList.add('active');
-        matched = true;
       }
-      // Then check if current path starts with href (but not for root)
-      else if (href !== '/' && currentPath.startsWith(href)) {
+      // Starts with match (for sub-pages) - but not for root
+      else if (href !== '/' && href.length > 1 && currentPath.startsWith(href)) {
         link.classList.add('active');
-        matched = true;
+      }
+      // Root path matches
+      else if (currentPath === '/' && href === '/') {
+        link.classList.add('active');
       }
     });
-    
-    // If no match and we're at root, mark dashboard as active
-    if (!matched && currentPath === '/') {
-      const dashboardLink = document.querySelector('.navbar-vertical .nav-link[href="/"]');
-      if (dashboardLink) {
-        dashboardLink.classList.add('active');
-      }
-    }
   });
 </script>
 
