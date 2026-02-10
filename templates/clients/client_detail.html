@@ -1,0 +1,254 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{{ client.nome_completo }} - VetSystem{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row align-items-center">
+      <div class="col">
+        <div class="page-pretitle">
+          <a href="{% url 'clients:list' %}">Clientes</a>
+        </div>
+        <h2 class="page-title">{{ client.nome_completo }}</h2>
+        <div class="text-secondary mt-1">
+          <span class="badge bg-blue-lt">Código: {{ client.codigo }}</span>
+          <span class="badge {% if client.tipo == 'PF' %}bg-green-lt{% else %}bg-purple-lt{% endif %}">
+            {{ client.get_tipo_display }}
+          </span>
+        </div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <a href="#" class="btn btn-primary">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+            Editar
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+  <div class="col-lg-8">
+    <!-- Informações do Cliente -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Informações do Cliente</h3>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Nome Completo</label>
+            <div>{{ client.nome_completo }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Tipo</label>
+            <div>{{ client.get_tipo_display }}</div>
+          </div>
+        </div>
+        
+        {% if client.tipo == 'PF' %}
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">CPF</label>
+            <div>{{ client.cpf|default:"-" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">RG</label>
+            <div>{{ client.rg|default:"-" }}</div>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Sexo</label>
+            <div>{{ client.get_sexo_display|default:"-" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Data de Aniversário</label>
+            <div>{{ client.data_aniversario|date:"d/m/Y"|default:"-" }}</div>
+          </div>
+        </div>
+        {% else %}
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">CNPJ</label>
+            <div>{{ client.cnpj|default:"-" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Regime Tributário</label>
+            <div>{{ client.get_regime_tributario_display|default:"-" }}</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Contatos -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Contatos</h3>
+      </div>
+      <div class="card-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Celular</label>
+            <div>
+              {{ client.celular }}
+              {% if client.celular_whatsapp %}
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-whatsapp text-success" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">E-mail</label>
+            <div>{{ client.email|default:"-" }}</div>
+          </div>
+        </div>
+        
+        {% if contatos_adicionais %}
+        <hr>
+        <h5>Contatos Adicionais</h5>
+        {% for contato in contatos_adicionais %}
+        <div class="mb-2">
+          <strong>{{ contato.get_tipo_display }}:</strong> {{ contato.valor }}
+          {% if contato.whatsapp %}
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-whatsapp text-success" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+          {% endif %}
+          {% if contato.observacoes %}
+            <div class="text-secondary small">{{ contato.observacoes }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+    
+    <!-- Endereço -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Endereço</h3>
+      </div>
+      <div class="card-body">
+        {% if client.endereco %}
+        <div class="mb-2">
+          {{ client.endereco }}{% if client.numero %}, {{ client.numero }}{% endif %}
+          {% if client.complemento %} - {{ client.complemento }}{% endif %}
+        </div>
+        <div class="mb-2">
+          {{ client.bairro }}
+        </div>
+        <div class="mb-2">
+          {{ client.cidade }} - {{ client.estado }}
+        </div>
+        <div class="mb-2">
+          CEP: {{ client.cep }}
+        </div>
+        {% if client.ponto_referencia %}
+        <div class="text-secondary">
+          <strong>Ponto de Referência:</strong> {{ client.ponto_referencia }}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="text-secondary">Endereço não cadastrado</div>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if client.observacoes %}
+    <!-- Observações -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Observações</h3>
+      </div>
+      <div class="card-body">
+        {{ client.observacoes|linebreaks }}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+  
+  <div class="col-lg-4">
+    <!-- Animais -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Animais</h3>
+        <div class="ms-auto">
+          <a href="#" class="btn btn-primary btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+            Adicionar
+          </a>
+        </div>
+      </div>
+      <div class="card-body">
+        {% if pets %}
+        <div class="list-group list-group-flush">
+          {% for pet in pets %}
+          <div class="list-group-item">
+            <div class="row align-items-center">
+              <div class="col-auto">
+                <span class="avatar">{{ pet.nome|slice:":2"|upper }}</span>
+              </div>
+              <div class="col">
+                <div class="fw-bold">{{ pet.nome }}</div>
+                <div class="text-secondary small">
+                  {{ pet.especie.nome }} - {{ pet.raca.nome }}
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty">
+          <p class="empty-title">Nenhum animal cadastrado</p>
+          <p class="empty-subtitle text-secondary">Adicione os animais deste cliente.</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    
+    {% if client.tags %}
+    <!-- Tags -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Tags</h3>
+      </div>
+      <div class="card-body">
+        {% for tag in client.get_tags_list %}
+          <span class="badge bg-blue-lt me-1 mb-1">{{ tag }}</span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    
+    <!-- Preferências -->
+    <div class="card">
+      <div class="card-header">
+        <h3 class="card-title">Preferências de Contato</h3>
+      </div>
+      <div class="card-body">
+        <div class="mb-2">
+          <span class="badge {% if client.aceita_email %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
+            E-mail: {% if client.aceita_email %}Sim{% else %}Não{% endif %}
+          </span>
+        </div>
+        <div class="mb-2">
+          <span class="badge {% if client.aceita_sms %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
+            SMS: {% if client.aceita_sms %}Sim{% else %}Não{% endif %}
+          </span>
+        </div>
+        <div class="mb-2">
+          <span class="badge {% if client.aceita_whatsapp %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
+            WhatsApp: {% if client.aceita_whatsapp %}Sim{% else %}Não{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

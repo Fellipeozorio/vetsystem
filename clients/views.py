@@ -166,3 +166,19 @@ def client_delete(request, pk):
         return redirect('clients:list')
     
     return redirect('clients:list')
+
+
+@login_required
+def client_detail(request, pk):
+    """Detalhes do cliente."""
+    client = get_object_or_404(Client, pk=pk)
+    pets = client.pets.all()
+    contatos_adicionais = client.contatos_adicionais.all()
+    
+    context = {
+        'client': client,
+        'pets': pets,
+        'contatos_adicionais': contatos_adicionais,
+    }
+    
+    return render(request, 'clients/client_detail.html', context)
