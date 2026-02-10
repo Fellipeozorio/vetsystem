@@ -21,27 +21,10 @@
       </div>
       <div class="col-auto ms-auto d-print-none">
         <div class="btn-list">
-          <div class="dropdown">
-            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>
-              Mais ações
-            </button>
-            <ul class="dropdown-menu dropdown-menu-end">
-              <li><a class="dropdown-item" href="#">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l.01 0"/><path d="M13 12l2 0"/><path d="M9 16l.01 0"/><path d="M13 16l2 0"/></svg>
-                Histórico de alterações
-              </a></li>
-              <li><a class="dropdown-item" href="#">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 10l5 -6l5 6"/><path d="M21 10l-2 8a2 2.5 0 0 1 -2 2h-10a2 2.5 0 0 1 -2 -2l-2 -8z"/><path d="M12 15m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/></svg>
-                Arquivar ficha
-              </a></li>
-              <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ client.id }}, '{{ client.nome_completo }}'); return false;">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
-                Excluir
-              </a></li>
-            </ul>
-          </div>
+          <button class="btn btn-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-more-actions">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>
+            Mais ações
+          </button>
         </div>
       </div>
     </div>
@@ -51,7 +34,8 @@
 
 {% block content %}
 <div class="row">
-  <div class="col-lg-8">
+  <!-- Coluna 1: Informações, Contatos e Endereço -->
+  <div class="col-lg-4">
     <!-- Informações do Cliente -->
     <div class="card mb-3 card-clickable" style="cursor: pointer;" onclick="openEditModal('info')">
       <div class="card-header">
@@ -201,6 +185,50 @@
     {% endif %}
   </div>
   
+  <!-- Coluna 2: Saldo e Privacidade -->
+  <div class="col-lg-4">
+    <!-- Saldo -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h3 class="card-title">Saldo</h3>
+      </div>
+      <div class="card-body">
+        <div class="text-center">
+          <div class="display-6 mb-2">R$ 0,00</div>
+          <div class="text-secondary">Saldo atual</div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Privacidade -->
+    <div class="card card-clickable" style="cursor: pointer;" onclick="openPrivacyModal()">
+      <div class="card-header">
+        <h3 class="card-title">Privacidade</h3>
+        <div class="card-actions">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="mb-2">
+          <span class="badge {% if client.aceita_email %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
+            E-mail: {% if client.aceita_email %}Sim{% else %}Não{% endif %}
+          </span>
+        </div>
+        <div class="mb-2">
+          <span class="badge {% if client.aceita_sms %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
+            SMS: {% if client.aceita_sms %}Sim{% else %}Não{% endif %}
+          </span>
+        </div>
+        <div class="mb-2">
+          <span class="badge {% if client.aceita_whatsapp %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
+            WhatsApp: {% if client.aceita_whatsapp %}Sim{% else %}Não{% endif %}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Coluna 3: Animais e Agendamentos -->
   <div class="col-lg-4">
     <!-- Animais -->
     <div class="card mb-3">
@@ -241,40 +269,18 @@
       </div>
     </div>
     
-    {% if client.tags %}
-    <!-- Tags -->
-    <div class="card mb-3">
-      <div class="card-header">
-        <h3 class="card-title">Tags</h3>
-      </div>
-      <div class="card-body">
-        {% for tag in client.get_tags_list %}
-          <span class="badge bg-blue-lt me-1 mb-1">{{ tag }}</span>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
-    
-    <!-- Preferências -->
+    <!-- Agendamentos -->
     <div class="card">
       <div class="card-header">
-        <h3 class="card-title">Preferências de Contato</h3>
+        <h3 class="card-title">Próximos Agendamentos</h3>
       </div>
       <div class="card-body">
-        <div class="mb-2">
-          <span class="badge {% if client.aceita_email %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
-            E-mail: {% if client.aceita_email %}Sim{% else %}Não{% endif %}
-          </span>
-        </div>
-        <div class="mb-2">
-          <span class="badge {% if client.aceita_sms %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
-            SMS: {% if client.aceita_sms %}Sim{% else %}Não{% endif %}
-          </span>
-        </div>
-        <div class="mb-2">
-          <span class="badge {% if client.aceita_whatsapp %}bg-success-lt{% else %}bg-secondary-lt{% endif %}">
-            WhatsApp: {% if client.aceita_whatsapp %}Sim{% else %}Não{% endif %}
-          </span>
+        <div class="empty">
+          <div class="empty-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/><path d="M11 15h1"/><path d="M12 15v3"/></svg>
+          </div>
+          <p class="empty-title">Nenhum agendamento</p>
+          <p class="empty-subtitle text-secondary">Os próximos agendamentos aparecerão aqui.</p>
         </div>
       </div>
     </div>
@@ -439,13 +445,6 @@
         </label>
       </div>
       
-      <div class="mb-3">
-        <label class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" name="aceita_campanha_sms" {% if client.aceita_campanha_sms %}checked{% endif %}>
-          <span class="form-check-label">Aceita Campanha de SMS</span>
-        </label>
-      </div>
-
       <div class="d-grid">
         <button type="submit" class="btn btn-primary">Salvar Alterações</button>
       </div>
@@ -463,6 +462,7 @@
     <form id="form-edit-contatos">
       {% csrf_token %}
       <input type="hidden" name="client_id" value="{{ client.id }}">
+      <input type="hidden" name="tipo" value="{{ client.tipo }}">
       
       <div class="mb-3">
         <label class="form-label required">Celular</label>
@@ -543,6 +543,7 @@
     <form id="form-edit-endereco">
       {% csrf_token %}
       <input type="hidden" name="client_id" value="{{ client.id }}">
+      <input type="hidden" name="tipo" value="{{ client.tipo }}">
       
       <div class="mb-3">
         <label class="form-label">CEP</label>
@@ -622,6 +623,109 @@
   </div>
 </div>
 
+<!-- Offcanvas Mais Ações -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-more-actions" style="width: 400px;">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Mais ações</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="list-group list-group-flush">
+      <a href="#" class="list-group-item list-group-item-action">
+        <div class="d-flex align-items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-3" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l.01 0"/><path d="M13 12l2 0"/><path d="M9 16l.01 0"/><path d="M13 16l2 0"/></svg>
+          <div>
+            <div>Histórico de alterações</div>
+            <div class="text-secondary small">Ver todas as modificações</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="#" class="list-group-item list-group-item-action">
+        <div class="d-flex align-items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-3" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 10l5 -6l5 6"/><path d="M21 10l-2 8a2 2.5 0 0 1 -2 2h-10a2 2.5 0 0 1 -2 -2l-2 -8z"/><path d="M12 15m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/></svg>
+          <div>
+            <div>Arquivar ficha</div>
+            <div class="text-secondary small">Mover para arquivados</div>
+          </div>
+        </div>
+      </a>
+      
+      <a href="#" class="list-group-item list-group-item-action text-danger" onclick="confirmDelete({{ client.id }}, '{{ client.nome_completo|escapejs }}'); return false;">
+        <div class="d-flex align-items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-3" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
+          <div>
+            <div>Excluir</div>
+            <div class="small">Remover permanentemente</div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Edição de Privacidade -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="modal-privacy" style="width: 500px;" data-bs-backdrop="static">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Privacidade e Comunicações</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-edit-privacy">
+      {% csrf_token %}
+      <input type="hidden" name="client_id" value="{{ client.id }}">
+      <input type="hidden" name="tipo" value="{{ client.tipo }}">
+      
+      <p class="text-secondary">Gerencie as preferências de comunicação do cliente.</p>
+      
+      <div class="card mb-3">
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="aceita_email" {% if client.aceita_email %}checked{% endif %}>
+              <span class="form-check-label">
+                <strong>Aceita E-mail</strong>
+                <div class="text-secondary small">Permitir envio de comunicações por e-mail</div>
+              </span>
+            </label>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="aceita_sms" {% if client.aceita_sms %}checked{% endif %}>
+              <span class="form-check-label">
+                <strong>Aceita SMS</strong>
+                <div class="text-secondary small">Permitir envio de SMS</div>
+              </span>
+            </label>
+          </div>
+          
+          <div class="mb-0">
+            <label class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="aceita_whatsapp" {% if client.aceita_whatsapp %}checked{% endif %}>
+              <span class="form-check-label">
+                <strong>Aceita WhatsApp</strong>
+                <div class="text-secondary small">Permitir envio de mensagens via WhatsApp</div>
+              </span>
+            </label>
+          </div>
+        </div>
+      </div>
+      
+      <div class="alert alert-info">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg>
+        <div class="text-secondary">
+          Essas preferências serão respeitadas no envio de comunicações e lembretes automáticos.
+        </div>
+      </div>
+      
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary">Salvar Preferências</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
 // Função para abrir modais de edição
 window.openEditModal = function(section) {
@@ -632,7 +736,35 @@ window.openEditModal = function(section) {
     offcanvas.show();
   }
 };
+// Função para abrir modal de privacidade
+window.openPrivacyModal = function() {
+  const modalElement = document.getElementById('modal-privacy');
+  if (modalElement) {
+    const offcanvas = new bootstrap.Offcanvas(modalElement);
+    offcanvas.show();
+  }
+};
 
+// Função para confirmar exclusão
+window.confirmDelete = function(clientId, clientName) {
+  if (confirm(`Tem certeza que deseja excluir o cliente "${clientName}"? Esta ação não pode ser desfeita.`)) {
+    // Criar formulário e submeter
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/clientes/${clientId}/excluir/`;
+    
+    // Adicionar CSRF token
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrfmiddlewaretoken';
+    csrfInput.value = csrfToken;
+    form.appendChild(csrfInput);
+    
+    document.body.appendChild(form);
+    form.submit();
+  }
+};
 // Toggle entre campos PF e PJ no modal de edição
 function toggleEditCampos() {
   const tipoPF = document.getElementById('edit-tipo-pf').checked;
@@ -822,6 +954,32 @@ document.getElementById('form-edit-contatos').addEventListener('submit', functio
 
 // Submeter formulário de edição de endereço  
 document.getElementById('form-edit-endereco').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch("{% url 'clients:update_ajax' client.id %}", {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Erro: ' + (data.error || 'Erro ao salvar'));
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    alert('Erro ao salvar alterações');
+  });
+});
+
+// Submeter formulário de privacidade
+document.getElementById('form-edit-privacy').addEventListener('submit', function(e) {
   e.preventDefault();
   const formData = new FormData(this);
   
