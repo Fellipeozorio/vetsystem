@@ -63,6 +63,18 @@ def client_create_ajax(request):
         if not nome_completo:
             return JsonResponse({'success': False, 'error': 'Nome completo é obrigatório'})
         
+        # Validar CPF duplicado para Pessoa Física
+        if tipo == 'PF':
+            cpf = request.POST.get('cpf', '').strip()
+            if cpf and Client.objects.filter(cpf=cpf).exists():
+                return JsonResponse({'success': False, 'error': 'Já existe um cliente cadastrado com este CPF'})
+        
+        # Validar CNPJ duplicado para Pessoa Jurídica
+        if tipo == 'PJ':
+            cnpj = request.POST.get('cnpj', '').strip()
+            if cnpj and Client.objects.filter(cnpj=cnpj).exists():
+                return JsonResponse({'success': False, 'error': 'Já existe um cliente cadastrado com este CNPJ'})
+        
         # Criar cliente
         client = Client()
         client.tipo = tipo
