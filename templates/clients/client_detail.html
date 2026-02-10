@@ -21,10 +21,27 @@
       </div>
       <div class="col-auto ms-auto d-print-none">
         <div class="btn-list">
-          <a href="#" class="btn btn-primary">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
-            Editar
-          </a>
+          <div class="dropdown">
+            <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>
+              Mais ações
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+              <li><a class="dropdown-item" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l.01 0"/><path d="M13 12l2 0"/><path d="M9 16l.01 0"/><path d="M13 16l2 0"/></svg>
+                Histórico de alterações
+              </a></li>
+              <li><a class="dropdown-item" href="#">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 10l5 -6l5 6"/><path d="M21 10l-2 8a2 2.5 0 0 1 -2 2h-10a2 2.5 0 0 1 -2 -2l-2 -8z"/><path d="M12 15m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/></svg>
+                Arquivar ficha
+              </a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="#" onclick="confirmDelete({{ client.id }}, '{{ client.nome_completo }}'); return false;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
+                Excluir
+              </a></li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
@@ -36,9 +53,12 @@
 <div class="row">
   <div class="col-lg-8">
     <!-- Informações do Cliente -->
-    <div class="card mb-3">
+    <div class="card mb-3 card-clickable" style="cursor: pointer;" onclick="openEditModal('info')">
       <div class="card-header">
         <h3 class="card-title">Informações do Cliente</h3>
+        <div class="card-actions">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+        </div>
       </div>
       <div class="card-body">
         <div class="row mb-3">
@@ -89,9 +109,12 @@
     </div>
     
     <!-- Contatos -->
-    <div class="card mb-3">
+    <div class="card mb-3 card-clickable" style="cursor: pointer;" onclick="openEditModal('contatos')">
       <div class="card-header">
         <h3 class="card-title">Contatos</h3>
+        <div class="card-actions">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+        </div>
       </div>
       <div class="card-body">
         <div class="row mb-3">
@@ -129,9 +152,12 @@
     </div>
     
     <!-- Endereço -->
-    <div class="card mb-3">
+    <div class="card mb-3 card-clickable" style="cursor: pointer;" onclick="openEditModal('endereco')">
       <div class="card-header">
         <h3 class="card-title">Endereço</h3>
+        <div class="card-actions">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+        </div>
       </div>
       <div class="card-body">
         {% if client.endereco %}
@@ -161,9 +187,12 @@
     
     {% if client.observacoes %}
     <!-- Observações -->
-    <div class="card mb-3">
+    <div class="card mb-3 card-clickable" style="cursor: pointer;" onclick="openEditModal('info')">
       <div class="card-header">
         <h3 class="card-title">Observações</h3>
+        <div class="card-actions">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+        </div>
       </div>
       <div class="card-body">
         {{ client.observacoes|linebreaks }}
@@ -251,4 +280,571 @@
     </div>
   </div>
 </div>
+
+<!-- Modal de Edição de Informações -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="modal-edit-info" style="width: 600px;" data-bs-backdrop="static">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Editar Informações</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-edit-info">
+      {% csrf_token %}
+      <input type="hidden" name="client_id" value="{{ client.id }}">
+      
+      <!-- Tipo -->
+      <div class="mb-3">
+        <label class="form-label">Tipo</label>
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="tipo" value="PF" id="edit-tipo-pf" {% if client.tipo == 'PF' %}checked{% endif %} onchange="toggleEditCampos()">
+          <label class="btn btn-outline-primary" for="edit-tipo-pf">Pessoa Física</label>
+          <input type="radio" class="btn-check" name="tipo" value="PJ" id="edit-tipo-pj" {% if client.tipo == 'PJ' %}checked{% endif %} onchange="toggleEditCampos()">
+          <label class="btn btn-outline-primary" for="edit-tipo-pj">Pessoa Jurídica</label>
+        </div>
+      </div>
+
+      <!-- Campos Pessoa Física -->
+      <div id="edit-campos-pf" {% if client.tipo != 'PF' %}style="display: none;"{% endif %}>
+        <div class="mb-3">
+          <label class="form-label required">Nome Completo</label>
+          <input type="text" class="form-control" name="nome_completo" value="{{ client.nome_completo }}" required>
+        </div>
+        
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label required">CPF</label>
+            <input type="text" class="form-control" name="cpf" value="{{ client.cpf }}" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">RG</label>
+            <input type="text" class="form-control" name="rg" value="{{ client.rg|default:'' }}">
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Nacionalidade</label>
+            <select class="form-select" name="nacionalidade">
+              <option value="">Selecione...</option>
+              <option value="BR" {% if client.nacionalidade == 'BR' %}selected{% endif %}>Brasileiro</option>
+              <option value="OUT" {% if client.nacionalidade == 'OUT' %}selected{% endif %}>Outro</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Sexo</label>
+            <select class="form-select" name="sexo">
+              <option value="">Selecione...</option>
+              <option value="M" {% if client.sexo == 'M' %}selected{% endif %}>Masculino</option>
+              <option value="F" {% if client.sexo == 'F' %}selected{% endif %}>Feminino</option>
+              <option value="O" {% if client.sexo == 'O' %}selected{% endif %}>Outro</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Data de Aniversário</label>
+            <input type="date" class="form-control" name="data_aniversario" value="{{ client.data_aniversario|default:'' }}">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Profissão</label>
+            <input type="text" class="form-control" name="profissao" value="{{ client.profissao|default:'' }}">
+          </div>
+        </div>
+      </div>
+
+      <!-- Campos Pessoa Jurídica -->
+      <div id="edit-campos-pj" {% if client.tipo != 'PJ' %}style="display: none;"{% endif %}>
+        <div class="mb-3">
+          <label class="form-label required">Nome Fantasia</label>
+          <input type="text" class="form-control" name="nome_completo_pj" value="{{ client.nome_completo }}" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Razão Social</label>
+          <input type="text" class="form-control" name="razao_social" value="{{ client.razao_social|default:'' }}">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label required">CNPJ</label>
+          <input type="text" class="form-control" name="cnpj" value="{{ client.cnpj }}" required>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Regime Tributário</label>
+          <select class="form-select" name="regime_tributario">
+            <option value="">Selecione...</option>
+            <option value="SN" {% if client.regime_tributario == 'SN' %}selected{% endif %}>Simples Nacional</option>
+            <option value="LP" {% if client.regime_tributario == 'LP' %}selected{% endif %}>Lucro Presumido</option>
+            <option value="LR" {% if client.regime_tributario == 'LR' %}selected{% endif %}>Lucro Real</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Informações Adicionais -->
+      <div class="mb-3">
+        <label class="form-label">Inscrição Municipal</label>
+        <input type="text" class="form-control" name="inscricao_municipal" value="{{ client.inscricao_municipal|default:'' }}">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Como Conheceu</label>
+        <select class="form-select" name="como_conheceu">
+          <option value="">Selecione...</option>
+          <option value="IND" {% if client.como_conheceu == 'IND' %}selected{% endif %}>Indicação</option>
+          <option value="RS" {% if client.como_conheceu == 'RS' %}selected{% endif %}>Redes Sociais</option>
+          <option value="INT" {% if client.como_conheceu == 'INT' %}selected{% endif %}>Internet</option>
+          <option value="OUT" {% if client.como_conheceu == 'OUT' %}selected{% endif %}>Outro</option>
+        </select>
+      </div>
+
+      <!-- Informações Complementares -->
+      <hr class="my-4">
+      <h4 class="mb-3">Informações Complementares</h4>
+      
+      <div class="mb-3">
+        <label class="form-label">Tags</label>
+        <input type="text" class="form-control" id="edit-tags-input" placeholder="Digite e pressione Enter">
+        <input type="hidden" name="tags" id="edit-tags-hidden" value="{{ client.tags|default:'' }}">
+        <div id="edit-tags-display" class="mt-2"></div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Observações</label>
+        <textarea class="form-control" name="observacoes" rows="4">{{ client.observacoes|default:'' }}</textarea>
+      </div>
+
+      <!-- Privacidade -->
+      <hr class="my-4">
+      <h4 class="mb-3">Privacidade</h4>
+      
+      <div class="mb-2">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="aceita_email" {% if client.aceita_email %}checked{% endif %}>
+          <span class="form-check-label">Aceita E-mail</span>
+        </label>
+      </div>
+      
+      <div class="mb-2">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="aceita_sms" {% if client.aceita_sms %}checked{% endif %}>
+          <span class="form-check-label">Aceita SMS</span>
+        </label>
+      </div>
+      
+      <div class="mb-2">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="aceita_whatsapp" {% if client.aceita_whatsapp %}checked{% endif %}>
+          <span class="form-check-label">Aceita WhatsApp</span>
+        </label>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="aceita_campanha_sms" {% if client.aceita_campanha_sms %}checked{% endif %}>
+          <span class="form-check-label">Aceita Campanha de SMS</span>
+        </label>
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de Edição de Contatos -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="modal-edit-contatos" style="width: 600px;" data-bs-backdrop="static">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Editar Contatos</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-edit-contatos">
+      {% csrf_token %}
+      <input type="hidden" name="client_id" value="{{ client.id }}">
+      
+      <div class="mb-3">
+        <label class="form-label required">Celular</label>
+        <input type="text" class="form-control" name="celular" value="{{ client.celular }}" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label required">Este número é WhatsApp?</label>
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="celular_whatsapp" value="1" id="edit-whatsapp-yes" {% if client.celular_whatsapp %}checked{% endif %}>
+          <label class="btn btn-outline-secondary" for="edit-whatsapp-yes">Sim</label>
+          <input type="radio" class="btn-check" name="celular_whatsapp" value="0" id="edit-whatsapp-no" {% if not client.celular_whatsapp %}checked{% endif %}>
+          <label class="btn btn-outline-secondary" for="edit-whatsapp-no">Não</label>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">E-mail</label>
+        <input type="email" class="form-control" name="email" value="{{ client.email|default:'' }}">
+      </div>
+
+      <hr class="my-4">
+      <h4 class="mb-3">Contatos Adicionais</h4>
+      
+      <div id="edit-contatos-adicionais-container">
+        {% for contato in contatos_adicionais %}
+        <div class="card mb-3">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-4 mb-2">
+                <select class="form-select" name="contatos_adicionais_tipo[]">
+                  <option value="CEL" {% if contato.tipo == 'CEL' %}selected{% endif %}>Celular</option>
+                  <option value="TEL" {% if contato.tipo == 'TEL' %}selected{% endif %}>Telefone</option>
+                  <option value="EMAIL" {% if contato.tipo == 'EMAIL' %}selected{% endif %}>E-mail</option>
+                  <option value="OUT" {% if contato.tipo == 'OUT' %}selected{% endif %}>Outro</option>
+                </select>
+              </div>
+              <div class="col-md-8 mb-2">
+                <input type="text" class="form-control" name="contatos_adicionais_valor[]" value="{{ contato.valor }}" placeholder="Contato">
+              </div>
+            </div>
+            <div class="row">
+              <div class="col-md-8 mb-2">
+                <input type="text" class="form-control" name="contatos_adicionais_obs[]" value="{{ contato.observacoes|default:'' }}" placeholder="Observações (ex: Comercial)">
+              </div>
+              <div class="col-md-4 mb-2">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" name="contatos_adicionais_whatsapp[]" {% if contato.whatsapp %}checked{% endif %}>
+                  <label class="form-check-label">WhatsApp</label>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.card').remove()">Remover</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <button type="button" class="btn btn-outline-primary w-100 mb-3" onclick="addEditContatoAdicional()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+        Adicionar Contato
+      </button>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de Edição de Endereço -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="modal-edit-endereco" style="width: 600px;" data-bs-backdrop="static">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Editar Endereço</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-edit-endereco">
+      {% csrf_token %}
+      <input type="hidden" name="client_id" value="{{ client.id }}">
+      
+      <div class="mb-3">
+        <label class="form-label">CEP</label>
+        <input type="text" class="form-control" name="cep" id="edit-cep" value="{{ client.cep|default:'' }}" maxlength="9">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Endereço</label>
+        <input type="text" class="form-control" name="endereco" id="edit-endereco" value="{{ client.endereco|default:'' }}">
+      </div>
+
+      <div class="row">
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Número</label>
+          <input type="text" class="form-control" name="numero" value="{{ client.numero|default:'' }}">
+        </div>
+        <div class="col-md-8 mb-3">
+          <label class="form-label">Complemento</label>
+          <input type="text" class="form-control" name="complemento" value="{{ client.complemento|default:'' }}">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Bairro</label>
+        <input type="text" class="form-control" name="bairro" id="edit-bairro" value="{{ client.bairro|default:'' }}">
+      </div>
+
+      <div class="row">
+        <div class="col-md-8 mb-3">
+          <label class="form-label">Cidade</label>
+          <input type="text" class="form-control" name="cidade" id="edit-cidade" value="{{ client.cidade|default:'' }}">
+        </div>
+        <div class="col-md-4 mb-3">
+          <label class="form-label">Estado</label>
+          <select class="form-select" name="estado" id="edit-estado">
+            <option value="">UF</option>
+            <option value="AC" {% if client.estado == 'AC' %}selected{% endif %}>AC</option>
+            <option value="AL" {% if client.estado == 'AL' %}selected{% endif %}>AL</option>
+            <option value="AP" {% if client.estado == 'AP' %}selected{% endif %}>AP</option>
+            <option value="AM" {% if client.estado == 'AM' %}selected{% endif %}>AM</option>
+            <option value="BA" {% if client.estado == 'BA' %}selected{% endif %}>BA</option>
+            <option value="CE" {% if client.estado == 'CE' %}selected{% endif %}>CE</option>
+            <option value="DF" {% if client.estado == 'DF' %}selected{% endif %}>DF</option>
+            <option value="ES" {% if client.estado == 'ES' %}selected{% endif %}>ES</option>
+            <option value="GO" {% if client.estado == 'GO' %}selected{% endif %}>GO</option>
+            <option value="MA" {% if client.estado == 'MA' %}selected{% endif %}>MA</option>
+            <option value="MT" {% if client.estado == 'MT' %}selected{% endif %}>MT</option>
+            <option value="MS" {% if client.estado == 'MS' %}selected{% endif %}>MS</option>
+            <option value="MG" {% if client.estado == 'MG' %}selected{% endif %}>MG</option>
+            <option value="PA" {% if client.estado == 'PA' %}selected{% endif %}>PA</option>
+            <option value="PB" {% if client.estado == 'PB' %}selected{% endif %}>PB</option>
+            <option value="PR" {% if client.estado == 'PR' %}selected{% endif %}>PR</option>
+            <option value="PE" {% if client.estado == 'PE' %}selected{% endif %}>PE</option>
+            <option value="PI" {% if client.estado == 'PI' %}selected{% endif %}>PI</option>
+            <option value="RJ" {% if client.estado == 'RJ' %}selected{% endif %}>RJ</option>
+            <option value="RN" {% if client.estado == 'RN' %}selected{% endif %}>RN</option>
+            <option value="RS" {% if client.estado == 'RS' %}selected{% endif %}>RS</option>
+            <option value="RO" {% if client.estado == 'RO' %}selected{% endif %}>RO</option>
+            <option value="RR" {% if client.estado == 'RR' %}selected{% endif %}>RR</option>
+            <option value="SC" {% if client.estado == 'SC' %}selected{% endif %}>SC</option>
+            <option value="SP" {% if client.estado == 'SP' %}selected{% endif %}>SP</option>
+            <option value="SE" {% if client.estado == 'SE' %}selected{% endif %}>SE</option>
+            <option value="TO" {% if client.estado == 'TO' %}selected{% endif %}>TO</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Ponto de Referência</label>
+        <input type="text" class="form-control" name="ponto_referencia" value="{{ client.ponto_referencia|default:'' }}">
+      </div>
+
+      <div class="d-grid">
+        <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Função para abrir modais de edição
+window.openEditModal = function(section) {
+  const modalId = 'modal-edit-' + section;
+  const modalElement = document.getElementById(modalId);
+  if (modalElement) {
+    const offcanvas = new bootstrap.Offcanvas(modalElement);
+    offcanvas.show();
+  }
+};
+
+// Toggle entre campos PF e PJ no modal de edição
+function toggleEditCampos() {
+  const tipoPF = document.getElementById('edit-tipo-pf').checked;
+  const camposPF = document.getElementById('edit-campos-pf');
+  const camposPJ = document.getElementById('edit-campos-pj');
+  
+  if (tipoPF) {
+    camposPF.style.display = 'block';
+    camposPJ.style.display = 'none';
+  } else {
+    camposPF.style.display = 'none';
+    camposPJ.style.display = 'block';
+  }
+}
+
+// Adicionar contato adicional no modal de edição
+function addEditContatoAdicional() {
+  const container = document.getElementById('edit-contatos-adicionais-container');
+  const html = `
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-4 mb-2">
+            <select class="form-select" name="contatos_adicionais_tipo[]">
+              <option value="CEL">Celular</option>
+              <option value="TEL">Telefone</option>
+              <option value="EMAIL">E-mail</option>
+              <option value="OUT">Outro</option>
+            </select>
+          </div>
+          <div class="col-md-8 mb-2">
+            <input type="text" class="form-control" name="contatos_adicionais_valor[]" placeholder="Contato">
+          </div>
+        </div>
+        <div class="row">
+          <div class="col-md-8 mb-2">
+            <input type="text" class="form-control" name="contatos_adicionais_obs[]" placeholder="Observações (ex: Comercial)">
+          </div>
+          <div class="col-md-4 mb-2">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" name="contatos_adicionais_whatsapp[]">
+              <label class="form-check-label">WhatsApp</label>
+            </div>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.card').remove()">Remover</button>
+      </div>
+    </div>
+  `;
+  container.insertAdjacentHTML('beforeend', html);
+}
+
+// Sistema de tags no modal de edição
+document.addEventListener('DOMContentLoaded', function() {
+  // Inicializar tags existentes
+  const tagsHidden = document.getElementById('edit-tags-hidden');
+  if (tagsHidden && tagsHidden.value) {
+    const tags = tagsHidden.value.split(',').filter(t => t.trim());
+    const display = document.getElementById('edit-tags-display');
+    tags.forEach(tag => {
+      addEditTagToDisplay(tag.trim(), display);
+    });
+  }
+
+  // Handler para Enter no input de tags
+  const tagsInput = document.getElementById('edit-tags-input');
+  if (tagsInput) {
+    tagsInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const tag = this.value.trim();
+        if (tag) {
+          const display = document.getElementById('edit-tags-display');
+          addEditTagToDisplay(tag, display);
+          updateEditTagsHidden();
+          this.value = '';
+        }
+      }
+    });
+  }
+
+  // Máscara CEP no modal de endereço
+  const editCep = document.getElementById('edit-cep');
+  if (editCep) {
+    editCep.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length > 5) {
+        value = value.slice(0, 5) + '-' + value.slice(5, 8);
+      }
+      e.target.value = value;
+      
+      // Buscar CEP
+      if (value.replace(/\D/g, '').length === 8) {
+        buscarCEPEdit(value.replace(/\D/g, ''));
+      }
+    });
+  }
+});
+
+function addEditTagToDisplay(tag, display) {
+  const badge = document.createElement('span');
+  badge.className = 'badge bg-blue-lt me-1 mb-1';
+  badge.innerHTML = `
+    ${tag}
+    <a href="#" class="btn-close ms-1" style="font-size: 0.7em;" onclick="removeEditTag(this); return false;"></a>
+  `;
+  display.appendChild(badge);
+}
+
+function removeEditTag(btn) {
+  btn.closest('.badge').remove();
+  updateEditTagsHidden();
+}
+
+function updateEditTagsHidden() {
+  const display = document.getElementById('edit-tags-display');
+  const badges = display.querySelectorAll('.badge');
+  const tags = Array.from(badges).map(b => b.textContent.trim());
+  document.getElementById('edit-tags-hidden').value = tags.join(',');
+}
+
+function buscarCEPEdit(cep) {
+  fetch(`https://viacep.com.br/ws/${cep}/json/`)
+    .then(response => response.json())
+    .then(data => {
+      if (!data.erro) {
+        document.getElementById('edit-endereco').value = data.logradouro || '';
+        document.getElementById('edit-bairro').value = data.bairro || '';
+        document.getElementById('edit-cidade').value = data.localidade || '';
+        document.getElementById('edit-estado').value = data.uf || '';
+      }
+    })
+    .catch(error => console.error('Erro ao buscar CEP:', error));
+}
+
+// Submeter formulário de edição de informações
+document.getElementById('form-edit-info').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch("{% url 'clients:update_ajax' client.id %}", {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Erro: ' + (data.error || 'Erro ao salvar'));
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    alert('Erro ao salvar alterações');
+  });
+});
+
+// Submeter formulário de edição de contatos
+document.getElementById('form-edit-contatos').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch("{% url 'clients:update_ajax' client.id %}", {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Erro: ' + (data.error || 'Erro ao salvar'));
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    alert('Erro ao salvar alterações');
+  });
+});
+
+// Submeter formulário de edição de endereço  
+document.getElementById('form-edit-endereco').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  
+  fetch("{% url 'clients:update_ajax' client.id %}", {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      location.reload();
+    } else {
+      alert('Erro: ' + (data.error || 'Erro ao salvar'));
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    alert('Erro ao salvar alterações');
+  });
+});
+</script>
+
 {% endblock %}

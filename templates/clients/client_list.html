@@ -54,7 +54,6 @@
           <th>Código</th>
           <th>Nome</th>
           <th>Animais</th>
-          <th class="w-1"></th>
         </tr>
       </thead>
       <tbody>
@@ -62,18 +61,15 @@
         <tr class="client-row" data-client-id="{{ client.id }}">
           <td class="text-secondary">{{ client.codigo }}</td>
           <td>
-            <div class="d-flex align-items-center">
-              <span class="avatar avatar-sm me-2">{{ client.nome_completo|slice:":2"|upper }}</span>
-              <div>
-                <div class="font-weight-medium">{{ client.nome_completo }}</div>
-                {% if client.tags %}
-                <div class="text-secondary small">
-                  {% for tag in client.get_tags_list %}
-                    <span class="badge bg-blue-lt me-1">{{ tag }}</span>
-                  {% endfor %}
-                </div>
-                {% endif %}
+            <div>
+              <div class="font-weight-medium">{{ client.nome_completo }}</div>
+              {% if client.tags %}
+              <div class="text-secondary small">
+                {% for tag in client.get_tags_list %}
+                  <span class="badge bg-blue-lt me-1">{{ tag }}</span>
+                {% endfor %}
               </div>
+              {% endif %}
             </div>
           </td>
           <td>
@@ -85,20 +81,10 @@
               <span class="text-muted">-</span>
             {% endif %}
           </td>
-          <td onclick="event.stopPropagation()">
-            <div class="btn-list" style="flex-wrap: nowrap;">
-              <a href="#" class="btn btn-ghost-primary btn-icon" title="Ver Detalhes">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/></svg>
-              </a>
-              <a href="#" class="btn btn-ghost-danger btn-icon" title="Excluir" onclick="confirmDelete({{ client.id }}, '{{ client.nome_completo }}'); return false;">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
-              </a>
-            </div>
-          </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="4" class="text-center text-secondary py-5">
+          <td colspan="3" class="text-center text-secondary py-5">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg mb-2 text-muted" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>
             <div>Nenhum cliente encontrado.</div>
           </td>
@@ -345,16 +331,17 @@
           
           <div class="mb-3">
             <label class="form-label">Celular <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="celular2" id="celular2">
+            <input type="text" class="form-control" name="celular2" id="celular2" required>
+            <div class="invalid-feedback">Por favor, preencha este campo.</div>
           </div>
           
           <div class="mb-3">
             <label class="form-label">Este número é WhatsApp? <span class="text-danger">*</span></label>
-            <div class="btn-group w-50" role="group">
+            <div class="btn-group w-100" role="group">
               <input type="radio" class="btn-check" name="celular_whatsapp2" id="whatsapp-sim" value="true" checked autocomplete="off">
-              <label class="btn btn-outline-success btn-whatsapp-yes" for="whatsapp-sim">Sim</label>
+              <label class="btn btn-outline-secondary btn-whatsapp-yes" for="whatsapp-sim">Sim</label>
               <input type="radio" class="btn-check" name="celular_whatsapp2" id="whatsapp-nao" value="false" autocomplete="off">
-              <label class="btn btn-outline-danger btn-whatsapp-no" for="whatsapp-nao">Não</label>
+              <label class="btn btn-outline-secondary btn-whatsapp-no" for="whatsapp-nao">Não</label>
             </div>
           </div>
           
@@ -368,7 +355,7 @@
           <h5 class="mb-3 text-center">Contato Adicional</h5>
           
           <div class="mb-3">
-            <label class="form-label">E-mail <span class="text-danger">*</span></label>
+            <label class="form-label">E-mail</label>
             <input type="email" class="form-control" name="email2">
           </div>
           
@@ -637,8 +624,8 @@
   content: '';
   position: absolute;
   top: 16px;
-  left: 10%;
-  right: 10%;
+  left: 0;
+  right: 0;
   height: 2px;
   background: #e9ecef;
   z-index: 0;
@@ -703,15 +690,9 @@
   border-color: #2fb344;
 }
 
-.btn-whatsapp-yes.active {
-  background-color: #2fb344 !important;
-  border-color: #2fb344 !important;
-  color: white !important;
-}
-
-.btn-whatsapp-no.active {
-  background-color: #d63939 !important;
-  border-color: #d63939 !important;
+.btn-whatsapp-yes.active, .btn-whatsapp-no.active {
+  background-color: #6c757d !important;
+  border-color: #6c757d !important;
   color: white !important;
 }
 
@@ -789,12 +770,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let isValid = true;
     
     requiredInputs.forEach(input => {
-      if (!input.value.trim()) {
+      if (!input.value || !input.value.trim()) {
         isValid = false;
         input.classList.add('is-invalid');
-        // Remover classe após correção
+        // Mostrar feedback
+        const feedback = input.parentElement.querySelector('.invalid-feedback') || createInvalidFeedback(input);
+        feedback.style.display = 'block';
+        
+        // Remover classe ao corrigir
         input.addEventListener('input', function() {
           this.classList.remove('is-invalid');
+          const fb = this.parentElement.querySelector('.invalid-feedback');
+          if (fb) fb.style.display = 'none';
         }, { once: true });
       }
     });
@@ -816,11 +803,15 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     
-    if (!isValid) {
-      alert('Por favor, preencha todos os campos obrigatórios antes de continuar.');
-    }
-    
     return isValid;
+  }
+  
+  function createInvalidFeedback(input) {
+    const feedback = document.createElement('div');
+    feedback.className = 'invalid-feedback';
+    feedback.textContent = 'Por favor, preencha este campo.';
+    input.parentElement.appendChild(feedback);
+    return feedback;
   }
   
   document.getElementById('btn-prev-step').addEventListener('click', function() {

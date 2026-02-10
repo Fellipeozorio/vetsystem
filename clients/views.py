@@ -182,3 +182,142 @@ def client_detail(request, pk):
     }
     
     return render(request, 'clients/client_detail.html', context)
+
+
+@login_required
+@require_http_methods(["POST"])
+def client_update_ajax(request, pk):
+    """Atualizar cliente via AJAX."""
+    try:
+        client = get_object_or_404(Client, pk=pk)
+        
+        # Parse dados do formulário
+        tipo = request.POST.get('tipo')
+        nome_completo = request.POST.get('nome_completo') or request.POST.get('nome_completo_pj')
+        
+        # Validação básica
+        if not nome_completo:
+            return JsonResponse({'success': False, 'error': 'Nome completo é obrigatório'})
+        
+        # Validar CPF duplicado para Pessoa Física (exceto próprio cliente)
+        if tipo == 'PF':
+            cpf = request.POST.get('cpf', '').strip()
+            if cpf and Client.objects.filter(cpf=cpf).exclude(id=client.id).exists():
+                return JsonResponse({'success': False, 'error': 'Já existe outro cliente cadastrado com este CPF'})
+        
+        # Validar CNPJ duplicado para Pessoa Jurídica (exceto próprio cliente)
+        if tipo == 'PJ':
+            cnpj = request.POST.get('cnpj', '').strip()
+            if cnpj and Client.objects.filter(cnpj=cnpj).exclude(id=client.id).exists():
+                return JsonResponse({'success': False, 'error': 'Já existe outro cliente cadastrado com este CNPJ'})
+        
+        # Atualizar cliente
+        client.tipo = tipo
+        client.nome_completo = nome_completo
+        
+        # Limpar campos do tipo anterior
+        if tipo == 'PF':
+            # Limpar campos PJ
+            client.cnpj = ''
+            client.razao_social = ''
+            client.regime_tributario = ''
+            client.inscricao_estadual = ''
+            # Atualizar campos PF
+            client.nacionalidade = request.POST.get('nacionalidade', '')
+            client.sexo = request.POST.get('sexo', '')
+            client.cpf = request.POST.get('cpf', '')
+            client.rg = request.POST.get('rg', '')
+            data_aniversario = request.POST.get('data_aniversario', '')
+            if data_aniversario:
+                client.data_aniversario = data_aniversario
+            else:
+                client.data_aniversario = None
+            client.profissao = request.POST.get('profissao', '')
+        
+        elif tipo == 'PJ':
+            # Limpar campos PF
+            client.cpf = ''
+            client.rg = ''
+            client.sexo = ''
+            client.data_aniversario = None
+            client.profissao = ''
+            # Atualizar campos PJ
+            client.cnpj = request.POST.get('cnpj', '')
+            client.razao_social = request.POST.get('razao_social', '')
+            client.regime_tributario = request.POST.get('regime_tributario', '')
+            client.inscricao_estadual = request.POST.get('inscricao_estadual', '')
+            client.nacionalidade = request.POST.get('nacionalidade', '')
+        
+        # Campos comuns
+        client.inscricao_municipal = request.POST.get('inscricao_municipal', '')
+        client.como_conheceu = request.POST.get('como_conheceu', '')
+        
+        # Contatos (se fornecidos)
+        celular = request.POST.get('celular')
+        if celular:
+            client.celular = celular
+            whatsapp_value = request.POST.get('celular_whatsapp', '0')
+            client.celular_whatsapp = whatsapp_value == '1' or whatsapp_value == 'true'
+        
+        email = request.POST.get('email')
+        if email is not None:
+            client.email = email
+        
+        # Endereço (se fornecido)
+        if 'cep' in request.POST:
+            client.cep = request.POST.get('cep', '')
+            client.endereco = request.POST.get('endereco', '')
+            client.numero = request.POST.get('numero', '')
+            client.complemento = request.POST.get('complemento', '')
+            client.bairro = request.POST.get('bairro', '')
+            client.cidade = request.POST.get('cidade', '')
+            client.estado = request.POST.get('estado', '')
+            client.ponto_referencia = request.POST.get('ponto_referencia', '')
+        
+        # Informações complementares (se fornecidas)
+        if 'tags' in request.POST:
+            client.tags = request.POST.get('tags', '')
+        if 'observacoes' in request.POST:
+            client.observacoes = request.POST.get('observacoes', '')
+        
+        # Preferências de privacidade
+        if 'aceita_email' in request.POST:
+            client.aceita_email = 'aceita_email' in request.POST
+        if 'aceita_sms' in request.POST:
+            client.aceita_sms = 'aceita_sms' in request.POST
+        if 'aceita_whatsapp' in request.POST:
+            client.aceita_whatsapp = 'aceita_whatsapp' in request.POST
+        if 'aceita_campanha_sms' in request.POST:
+            client.aceita_campanha_sms = 'aceita_campanha_sms' in request.POST
+        
+        client.save()
+        
+        # Atualizar contatos adicionais (se fornecidos)
+        if 'contatos_adicionais_tipo[]' in request.POST:
+            # Remover contatos existentes
+            client.contatos_adicionais.all().delete()
+            
+            # Adicionar novos contatos
+            tipos = request.POST.getlist('contatos_adicionais_tipo[]')
+            valores = request.POST.getlist('contatos_adicionais_valor[]')
+            obs_list = request.POST.getlist('contatos_adicionais_obs[]')
+            whatsapp_list = request.POST.getlist('contatos_adicionais_whatsapp[]')
+            
+            for i, (tipo_contato, valor) in enumerate(zip(tipos, valores)):
+                if valor.strip():  # Só criar se tiver valor
+                    ContatoAdicional.objects.create(
+                        cliente=client,
+                        tipo=tipo_contato,
+                        valor=valor,
+                        whatsapp='on' in whatsapp_list if i < len(whatsapp_list) else False,
+                        observacoes=obs_list[i] if i < len(obs_list) else ''
+                    )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Cliente {client.nome_completo} atualizado com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
