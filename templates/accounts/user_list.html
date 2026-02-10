@@ -58,6 +58,28 @@
               {% if u.userprofile.avatar %}
               <span class="avatar me-2" style="background-image: url({{ u.userprofile.avatar.url }})"></span>
               {% else %}
+<!-- Modal de Sucesso de Criação -->
+<div class="modal modal-blur fade" id="modal-create-success" tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
+        <h3>Sucesso</h3>
+        <div class="text-secondary" id="create-success-message"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Fechar</button></div>
+            <div class="col d-none"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
               <span class="avatar me-2" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ u.get_full_name|default:u.username }})"></span>
               {% endif %}
               <div class="flex-fill">
@@ -269,46 +291,21 @@ document.addEventListener('DOMContentLoaded', function() {
         // Limpar formulário
         document.getElementById('form-create-user').reset();
         
-        // Mostrar mensagem de sucesso como card sobreposto (overlay) centralizado
-        const overlay = document.createElement('div');
-        overlay.style.position = 'fixed';
-        overlay.style.top = 0;
-        overlay.style.left = 0;
-        overlay.style.width = '100vw';
-        overlay.style.height = '100vh';
-        overlay.style.display = 'flex';
-        overlay.style.alignItems = 'center';
-        overlay.style.justifyContent = 'center';
-        overlay.style.backgroundColor = 'rgba(0,0,0,0.35)';
-        overlay.style.zIndex = 2000;
-
-        const cardDiv = document.createElement('div');
-        cardDiv.className = 'card card-md';
-        cardDiv.style.maxWidth = '480px';
-        cardDiv.innerHTML = `
-          <div class="card-body text-center">
-            <div class="mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check text-success" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M5 12l5 5l10 -10"></path></svg>
-            </div>
-            <h4 class="card-title mb-2">Usuário criado com sucesso!</h4>
-            <p class="text-muted mb-3">${data.message}</p>
-            <div class="d-flex justify-content-center">
-              <button type="button" class="btn btn-primary" id="overlay-close-btn">Fechar</button>
-            </div>
-          </div>
-        `;
-
-        overlay.appendChild(cardDiv);
-        document.body.appendChild(overlay);
-
-        // Fechar overlay ao clicar no botão e recarregar a lista
-        document.getElementById('overlay-close-btn').addEventListener('click', function() {
-          if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
-          console.log('Overlay closed by user - reloading');
+        // Mostrar modal de sucesso Tabler
+        const successModalEl = document.getElementById('modal-create-success');
+        if (successModalEl) {
+          const msgEl = successModalEl.querySelector('#create-success-message');
+          if (msgEl) msgEl.textContent = data.message;
+          const modal = bootstrap.Modal.getOrCreateInstance(successModalEl);
+          // garantir recarregamento após o modal ser fechado (apenas uma vez)
+          const onHidden = function() { location.reload(); };
+          successModalEl.addEventListener('hidden.bs.modal', onHidden, { once: true });
+          modal.show();
+        } else {
+          // fallback simples
+          alert(data.message);
           location.reload();
-        });
-
-        console.log('Showing overlay success card (manual close)');
+        }
       } else {
         errorDiv.textContent = data.error;
         errorDiv.style.display = 'block';
@@ -324,58 +321,27 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  // Confirmação de exclusão (overlay centralizado)
+  // Confirmação de exclusão usando modal Tabler
   let deleteUserId = null;
 
   window.confirmDelete = function(userId, username) {
     deleteUserId = userId;
-
-    // Criar overlay
-    const overlayDel = document.createElement('div');
-    overlayDel.style.position = 'fixed';
-    overlayDel.style.top = 0;
-    overlayDel.style.left = 0;
-    overlayDel.style.width = '100vw';
-    overlayDel.style.height = '100vh';
-    overlayDel.style.display = 'flex';
-    overlayDel.style.alignItems = 'center';
-    overlayDel.style.justifyContent = 'center';
-    overlayDel.style.backgroundColor = 'rgba(0,0,0,0.35)';
-    overlayDel.style.zIndex = 2000;
-
-    const cardDiv = document.createElement('div');
-    cardDiv.className = 'card card-md';
-    cardDiv.style.maxWidth = '480px';
-    cardDiv.innerHTML = `
-      <div class="card-body text-center">
-        <div class="mb-3">
-          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-triangle text-warning" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M12 9v2m0 4v.01"></path><path d="M10.29 3.86l-7.29 12.64a2 2 0 0 0 1.73 3h14.56a2 2 0 0 0 1.73-3l-7.29-12.64a2 2 0 0 0-3.14 0z"></path></svg>
-        </div>
-        <h4 class="card-title mb-2">Confirmar exclusão</h4>
-        <p class="text-muted mb-3">Deseja excluir o usuário <strong>${username}</strong>? Esta ação não pode ser desfeita.</p>
-        <div class="d-flex justify-content-center gap-2">
-          <button type="button" class="btn btn-secondary" id="overlay-cancel-btn">Cancelar</button>
-          <button type="button" class="btn btn-danger" id="overlay-delete-btn">Excluir</button>
-        </div>
-      </div>
-    `;
-
-    overlayDel.appendChild(cardDiv);
-    document.body.appendChild(overlayDel);
-
-    // Cancelar
-    document.getElementById('overlay-cancel-btn').addEventListener('click', function() {
-      if (overlayDel && overlayDel.parentNode) overlayDel.parentNode.removeChild(overlayDel);
-      deleteUserId = null;
-    });
-
-    // Confirmar exclusão: submeter o formulário oculto
-    document.getElementById('overlay-delete-btn').addEventListener('click', function() {
-      const form = document.getElementById('form-delete-user');
-      form.action = `/accounts/usuarios/${deleteUserId}/excluir/`;
-      form.submit();
-    });
+    const usernameEl = document.getElementById('delete-username');
+    if (usernameEl) usernameEl.textContent = username;
+    const modalEl = document.getElementById('modal-delete-confirm');
+    if (modalEl) {
+      const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+      modal.show();
+    }
   };
+
+  // Handler do botão de confirmação no modal
+  document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+    if (!deleteUserId) return;
+    const form = document.getElementById('form-delete-user');
+    form.action = `/accounts/usuarios/${deleteUserId}/excluir/`;
+    form.submit();
+  });
 });
 </script>
 {% endblock %}

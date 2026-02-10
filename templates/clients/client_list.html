@@ -1,0 +1,1086 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Clientes - VetSystem{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <div class="page-pretitle">Gerenciamento</div>
+        <h2 class="page-title">Clientes</h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <button type="button" class="btn btn-primary" id="btn-novo-cliente">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+            Novo Cliente
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Lista de Clientes</h3>
+    <div class="ms-auto">
+      <form method="get" class="d-flex gap-2">
+        <div class="input-icon">
+          <input type="text" class="form-control" name="search" placeholder="Buscar..." value="{{ search }}" autocomplete="off">
+          <span class="input-icon-addon">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
+          </span>
+        </div>
+        <select class="form-select" name="tipo" onchange="this.form.submit()" style="width: auto;">
+          <option value="">Todos os tipos</option>
+          <option value="PF" {% if tipo_filter == 'PF' %}selected{% endif %}>Pessoa Física</option>
+          <option value="PJ" {% if tipo_filter == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
+        </select>
+        <button type="button" class="btn btn-outline-secondary" title="Gerar Relatório">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 17h6"/><path d="M9 13h6"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Código</th>
+          <th>Nome</th>
+          <th>Tipo</th>
+          <th>CPF/CNPJ</th>
+          <th>Celular</th>
+          <th>E-mail</th>
+          <th>Cidade</th>
+          <th class="w-1"></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for client in clients %}
+        <tr>
+          <td class="text-secondary">{{ client.codigo }}</td>
+          <td>
+            <div class="d-flex align-items-center">
+              <span class="avatar avatar-sm me-2">{{ client.nome_completo|slice:":2"|upper }}</span>
+              <div>
+                <div class="font-weight-medium">{{ client.nome_completo }}</div>
+                {% if client.tags %}
+                <div class="text-secondary small">
+                  {% for tag in client.get_tags_list %}
+                    <span class="badge bg-blue-lt me-1">{{ tag }}</span>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="badge {% if client.tipo == 'PF' %}bg-green-lt{% else %}bg-purple-lt{% endif %}">
+              {{ client.get_tipo_display }}
+            </span>
+          </td>
+          <td class="text-secondary">
+            {% if client.tipo == 'PF' %}
+              {{ client.cpf|default:"-" }}
+            {% else %}
+              {{ client.cnpj|default:"-" }}
+            {% endif %}
+          </td>
+          <td class="text-secondary">
+            {{ client.celular }}
+            {% if client.celular_whatsapp %}
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-whatsapp text-success" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+            {% endif %}
+          </td>
+          <td class="text-secondary">{{ client.email|default:"-" }}</td>
+          <td class="text-secondary">{{ client.cidade|default:"-" }}</td>
+          <td>
+            <div class="btn-list" style="flex-wrap: nowrap;">
+              <a href="#" class="btn btn-ghost-primary btn-icon" title="Ver Detalhes">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/></svg>
+              </a>
+              <a href="#" class="btn btn-ghost-danger btn-icon" title="Excluir" onclick="confirmDelete({{ client.id }}, '{{ client.nome_completo }}'); return false;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="text-center text-secondary py-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg mb-2 text-muted" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>
+            <div>Nenhum cliente encontrado.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  {% if clients.has_other_pages %}
+  <div class="card-footer d-flex align-items-center">
+    <p class="m-0 text-secondary">
+      Mostrando <span>{{ clients.start_index }}</span> a <span>{{ clients.end_index }}</span> de <span>{{ clients.paginator.count }}</span> clientes
+    </p>
+    <ul class="pagination m-0 ms-auto">
+      {% if clients.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+          anterior
+        </a>
+      </li>
+      {% endif %}
+      {% for num in clients.paginator.page_range %}
+        {% if clients.number == num %}
+        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+        {% elif num > clients.number|add:'-3' and num < clients.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}">{{ num }}</a></li>
+        {% endif %}
+      {% endfor %}
+      {% if clients.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}">
+          próximo
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Wizard Lateral (Offcanvas) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="wizard-cliente" style="width: 600px;" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title">Novo Cliente</h5>
+    <button type="button" class="btn-close" id="wizard-close-btn"></button>
+  </div>
+  <div class="offcanvas-body p-0">
+    <form id="form-wizard-cliente">
+      {% csrf_token %}
+      
+      <!-- Indicador de Progresso -->
+      <div class="steps p-3 border-bottom">
+        <div class="step" data-step="1">
+          <span class="step-number">1</span>
+          <span class="step-title">Informações</span>
+        </div>
+        <div class="step" data-step="2">
+          <span class="step-number">2</span>
+          <span class="step-title">Contatos</span>
+        </div>
+        <div class="step" data-step="3">
+          <span class="step-number">3</span>
+          <span class="step-title">Endereço</span>
+        </div>
+        <div class="step" data-step="4">
+          <span class="step-number">4</span>
+          <span class="step-title">Complementares</span>
+        </div>
+        <div class="step" data-step="5">
+          <span class="step-number">5</span>
+          <span class="step-title">Animais</span>
+        </div>
+      </div>
+      
+      <!-- Conteúdo das Etapas -->
+      <div class="wizard-content p-4" style="height: calc(100vh - 280px); overflow-y: auto;">
+        
+        <!-- Etapa 1: Informações do Cliente -->
+        <div class="wizard-step" id="step-1">
+          <h4 class="mb-3">Informações do Cliente</h4>
+          
+          <div class="form-label">Tipo <span class="text-danger">*</span></div>
+          <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column mb-3">
+            <label class="form-selectgroup-item flex-fill mb-2">
+              <input type="radio" name="tipo" value="PF" class="form-selectgroup-input" checked>
+              <div class="form-selectgroup-label d-flex align-items-center p-3">
+                <div class="me-3">
+                  <span class="form-selectgroup-check"></span>
+                </div>
+                <div>
+                  <strong>Pessoa Física</strong>
+                  <div class="text-secondary small">Cliente individual</div>
+                </div>
+              </div>
+            </label>
+            <label class="form-selectgroup-item flex-fill">
+              <input type="radio" name="tipo" value="PJ" class="form-selectgroup-input">
+              <div class="form-selectgroup-label d-flex align-items-center p-3">
+                <div class="me-3">
+                  <span class="form-selectgroup-check"></span>
+                </div>
+                <div>
+                  <strong>Pessoa Jurídica</strong>
+                  <div class="text-secondary small">Empresa ou organização</div>
+                </div>
+              </div>
+            </label>
+          </div>
+          
+          <!-- Campos Pessoa Física -->
+          <div id="campos-pf">
+            <div class="mb-3">
+              <label class="form-label">Nome Completo <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="nome_completo" required>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Nacionalidade <span class="text-danger">*</span></label>
+                <select class="form-select" name="nacionalidade">
+                  <option value="brasileiro">Brasileiro</option>
+                  <option value="estrangeiro">Estrangeiro</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Sexo <span class="text-danger">*</span></label>
+                <select class="form-select" name="sexo">
+                  <option value="">Selecione...</option>
+                  <option value="M">Masculino</option>
+                  <option value="F">Feminino</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">CPF <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="cpf" id="cpf" maxlength="14">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">RG</label>
+                <input type="text" class="form-control" name="rg">
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Aniversário</label>
+                <input type="date" class="form-control" name="data_aniversario">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Profissão</label>
+                <input type="text" class="form-control" name="profissao">
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Como nos conheceu?</label>
+              <select class="form-select" name="como_conheceu">
+                <option value="">Selecione...</option>
+                <option value="rua">Passando na rua</option>
+                <option value="facebook">Facebook</option>
+                <option value="site">Site</option>
+                <option value="instagram">Instagram</option>
+                <option value="indicacao">Indicação</option>
+                <option value="outros">Outros</option>
+              </select>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Inscrição Municipal</label>
+              <input type="text" class="form-control" name="inscricao_municipal">
+              <small class="form-hint">Preencha apenas se a pessoa possuir Inscrição municipal junto à prefeitura. Essa informação serve exclusivamente para emissão de notas fiscais de serviço.</small>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">E-mail</label>
+                <input type="email" class="form-control" name="email">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Celular <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="celular" id="celular" required>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Este número é WhatsApp? <span class="text-danger">*</span></label>
+              <div class="form-selectgroup form-selectgroup-boxes d-flex">
+                <label class="form-selectgroup-item flex-fill">
+                  <input type="radio" name="celular_whatsapp" value="true" class="form-selectgroup-input" checked>
+                  <div class="form-selectgroup-label text-center">Sim</div>
+                </label>
+                <label class="form-selectgroup-item flex-fill">
+                  <input type="radio" name="celular_whatsapp" value="false" class="form-selectgroup-input">
+                  <div class="form-selectgroup-label text-center">Não</div>
+                </label>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" name="aceita_email_pf" checked>
+                  <span class="form-check-label">Aceita Email?</span>
+                </label>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" name="aceita_whatsapp_pf" checked>
+                  <span class="form-check-label">Aceita WhatsApp?</span>
+                </label>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" name="aceita_sms_pf" checked>
+                  <span class="form-check-label">Aceita SMS?</span>
+                </label>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-check">
+                  <input type="checkbox" class="form-check-input" name="aceita_campanha_sms" checked>
+                  <span class="form-check-label">Aceita Campanha SMS?</span>
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Campos Pessoa Jurídica -->
+          <div id="campos-pj" style="display: none;">
+            <div class="mb-3">
+              <label class="form-label">Nome Completo <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" name="nome_completo_pj">
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">CNPJ <span class="text-danger">*</span></label>
+                <input type="text" class="form-control" name="cnpj" id="cnpj" maxlength="18">
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Nacionalidade <span class="text-danger">*</span></label>
+                <select class="form-select" name="nacionalidade_pj">
+                  <option value="brasileiro">Brasileiro</option>
+                  <option value="estrangeiro">Estrangeiro</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Regime Tributário</label>
+                <select class="form-select" name="regime_tributario">
+                  <option value="">Selecione...</option>
+                  <option value="normal">Normal</option>
+                  <option value="simples">Simples</option>
+                </select>
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Inscrição Estadual</label>
+                <select class="form-select" name="inscricao_estadual">
+                  <option value="">Selecione...</option>
+                  <option value="contribuinte">Contribuinte de ICMS</option>
+                  <option value="nao_contribuinte">Não contribuinte de ICMS</option>
+                  <option value="isento">Isento de inscrição</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Inscrição Municipal</label>
+              <input type="text" class="form-control" name="inscricao_municipal_pj">
+            </div>
+            
+            <div class="mb-3">
+              <label class="form-label">Como nos conheceu?</label>
+              <select class="form-select" name="como_conheceu_pj">
+                <option value="">Selecione...</option>
+                <option value="rua">Passando na rua</option>
+                <option value="facebook">Facebook</option>
+                <option value="site">Site</option>
+                <option value="instagram">Instagram</option>
+                <option value="indicacao">Indicação</option>
+                <option value="outros">Outros</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Etapa 2: Contatos -->
+        <div class="wizard-step" id="step-2" style="display: none;">
+          <h4 class="mb-3">Contatos</h4>
+          
+          <div class="mb-3">
+            <label class="form-label">Celular <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="celular2" id="celular2">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Este número é WhatsApp? <span class="text-danger">*</span></label>
+            <div class="form-selectgroup form-selectgroup-boxes d-flex">
+              <label class="form-selectgroup-item flex-fill">
+                <input type="radio" name="celular_whatsapp2" value="true" class="form-selectgroup-input" checked>
+                <div class="form-selectgroup-label text-center">Sim</div>
+              </label>
+              <label class="form-selectgroup-item flex-fill">
+                <input type="radio" name="celular_whatsapp2" value="false" class="form-selectgroup-input">
+                <div class="form-selectgroup-label text-center">Não</div>
+              </label>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" name="obs_contato" rows="2"></textarea>
+          </div>
+          
+          <hr class="my-4">
+          
+          <h5 class="mb-3">Contato Adicional</h5>
+          
+          <div class="mb-3">
+            <label class="form-label">E-mail <span class="text-danger">*</span></label>
+            <input type="email" class="form-control" name="email2">
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" name="obs_email" rows="2"></textarea>
+          </div>
+          
+          <div id="contatos-adicionais-container"></div>
+          
+          <button type="button" class="btn btn-outline-primary w-100" id="btn-adicionar-contato">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+            Adicionar outro contato
+          </button>
+        </div>
+        
+        <!-- Etapa 3: Endereço -->
+        <div class="wizard-step" id="step-3" style="display: none;">
+          <h4 class="mb-3">Endereço</h4>
+          
+          <div class="mb-3">
+            <label class="form-label">CEP</label>
+            <input type="text" class="form-control" name="cep" id="cep" maxlength="9">
+            <small class="form-hint">
+              Digite o CEP para preencher o endereço automaticamente. Caso necessário consulte diretamente nos 
+              <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank">Correios</a>.
+            </small>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Endereço</label>
+            <input type="text" class="form-control" name="endereco" id="endereco">
+          </div>
+          
+          <div class="row">
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Número</label>
+              <input type="text" class="form-control" name="numero">
+            </div>
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Complemento</label>
+              <input type="text" class="form-control" name="complemento">
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Bairro</label>
+            <input type="text" class="form-control" name="bairro" id="bairro">
+          </div>
+          
+          <div class="row">
+            <div class="col-md-8 mb-3">
+              <label class="form-label">Cidade</label>
+              <input type="text" class="form-control" name="cidade" id="cidade">
+            </div>
+            <div class="col-md-4 mb-3">
+              <label class="form-label">Estado</label>
+              <select class="form-select" name="estado" id="estado">
+                <option value="">UF</option>
+                <option value="AC">AC</option>
+                <option value="AL">AL</option>
+                <option value="AP">AP</option>
+                <option value="AM">AM</option>
+                <option value="BA">BA</option>
+                <option value="CE">CE</option>
+                <option value="DF">DF</option>
+                <option value="ES">ES</option>
+                <option value="GO">GO</option>
+                <option value="MA">MA</option>
+                <option value="MT">MT</option>
+                <option value="MS">MS</option>
+                <option value="MG">MG</option>
+                <option value="PA">PA</option>
+                <option value="PB">PB</option>
+                <option value="PR">PR</option>
+                <option value="PE">PE</option>
+                <option value="PI">PI</option>
+                <option value="RJ">RJ</option>
+                <option value="RN">RN</option>
+                <option value="RS">RS</option>
+                <option value="RO">RO</option>
+                <option value="RR">RR</option>
+                <option value="SC">SC</option>
+                <option value="SP">SP</option>
+                <option value="SE">SE</option>
+                <option value="TO">TO</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Ponto de Referência</label>
+            <input type="text" class="form-control" name="ponto_referencia">
+          </div>
+        </div>
+        
+        <!-- Etapa 4: Informações Complementares -->
+        <div class="wizard-step" id="step-4" style="display: none;">
+          <h4 class="mb-3">Informações Complementares</h4>
+          
+          <div class="mb-3">
+            <label class="form-label">Marcações</label>
+            <input type="text" class="form-control" name="tags" id="tags-input" placeholder="Digite e pressione Enter">
+            <small class="form-hint">Fixe informações como "Bom pagador" ou "Cliente fiel" que serão exibidas nas telas de Clientes, Agenda e PDV.</small>
+            <div id="tags-display" class="mt-2"></div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" name="observacoes" rows="4"></textarea>
+          </div>
+          
+          <hr class="my-4">
+          
+          <h5 class="mb-3">Área de Privacidade</h5>
+          
+          <div class="mb-3">
+            <label class="form-label d-flex align-items-center justify-content-between">
+              <span>Aceita receber Emails?</span>
+              <label class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" name="aceita_email" checked>
+              </label>
+            </label>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label d-flex align-items-center justify-content-between">
+              <span>Aceita receber SMS?</span>
+              <label class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" name="aceita_sms" checked>
+              </label>
+            </label>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label d-flex align-items-center justify-content-between">
+              <span>Aceita receber WhatsApp?</span>
+              <label class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" name="aceita_whatsapp" checked>
+              </label>
+            </label>
+          </div>
+        </div>
+        
+        <!-- Etapa 5: Animais -->
+        <div class="wizard-step" id="step-5" style="display: none;">
+          <h4 class="mb-3">Animais</h4>
+          
+          <div class="empty">
+            <div class="empty-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/><path d="M12 3a2 2 0 0 0 0 4"/></svg>
+            </div>
+            <p class="empty-title">Adicione animais ao cadastro</p>
+            <p class="empty-subtitle text-secondary">Você poderá adicionar os animais deste cliente após criar o cadastro.</p>
+          </div>
+          
+          <button type="button" class="btn btn-outline-primary w-100" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+            Adicionar Novo Animal
+          </button>
+        </div>
+      </div>
+      
+      <!-- Botões de Navegação -->
+      <div class="wizard-footer p-3 border-top d-flex justify-content-between">
+        <button type="button" class="btn" id="btn-prev-step" style="display: none;">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+          Anterior
+        </button>
+        <div class="ms-auto">
+          <button type="button" class="btn btn-primary" id="btn-next-step">
+            Próximo
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+          </button>
+          <button type="submit" class="btn btn-success" id="btn-submit" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
+            Criar Cliente
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de Confirmação para Descartar -->
+<div class="modal modal-blur fade" id="modal-discard-confirm" tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/></svg>
+        <h3>Descartar alterações?</h3>
+        <div class="text-secondary">Você tem alterações não salvas. Deseja realmente descartar?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal" id="btn-continuar-editando">Continuar editando</button></div>
+            <div class="col"><button type="button" class="btn btn-warning w-100" id="btn-descartar">Descartar</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Exclusão -->
+<div class="modal modal-blur fade" id="modal-delete-confirm" tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/></svg>
+        <h3>Tem certeza?</h3>
+        <div class="text-secondary">Deseja realmente excluir o cliente <strong id="delete-client-name"></strong>? Esta ação não pode ser desfeita.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-danger w-100" id="confirm-delete-btn">Excluir</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<form id="form-delete-client" method="post" style="display:none;">
+  {% csrf_token %}
+</form>
+
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.steps {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+}
+
+.step {
+  flex: 1;
+  text-align: center;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e9ecef;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 14px;
+  margin-bottom: 4px;
+  position: relative;
+  z-index: 2;
+}
+
+.step-title {
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.step.active .step-number {
+  background: #206bc4;
+  color: white;
+}
+
+.step.active .step-title {
+  color: #206bc4;
+  font-weight: 600;
+}
+
+.step.completed .step-number {
+  background: #2fb344;
+  color: white;
+}
+
+.step.completed .step-title {
+  color: #2fb344;
+}
+
+#tags-display .badge {
+  margin-right: 4px;
+  margin-bottom: 4px;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  let currentStep = 1;
+  let formModified = false;
+  let wizardOffcanvas = null;
+  let deleteClientId = null;
+  const totalSteps = 5;
+  const tagsArray = [];
+  
+  // Inicializar offcanvas
+  const wizardEl = document.getElementById('wizard-cliente');
+  wizardOffcanvas = new bootstrap.Offcanvas(wizardEl);
+  
+  // Abrir wizard
+  document.getElementById('btn-novo-cliente').addEventListener('click', function() {
+    wizardOffcanvas.show();
+    updateStepDisplay();
+  });
+  
+  // Detectar modificações no formulário
+  document.getElementById('form-wizard-cliente').addEventListener('input', function() {
+    formModified = true;
+  });
+  
+  // Botão de fechar wizard
+  document.getElementById('wizard-close-btn').addEventListener('click', function(e) {
+    e.preventDefault();
+    if (formModified) {
+      const modal = new bootstrap.Modal(document.getElementById('modal-discard-confirm'));
+      modal.show();
+    } else {
+      wizardOffcanvas.hide();
+    }
+  });
+  
+  // Continuar editando
+  document.getElementById('btn-continuar-editando').addEventListener('click', function() {
+    bootstrap.Modal.getInstance(document.getElementById('modal-discard-confirm')).hide();
+  });
+  
+  // Descartar alterações
+  document.getElementById('btn-descartar').addEventListener('click', function() {
+    bootstrap.Modal.getInstance(document.getElementById('modal-discard-confirm')).hide();
+    wizardOffcanvas.hide();
+    resetWizard();
+  });
+  
+  // Navegação entre etapas
+  document.getElementById('btn-next-step').addEventListener('click', function() {
+    if (currentStep < totalSteps) {
+      currentStep++;
+      updateStepDisplay();
+    }
+  });
+  
+  document.getElementById('btn-prev-step').addEventListener('click', function() {
+    if (currentStep > 1) {
+      currentStep--;
+      updateStepDisplay();
+    }
+  });
+  
+  function updateStepDisplay() {
+    // Atualizar indicador de progresso
+    document.querySelectorAll('.step').forEach(step => {
+      const stepNum = parseInt(step.dataset.step);
+      step.classList.remove('active', 'completed');
+      if (stepNum === currentStep) {
+        step.classList.add('active');
+      } else if (stepNum < currentStep) {
+        step.classList.add('completed');
+      }
+    });
+    
+    // Mostrar/ocultar etapas
+    document.querySelectorAll('.wizard-step').forEach(step => {
+      step.style.display = 'none';
+    });
+    document.getElementById('step-' + currentStep).style.display = 'block';
+    
+    // Atualizar botões
+    document.getElementById('btn-prev-step').style.display = currentStep === 1 ? 'none' : 'inline-block';
+    document.getElementById('btn-next-step').style.display = currentStep === totalSteps ? 'none' : 'inline-block';
+    document.getElementById('btn-submit').style.display = currentStep === totalSteps ? 'inline-block' : 'none';
+  }
+  
+  // Toggle entre Pessoa Física e Jurídica
+  document.querySelectorAll('input[name="tipo"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+      const tipo = this.value;
+      document.getElementById('campos-pf').style.display = tipo === 'PF' ? 'block' : 'none';
+      document.getElementById('campos-pj').style.display = tipo === 'PJ' ? 'block' : 'none';
+    });
+  });
+  
+  // Máscaras
+  document.getElementById('cpf')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      e.target.value = value;
+    }
+  });
+  
+  document.getElementById('cnpj')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 14) {
+      value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+      value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+      value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+      value = value.replace(/(\d{4})(\d)/, '$1-$2');
+      e.target.value = value;
+    }
+  });
+  
+  document.getElementById('celular')?.addEventListener('input', formatPhone);
+  document.getElementById('celular2')?.addEventListener('input', formatPhone);
+  
+  function formatPhone(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+      value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+      value = value.replace(/(\d{5})(\d)/, '$1-$2');
+      e.target.value = value;
+    }
+  }
+  
+  document.getElementById('cep')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 8) {
+      value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+      e.target.value = value;
+    }
+  });
+  
+  // Buscar CEP
+  document.getElementById('cep')?.addEventListener('blur', function() {
+    const cep = this.value.replace(/\D/g, '');
+    if (cep.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+          if (!data.erro) {
+            document.getElementById('endereco').value = data.logradouro;
+            document.getElementById('bairro').value = data.bairro;
+            document.getElementById('cidade').value = data.localidade;
+            document.getElementById('estado').value = data.uf;
+          }
+        })
+        .catch(error => console.error('Erro ao buscar CEP:', error));
+    }
+  });
+  
+  // Sistema de Tags
+  document.getElementById('tags-input')?.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const tag = this.value.trim();
+      if (tag && !tagsArray.includes(tag)) {
+        tagsArray.push(tag);
+        updateTagsDisplay();
+        this.value = '';
+      }
+    }
+  });
+  
+  function updateTagsDisplay() {
+    const container = document.getElementById('tags-display');
+    container.innerHTML = '';
+    tagsArray.forEach((tag, index) => {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-blue-lt';
+      badge.innerHTML = `${tag} <a href="#" class="text-reset ms-1" onclick="removeTag(${index}); return false;">&times;</a>`;
+      container.appendChild(badge);
+    });
+  }
+  
+  window.removeTag = function(index) {
+    tagsArray.splice(index, 1);
+    updateTagsDisplay();
+  };
+  
+  // Adicionar contato adicional
+  let contatoCount = 0;
+  document.getElementById('btn-adicionar-contato')?.addEventListener('click', function() {
+    contatoCount++;
+    const container = document.getElementById('contatos-adicionais-container');
+    const div = document.createElement('div');
+    div.className = 'card mb-3';
+    div.innerHTML = `
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Contato Adicional ${contatoCount}</h6>
+          <button type="button" class="btn btn-sm btn-ghost-danger" onclick="this.closest('.card').remove()">Remover</button>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Tipo</label>
+          <select class="form-select contato-tipo" name="contato_tipo_${contatoCount}">
+            <option value="">Selecione...</option>
+            <option value="celular">Celular</option>
+            <option value="email">E-mail</option>
+            <option value="telefone_residencial">Telefone Residencial</option>
+            <option value="telefone_comercial">Telefone Comercial</option>
+            <option value="outros">Outros</option>
+          </select>
+        </div>
+        <div class="contato-campos-${contatoCount}"></div>
+      </div>
+    `;
+    container.appendChild(div);
+    
+    // Handler para mudança de tipo
+    div.querySelector('.contato-tipo').addEventListener('change', function() {
+      const tipo = this.value;
+      const camposDiv = div.querySelector(`.contato-campos-${contatoCount}`);
+      
+      if (tipo === 'celular') {
+        camposDiv.innerHTML = `
+          <div class="mb-2">
+            <label class="form-label">Celular</label>
+            <input type="text" class="form-control" name="contato_valor_${contatoCount}">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">É WhatsApp?</label>
+            <div class="form-selectgroup form-selectgroup-boxes d-flex">
+              <label class="form-selectgroup-item flex-fill">
+                <input type="radio" name="contato_whatsapp_${contatoCount}" value="true" class="form-selectgroup-input">
+                <div class="form-selectgroup-label text-center">Sim</div>
+              </label>
+              <label class="form-selectgroup-item flex-fill">
+                <input type="radio" name="contato_whatsapp_${contatoCount}" value="false" class="form-selectgroup-input">
+                <div class="form-selectgroup-label text-center">Não</div>
+              </label>
+            </div>
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" name="contato_obs_${contatoCount}" rows="2"></textarea>
+          </div>
+        `;
+      } else if (tipo) {
+        camposDiv.innerHTML = `
+          <div class="mb-2">
+            <label class="form-label">${tipo === 'email' ? 'E-mail' : 'Valor'}</label>
+            <input type="${tipo === 'email' ? 'email' : 'text'}" class="form-control" name="contato_valor_${contatoCount}">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" name="contato_obs_${contatoCount}" rows="2"></textarea>
+          </div>
+        `;
+      } else {
+        camposDiv.innerHTML = '';
+      }
+    });
+  });
+  
+  // Submit do formulário
+  document.getElementById('form-wizard-cliente').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const tipo = formData.get('tipo');
+    
+    // Consolidar campos baseado no tipo
+    if (tipo === 'PF') {
+      // Manter campos PF
+    } else if (tipo === 'PJ') {
+      formData.set('nome_completo', formData.get('nome_completo_pj'));
+      formData.set('nacionalidade', formData.get('nacionalidade_pj'));
+      formData.set('como_conheceu', formData.get('como_conheceu_pj'));
+      formData.set('inscricao_municipal', formData.get('inscricao_municipal_pj'));
+    }
+    
+    // Adicionar tags como string separada por vírgulas
+    formData.set('tags', tagsArray.join(', '));
+    
+    // Converter checkboxes em valores booleanos
+    formData.set('aceita_email', formData.has('aceita_email') ? 'true' : 'false');
+    formData.set('aceita_sms', formData.has('aceita_sms') ? 'true' : 'false');
+    formData.set('aceita_whatsapp', formData.has('aceita_whatsapp') ? 'true' : 'false');
+    formData.set('aceita_campanha_sms', formData.has('aceita_campanha_sms') ? 'true' : 'false');
+    
+    const submitBtn = document.getElementById('btn-submit');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Criando...';
+    
+    fetch('{% url "clients:create_ajax" %}', {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        wizardOffcanvas.hide();
+        resetWizard();
+        
+        // Mostrar mensagem de sucesso e recarregar
+        alert(data.message);
+        location.reload();
+      } else {
+        alert('Erro: ' + data.error);
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg> Criar Cliente';
+      }
+    })
+    .catch(error => {
+      alert('Erro ao criar cliente. Tente novamente.');
+      submitBtn.disabled = false;
+      submitBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg> Criar Cliente';
+    });
+  });
+  
+  function resetWizard() {
+    currentStep = 1;
+    formModified = false;
+    tagsArray.length = 0;
+    document.getElementById('form-wizard-cliente').reset();
+    document.getElementById('tags-display').innerHTML = '';
+    document.getElementById('contatos-adicionais-container').innerHTML = '';
+    updateStepDisplay();
+  }
+  
+  // Exclusão de cliente
+  window.confirmDelete = function(clientId, clientName) {
+    deleteClientId = clientId;
+    document.getElementById('delete-client-name').textContent = clientName;
+    const modal = new bootstrap.Modal(document.getElementById('modal-delete-confirm'));
+    modal.show();
+  };
+  
+  document.getElementById('confirm-delete-btn').addEventListener('click', function() {
+    if (!deleteClientId) return;
+    const form = document.getElementById('form-delete-client');
+    form.action = `/clientes/${deleteClientId}/excluir/`;
+    form.submit();
+  });
+});
+</script>
+{% endblock %}
