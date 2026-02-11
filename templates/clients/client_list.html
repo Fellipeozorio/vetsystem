@@ -350,7 +350,7 @@
           
           <div class="mb-3">
             <label class="form-label">E-mail <span class="text-danger">*</span></label>
-            <input type="email" class="form-control" name="email2" required>
+            <input type="email" class="form-control" id="email" name="email" required>
             <div class="invalid-feedback"></div>
           </div>
           
@@ -512,23 +512,23 @@
             Adicionar Novo Animal
           </button>
         </div>
-      </div>
-      
-      <!-- Botões de Navegação -->
-      <div class="wizard-footer px-3 py-1 border-top d-flex justify-content-between">
-        <button type="button" class="btn" id="btn-prev-step" style="display: none;">
-          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
-          Anterior
-        </button>
-        <div class="ms-auto">
-          <button type="button" class="btn btn-primary" id="btn-next-step">
-            Próximo
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+        
+        <!-- Botões de Navegação -->
+        <div class="d-flex justify-content-between px-0 py-3 mt-3 border-top">
+          <button type="button" class="btn" id="btn-prev-step" style="display: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+            Anterior
           </button>
-          <button type="submit" class="btn btn-success" id="btn-submit" style="display: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
-            Criar Cliente
-          </button>
+          <div class="ms-auto">
+            <button type="button" class="btn btn-primary" id="btn-next-step">
+              Próximo
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+            </button>
+            <button type="submit" class="btn btn-success" id="btn-submit" style="display: none;">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
+              Criar Cliente
+            </button>
+          </div>
         </div>
       </div>
     </form>
@@ -644,9 +644,7 @@
 .step-title {
   font-size: 12px;
   color: #6c757d;
-}
-
-.step.active .step-number {
+        margin-top: 4px;
   background: #206bc4;
   color: white;
 }

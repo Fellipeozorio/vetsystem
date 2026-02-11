@@ -323,15 +323,15 @@
 
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label class="form-label">Nacionalidade</label>
-            <select class="form-select" name="nacionalidade">
+            <label class="form-label">Nacionalidade <span class="text-danger">*</span></label>
+            <select class="form-select" name="nacionalidade" required>
               <option value="brasileiro" {% if client.nacionalidade == 'brasileiro' %}selected{% endif %}>Brasileiro</option>
               <option value="estrangeiro" {% if client.nacionalidade == 'estrangeiro' %}selected{% endif %}>Estrangeiro</option>
             </select>
           </div>
           <div class="col-md-6 mb-3">
-            <label class="form-label">Sexo</label>
-            <select class="form-select" name="sexo">
+            <label class="form-label">Sexo <span class="text-danger">*</span></label>
+            <select class="form-select" name="sexo" required>
               <option value="">Selecione...</option>
               <option value="M" {% if client.sexo == 'M' %}selected{% endif %}>Masculino</option>
               <option value="F" {% if client.sexo == 'F' %}selected{% endif %}>Feminino</option>
@@ -433,7 +433,7 @@
       
       <div class="mb-3">
         <label class="form-label required">Celular</label>
-        <input type="text" class="form-control" name="celular" value="{{ client.celular }}" required>
+        <input type="text" class="form-control" id="edit-celular" name="celular" value="{{ client.celular }}" required>
       </div>
 
       <div class="mb-3">
@@ -447,8 +447,8 @@
       </div>
 
       <div class="mb-3">
-        <label class="form-label">E-mail</label>
-        <input type="email" class="form-control" name="email" value="{{ client.email|default:'' }}">
+        <label class="form-label">E-mail <span class="text-danger">*</span></label>
+        <input type="email" class="form-control" name="email" value="{{ client.email|default:'' }}" required>
       </div>
 
       <hr class="my-4">
@@ -873,6 +873,19 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   }
+  
+  // Máscara de celular no modal de contatos
+  const editCelular = document.getElementById('edit-celular');
+  if (editCelular) {
+    editCelular.addEventListener('input', function(e) {
+      let value = e.target.value.replace(/\D/g, '');
+      if (value.length <= 11) {
+        value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+        value = value.replace(/(\d{5})(\d)/, '$1-$2');
+        e.target.value = value;
+      }
+    });
+  }
 });
 
 function addEditTagToDisplay(tag, display) {
@@ -916,6 +929,11 @@ document.getElementById('form-edit-info').addEventListener('submit', function(e)
   e.preventDefault();
   const formData = new FormData(this);
   
+  console.log('=== Editando Informações do Cliente ===');
+  for (let [key, value] of formData.entries()) {
+    console.log(`${key}: ${value}`);
+  }
+  
   fetch("{% url 'clients:update_ajax' client.id %}", {
     method: 'POST',
     body: formData,
@@ -941,6 +959,11 @@ document.getElementById('form-edit-info').addEventListener('submit', function(e)
 document.getElementById('form-edit-contatos').addEventListener('submit', function(e) {
   e.preventDefault();
   const formData = new FormData(this);
+  
+  console.log('=== Editando Contatos do Cliente ===');
+  for (let [key, value] of formData.entries()) {
+    console.log(`${key}: ${value}`);
+  }
   
   fetch("{% url 'clients:update_ajax' client.id %}", {
     method: 'POST',
