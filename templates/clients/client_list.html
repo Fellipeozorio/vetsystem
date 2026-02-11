@@ -178,14 +178,12 @@
               <label class="btn btn-outline-primary" for="tipo-pf">
                 <div>
                   <strong>Pessoa Física</strong>
-                  <span class="d-block text-secondary small">Cliente individual</span>
                 </div>
               </label>
               <input type="radio" class="btn-check" name="tipo" id="tipo-pj" value="PJ" autocomplete="off">
               <label class="btn btn-outline-primary" for="tipo-pj">
                 <div>
                   <strong>Pessoa Jurídica</strong>
-                  <span class="d-block text-secondary small">Empresa ou organização</span>
                 </div>
               </label>
             </div>
@@ -327,7 +325,8 @@
           
           <div class="mb-3">
             <label class="form-label">Celular <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" name="celular2" id="celular2">
+            <input type="text" class="form-control" name="celular2" id="celular2" required>
+            <div class="invalid-feedback"></div>
           </div>
           
           <div class="mb-3">
@@ -351,7 +350,8 @@
           
           <div class="mb-3">
             <label class="form-label">E-mail <span class="text-danger">*</span></label>
-            <input type="email" class="form-control" name="email2">
+            <input type="email" class="form-control" name="email2" required>
+            <div class="invalid-feedback"></div>
           </div>
           
           <div class="mb-3">
@@ -515,7 +515,7 @@
       </div>
       
       <!-- Botões de Navegação -->
-      <div class="wizard-footer px-3 py-2 border-top d-flex justify-content-between">
+      <div class="wizard-footer px-3 py-1 border-top d-flex justify-content-between">
         <button type="button" class="btn" id="btn-prev-step" style="display: none;">
           <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
           Anterior
@@ -616,15 +616,7 @@
 }
 
 .steps::before {
-  content: '';
-  position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 2px;
-        background: #e9ecef;
-        z-index: 0;
-        transform: translateY(-50%);
+  display: none;
   flex: 1;
   text-align: center;
   position: relative;
@@ -990,16 +982,12 @@ document.addEventListener('DOMContentLoaded', function() {
             <input type="text" class="form-control" name="contato_valor_${contatoCount}">
           </div>
           <div class="mb-2">
-            <label class="form-label">É WhatsApp?</label>
-            <div class="form-selectgroup form-selectgroup-boxes d-flex">
-              <label class="form-selectgroup-item flex-fill">
-                <input type="radio" name="contato_whatsapp_${contatoCount}" value="true" class="form-selectgroup-input">
-                <div class="form-selectgroup-label text-center">Sim</div>
-              </label>
-              <label class="form-selectgroup-item flex-fill">
-                <input type="radio" name="contato_whatsapp_${contatoCount}" value="false" class="form-selectgroup-input">
-                <div class="form-selectgroup-label text-center">Não</div>
-              </label>
+            <label class="form-label">Este Número é WhatsApp?</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="contato_whatsapp_${contatoCount}" id="contato-whatsapp-sim-${contatoCount}" value="true" checked autocomplete="off">
+              <label class="btn btn-outline-secondary" for="contato-whatsapp-sim-${contatoCount}">Sim</label>
+              <input type="radio" class="btn-check" name="contato_whatsapp_${contatoCount}" id="contato-whatsapp-nao-${contatoCount}" value="false" autocomplete="off">
+              <label class="btn btn-outline-secondary" for="contato-whatsapp-nao-${contatoCount}">Não</label>
             </div>
           </div>
           <div class="mb-2">

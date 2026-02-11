@@ -12,12 +12,6 @@
           <a href="{% url 'clients:list' %}">Clientes</a>
         </div>
         <h2 class="page-title">{{ client.nome_completo }}</h2>
-        <div class="text-secondary mt-1">
-          <span class="badge bg-blue-lt">Código: {{ client.codigo }}</span>
-          <span class="badge {% if client.tipo == 'PF' %}bg-green-lt{% else %}bg-purple-lt{% endif %}">
-            {{ client.get_tipo_display }}
-          </span>
-        </div>
       </div>
       <div class="col-auto ms-auto d-print-none">
         <div class="btn-list">
@@ -331,9 +325,8 @@
           <div class="col-md-6 mb-3">
             <label class="form-label">Nacionalidade</label>
             <select class="form-select" name="nacionalidade">
-              <option value="">Selecione...</option>
-              <option value="BR" {% if client.nacionalidade == 'BR' %}selected{% endif %}>Brasileiro</option>
-              <option value="OUT" {% if client.nacionalidade == 'OUT' %}selected{% endif %}>Outro</option>
+              <option value="brasileiro" {% if client.nacionalidade == 'brasileiro' %}selected{% endif %}>Brasileiro</option>
+              <option value="estrangeiro" {% if client.nacionalidade == 'estrangeiro' %}selected{% endif %}>Estrangeiro</option>
             </select>
           </div>
           <div class="col-md-6 mb-3">
@@ -342,7 +335,6 @@
               <option value="">Selecione...</option>
               <option value="M" {% if client.sexo == 'M' %}selected{% endif %}>Masculino</option>
               <option value="F" {% if client.sexo == 'F' %}selected{% endif %}>Feminino</option>
-              <option value="O" {% if client.sexo == 'O' %}selected{% endif %}>Outro</option>
             </select>
           </div>
         </div>
@@ -420,31 +412,6 @@
         <textarea class="form-control" name="observacoes" rows="4">{{ client.observacoes|default:'' }}</textarea>
       </div>
 
-      <!-- Privacidade -->
-      <hr class="my-4">
-      <h4 class="mb-3">Privacidade</h4>
-      
-      <div class="mb-2">
-        <label class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" name="aceita_email" {% if client.aceita_email %}checked{% endif %}>
-          <span class="form-check-label">Aceita E-mail</span>
-        </label>
-      </div>
-      
-      <div class="mb-2">
-        <label class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" name="aceita_sms" {% if client.aceita_sms %}checked{% endif %}>
-          <span class="form-check-label">Aceita SMS</span>
-        </label>
-      </div>
-      
-      <div class="mb-2">
-        <label class="form-check form-switch">
-          <input class="form-check-input" type="checkbox" name="aceita_whatsapp" {% if client.aceita_whatsapp %}checked{% endif %}>
-          <span class="form-check-label">Aceita WhatsApp</span>
-        </label>
-      </div>
-      
       <div class="d-grid">
         <button type="submit" class="btn btn-primary">Salvar Alterações</button>
       </div>
@@ -651,7 +618,7 @@
         </div>
       </a>
       
-      <a href="#" class="list-group-item list-group-item-action text-danger" onclick="confirmDelete({{ client.id }}, '{{ client.nome_completo|escapejs }}'); return false;">
+      <a href="#" class="list-group-item list-group-item-action text-danger" onclick="showDeleteModal({{ client.id }}, '{{ client.nome_completo|escapejs }}'); return false;">
         <div class="d-flex align-items-center">
           <svg xmlns="http://www.w3.org/2000/svg" class="icon me-3" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
           <div>
@@ -660,6 +627,29 @@
           </div>
         </div>
       </a>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal modal-blur fade" id="modal-delete-danger" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/></svg>
+        <h3>Confirmar exclusão</h3>
+        <div class="text-secondary" id="delete-client-name"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-danger w-100" id="confirm-delete-btn">Excluir</button></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -726,6 +716,17 @@
   </div>
 </div>
 
+<style>
+/* Hover nos itens do offcanvas mais ações */
+#offcanvas-more-actions .list-group-item-action:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+#offcanvas-more-actions .list-group-item-action.text-danger:hover {
+  background-color: rgba(214, 57, 57, 0.1);
+}
+</style>
+
 <script>
 // Função para abrir modais de edição
 window.openEditModal = function(section) {
@@ -747,7 +748,15 @@ window.openPrivacyModal = function() {
 
 // Função para confirmar exclusão
 window.confirmDelete = function(clientId, clientName) {
-  if (confirm(`Tem certeza que deseja excluir o cliente "${clientName}"? Esta ação não pode ser desfeita.`)) {
+  showDeleteModal(clientId, clientName);
+};
+
+// Função para mostrar modal de exclusão
+window.showDeleteModal = function(clientId, clientName) {
+  const modal = new bootstrap.Modal(document.getElementById('modal-delete-danger'));
+  document.getElementById('delete-client-name').textContent = `Tem certeza que deseja excluir o cliente "${clientName}"? Esta ação não pode ser desfeita.`;
+  
+  document.getElementById('confirm-delete-btn').onclick = function() {
     // Criar formulário e submeter
     const form = document.createElement('form');
     form.method = 'POST';
@@ -763,7 +772,9 @@ window.confirmDelete = function(clientId, clientName) {
     
     document.body.appendChild(form);
     form.submit();
-  }
+  };
+  
+  modal.show();
 };
 // Toggle entre campos PF e PJ no modal de edição
 function toggleEditCampos() {
