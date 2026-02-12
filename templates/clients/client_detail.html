@@ -785,31 +785,9 @@ function toggleEditCampos() {
   if (tipoPF) {
     camposPF.style.display = 'block';
     camposPJ.style.display = 'none';
-    
-    // Habilitar required para campos PF
-    camposPF.querySelectorAll('input[data-required="true"], select[data-required="true"]').forEach(field => {
-      field.required = true;
-    });
-    
-    // Desabilitar required para campos PJ
-    camposPJ.querySelectorAll('input[required], select[required]').forEach(field => {
-      field.dataset.required = 'true';
-      field.required = false;
-    });
   } else {
     camposPF.style.display = 'none';
     camposPJ.style.display = 'block';
-    
-    // Desabilitar required para campos PF
-    camposPF.querySelectorAll('input[required], select[required]').forEach(field => {
-      field.dataset.required = 'true';
-      field.required = false;
-    });
-    
-    // Habilitar required para campos PJ
-    camposPJ.querySelectorAll('input[data-required="true"], select[data-required="true"]').forEach(field => {
-      field.required = true;
-    });
   }
 }
 

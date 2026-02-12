@@ -140,28 +140,49 @@
     <form id="form-wizard-cliente">
       {% csrf_token %}
       
-      <!-- Indicador de Progresso - Tabler Steps -->
-      <div class="steps steps-blue p-3 border-bottom">
-        <a href="#" class="step-item" data-step="1">
-          <span class="h4">1</span>
-          Informações
-        </a>
-        <a href="#" class="step-item" data-step="2">
-          <span class="h4">2</span>
-          Contatos
-        </a>
-        <a href="#" class="step-item" data-step="3">
-          <span class="h4">3</span>
-          Endereço
-        </a>
-        <a href="#" class="step-item" data-step="4">
-          <span class="h4">4</span>
-          Complementares
-        </a>
-        <a href="#" class="step-item" data-step="5">
-          <span class="h4">5</span>
-          Animais
-        </a>
+      <!-- Indicador de Progresso Moderno -->
+      <div class="modern-steps-container p-4 border-bottom bg-light">
+        <div class="modern-steps">
+          <div class="step-item" data-step="1">
+            <div class="step-circle">
+              <span class="step-num">1</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Informações</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="2">
+            <div class="step-circle">
+              <span class="step-num">2</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Contatos</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="3">
+            <div class="step-circle">
+              <span class="step-num">3</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Endereço</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="4">
+            <div class="step-circle">
+              <span class="step-num">4</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Complementares</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="5">
+            <div class="step-circle">
+              <span class="step-num">5</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Animais</div>
+          </div>
+        </div>
       </div>
       
       <!-- Conteúdo das Etapas -->
@@ -609,88 +630,122 @@
 
 {% block extra_js %}
 <style>
-/* Steps do Tabler */
-.steps {
-  display: flex;
-  flex-wrap: wrap;
-  padding: 0;
-  margin: 0;
-  list-style: none;
+/* Modern Steps Container */
+.modern-steps-container {
+  background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
 }
 
-.steps-blue .step-item.active {
+.modern-steps {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  position: relative;
+  max-width: 100%;
+}
+
+.step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  position: relative;
+}
+
+.step-circle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #dee2e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.step-num {
+  font-size: 18px;
+  font-weight: 600;
+  color: #6c757d;
+  transition: all 0.3s ease;
+}
+
+.step-check {
+  display: none;
+  color: #fff;
+}
+
+.step-label {
+  margin-top: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #6c757d;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.step-line {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  width: 100%;
+  height: 3px;
+  background: #dee2e6;
+  z-index: 1;
+  transition: all 0.4s ease;
+}
+
+.step-item:last-child .step-line {
+  display: none;
+}
+
+/* Active State */
+.step-item.active .step-circle {
+  background: #206bc4;
+  border-color: #206bc4;
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(32, 107, 196, 0.3);
+}
+
+.step-item.active .step-num {
+  color: #fff;
+}
+
+.step-item.active .step-label {
   color: #206bc4;
   font-weight: 600;
 }
 
-.step-item {
-  position: relative;
-  flex: 1 1 0;
-  min-width: 0;
-  padding: 1rem 0.5rem;
-  margin: 0;
-  color: #626976;
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  background: none;
-  border: 0;
-  transition: color 0.3s;
+/* Completed State */
+.step-item.completed .step-circle {
+  background: #2fb344;
+  border-color: #2fb344;
+  animation: checkPulse 0.5s ease;
 }
 
-.step-item:hover {
-  color: #1f2937;
-  text-decoration: none;
-}
-
-.step-item .h4 {
-  margin: 0 0 0.25rem;
-  font-size: 1.5rem;
-  font-weight: 400;
-}
-
-.step-item.active .h4 {
-  font-weight: 600;
-}
-
-.step-item::before {
-  position: absolute;
-  top: 2rem;
-  left: 0;
-  width: 100%;
-  height: 2px;
-  content: "";
-  background: #e6e7e9;
-  transform: translateY(-50%);
-}
-
-.step-item:first-child::before {
-  left: 50%;
-  width: 50%;
-}
-
-.step-item:last-child::before {
-  width: 50%;
-}
-
-.step-item.active ~ .step-item::before {
-  background: #e6e7e9;
-}
-
-.step-item.active::before {
-  background: #206bc4;
-}
-
-.steps-blue .step-item.active::before {
-  background: #206bc4;
-}
-
-.wizard-step {
+.step-item.completed .step-num {
   display: none;
 }
 
-.wizard-step.active {
+.step-item.completed .step-check {
   display: block;
+}
+
+.step-item.completed .step-label {
+  color: #2fb344;
+}
+
+.step-item.completed .step-line {
+  background: #2fb344;
+}
+
+@keyframes checkPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+  100% { transform: scale(1); }
 }
 
 #tags-display .badge {
@@ -848,25 +903,22 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   function updateStepDisplay() {
-    // Atualizar indicador de progresso - Tabler Steps
+    // Atualizar indicador de progresso moderno
     document.querySelectorAll('.step-item').forEach(step => {
       const stepNum = parseInt(step.dataset.step);
-      step.classList.remove('active');
+      step.classList.remove('active', 'completed');
       if (stepNum === currentStep) {
         step.classList.add('active');
+      } else if (stepNum < currentStep) {
+        step.classList.add('completed');
       }
     });
     
     // Mostrar/ocultar etapas
     document.querySelectorAll('.wizard-step').forEach(step => {
-      step.classList.remove('active');
       step.style.display = 'none';
     });
-    const activeStep = document.getElementById('step-' + currentStep);
-    if (activeStep) {
-      activeStep.classList.add('active');
-      activeStep.style.display = 'block';
-    }
+    document.getElementById('step-' + currentStep).style.display = 'block';
     
     // Atualizar botões
     document.getElementById('btn-prev-step').style.display = currentStep === 1 ? 'none' : 'inline-block';
