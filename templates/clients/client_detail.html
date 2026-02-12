@@ -364,7 +364,7 @@
         </div>
 
         <div class="mb-3">
-          <label class="form-label required">CNPJ</label>
+          <label class="form-label required">CNPJ <span class="text-danger">*</span></label>
           <input type="text" class="form-control" name="cnpj" value="{{ client.cnpj }}" required>
         </div>
 
@@ -792,44 +792,163 @@ function toggleEditCampos() {
 }
 
 // Adicionar contato adicional no modal de edição
+let editContatoCount = 0;
 function addEditContatoAdicional() {
+  editContatoCount++;
   const container = document.getElementById('edit-contatos-adicionais-container');
-  const html = `
-    <div class="card mb-3">
-      <div class="card-body">
-        <div class="row">
-          <div class="col-md-4 mb-2">
-            <select class="form-select" name="contatos_adicionais_tipo[]">
-              <option value="CEL">Celular</option>
-              <option value="TEL">Telefone</option>
-              <option value="EMAIL">E-mail</option>
-              <option value="OUT">Outro</option>
-            </select>
-          </div>
-          <div class="col-md-8 mb-2">
-            <input type="text" class="form-control" name="contatos_adicionais_valor[]" placeholder="Contato">
-          </div>
-        </div>
-        <div class="row">
-          <div class="col-md-8 mb-2">
-            <input type="text" class="form-control" name="contatos_adicionais_obs[]" placeholder="Observações (ex: Comercial)">
-          </div>
-          <div class="col-md-4 mb-2">
-            <div class="form-check form-switch">
-              <input class="form-check-input" type="checkbox" name="contatos_adicionais_whatsapp[]">
-              <label class="form-check-label">WhatsApp</label>
-            </div>
-          </div>
-        </div>
-        <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.card').remove()">Remover</button>
+  const div = document.createElement('div');
+  div.className = 'card mb-3';
+  div.innerHTML = `
+    <div class="card-body">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0">Contato Adicional</h6>
+        <button type="button" class="btn btn-sm btn-ghost-danger" onclick="this.closest('.card').remove()">Remover</button>
       </div>
+      <div class="mb-2">
+        <label class="form-label">Tipo</label>
+        <select class="form-select edit-contato-tipo" data-count="${editContatoCount}">
+          <option value="">Selecione...</option>
+          <option value="celular">Celular</option>
+          <option value="email">E-mail</option>
+          <option value="telefone_residencial">Telefone Residencial</option>
+          <option value="telefone_comercial">Telefone Comercial</option>
+          <option value="outros">Outros</option>
+        </select>
+      </div>
+      <div class="edit-contato-campos-${editContatoCount}"></div>
     </div>
   `;
-  container.insertAdjacentHTML('beforeend', html);
+  container.appendChild(div);
+  
+  // Handler para mudança de tipo
+  div.querySelector('.edit-contato-tipo').addEventListener('change', function() {
+    const tipo = this.value;
+    const count = this.dataset.count;
+    const camposDiv = div.querySelector(`.edit-contato-campos-${count}`);
+    
+    if (tipo === 'celular') {
+      camposDiv.innerHTML = `
+        <div class="mb-2">
+          <label class="form-label">Celular</label>
+          <input type="text" class="form-control edit-contato-phone-mask" name="contato_valor_${count}">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Este Número é WhatsApp?</label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-sim-${count}" value="true" checked autocomplete="off">
+            <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-sim-${count}">Sim</label>
+            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-nao-${count}" value="false" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-nao-${count}">Não</label>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Observações</label>
+          <textarea class="form-control" name="contato_obs_${count}" rows="2"></textarea>
+        </div>
+      `;
+      // Aplicar máscara
+      setTimeout(() => {
+        const phoneInput = camposDiv.querySelector('.edit-contato-phone-mask');
+        if (phoneInput) {
+          phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+              value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+              value = value.replace(/(\d{5})(\d)/, '$1-$2');
+              e.target.value = value;
+            }
+          });
+        }
+      }, 10);
+    } else if (tipo === 'telefone_residencial' || tipo === 'telefone_comercial') {
+      const tipoLabel = tipo === 'telefone_residencial' ? 'Telefone Residencial' : 'Telefone Comercial';
+      camposDiv.innerHTML = `
+        <div class="mb-2">
+          <label class="form-label">${tipoLabel}</label>
+          <input type="text" class="form-control edit-contato-phone-mask" name="contato_valor_${count}">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Este Número é WhatsApp?</label>
+          <div class="btn-group w-100" role="group">
+            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-sim-${count}" value="true" autocomplete="off">
+            <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-sim-${count}">Sim</label>
+            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-nao-${count}" value="false" checked autocomplete="off">
+            <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-nao-${count}">Não</label>
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Observações</label>
+          <textarea class="form-control" name="contato_obs_${count}" rows="2"></textarea>
+        </div>
+      `;
+      // Aplicar máscara
+      setTimeout(() => {
+        const phoneInput = camposDiv.querySelector('.edit-contato-phone-mask');
+        if (phoneInput) {
+          phoneInput.addEventListener('input', function(e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length <= 11) {
+              value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+              value = value.replace(/(\d{5})(\d)/, '$1-$2');
+              e.target.value = value;
+            }
+          });
+        }
+      }, 10);
+    } else if (tipo) {
+      camposDiv.innerHTML = `
+        <div class="mb-2">
+          <label class="form-label">${tipo === 'email' ? 'E-mail' : 'Valor'}</label>
+          <input type="${tipo === 'email' ? 'email' : 'text'}" class="form-control" name="contato_valor_${count}">
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Observações</label>
+          <textarea class="form-control" name="contato_obs_${count}" rows="2"></textarea>
+        </div>
+      `;
+    } else {
+      camposDiv.innerHTML = '';
+    }
+  });
 }
 
 // Sistema de tags no modal de edição
 document.addEventListener('DOMContentLoaded', function() {
+  // Gerenciar campos required nos modais offcanvas
+  const offcanvasModals = ['modal-edit-info', 'modal-edit-contatos', 'modal-edit-endereco', 'modal-edit-privacy'];
+  
+  offcanvasModals.forEach(modalId => {
+    const modalEl = document.getElementById(modalId);
+    if (modalEl) {
+      modalEl.addEventListener('show.bs.offcanvas', function() {
+        // Habilitar required no modal que está abrindo
+        const requiredFields = this.querySelectorAll('[data-required="true"]');
+        requiredFields.forEach(field => field.required = true);
+      });
+      
+      modalEl.addEventListener('hide.bs.offcanvas', function() {
+        // Desabilitar required no modal que está fechando
+        const requiredFields = this.querySelectorAll('input[required], select[required]');
+        requiredFields.forEach(field => {
+          field.dataset.required = 'true';
+          field.required = false;
+        });
+      });
+    }
+  });
+  
+  // Inicialmente desabilitar required em todos os modais fechados
+  offcanvasModals.forEach(modalId => {
+    const modalEl = document.getElementById(modalId);
+    if (modalEl && !modalEl.classList.contains('show')) {
+      const requiredFields = modalEl.querySelectorAll('input[required], select[required]');
+      requiredFields.forEach(field => {
+        field.dataset.required = 'true';
+        field.required = false;
+      });
+    }
+  });
+  
   // Inicializar tags existentes
   const tagsHidden = document.getElementById('edit-tags-hidden');
   if (tagsHidden && tagsHidden.value) {
