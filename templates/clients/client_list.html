@@ -141,12 +141,12 @@
       {% csrf_token %}
       
       <!-- Indicador de Progresso Moderno -->
-      <div class="modern-steps-container p-4 border-bottom bg-light">
+      <div class="modern-steps-container p-3 bg-light">
         <div class="modern-steps">
           <div class="step-item" data-step="1">
             <div class="step-circle">
               <span class="step-num">1</span>
-              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <div class="step-label">Informações</div>
             <div class="step-line"></div>
@@ -154,7 +154,7 @@
           <div class="step-item" data-step="2">
             <div class="step-circle">
               <span class="step-num">2</span>
-              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <div class="step-label">Contatos</div>
             <div class="step-line"></div>
@@ -162,7 +162,7 @@
           <div class="step-item" data-step="3">
             <div class="step-circle">
               <span class="step-num">3</span>
-              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <div class="step-label">Endereço</div>
             <div class="step-line"></div>
@@ -170,7 +170,7 @@
           <div class="step-item" data-step="4">
             <div class="step-circle">
               <span class="step-num">4</span>
-              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <div class="step-label">Complementares</div>
             <div class="step-line"></div>
@@ -178,7 +178,7 @@
           <div class="step-item" data-step="5">
             <div class="step-circle">
               <span class="step-num">5</span>
-              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
             </div>
             <div class="step-label">Animais</div>
           </div>
@@ -652,11 +652,11 @@
 }
 
 .step-circle {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background: #fff;
-  border: 3px solid #dee2e6;
+  border: 2px solid #dee2e6;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -667,7 +667,7 @@
 }
 
 .step-num {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #6c757d;
   transition: all 0.3s ease;
@@ -679,8 +679,8 @@
 }
 
 .step-label {
-  margin-top: 10px;
-  font-size: 13px;
+  margin-top: 8px;
+  font-size: 12px;
   font-weight: 500;
   color: #6c757d;
   text-align: center;
@@ -689,10 +689,10 @@
 
 .step-line {
   position: absolute;
-  top: 24px;
+  top: 20px;
   left: 50%;
   width: 100%;
-  height: 3px;
+  height: 2px;
   background: #dee2e6;
   z-index: 1;
   transition: all 0.4s ease;
