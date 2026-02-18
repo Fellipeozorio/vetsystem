@@ -51,6 +51,51 @@ def client_list(request):
 
 
 @login_required
+@require_http_methods(["GET"])
+def check_duplicate(request):
+    """Verificar se CPF ou CNPJ já está cadastrado."""
+    document_type = request.GET.get('type', '').lower()
+    document_value = request.GET.get('value', '').strip()
+    
+    if not document_type or not document_value:
+        return JsonResponse({'exists': False})
+    
+    exists = False
+    message = ''
+    
+    # Buscar todos os clientes e comparar removendo formatação
+    if document_type == 'cpf':
+        from django.db.models import Q
+        import re
+        # Buscar clientes que tenham CPF
+        clients = Client.objects.filter(cpf__isnull=False).exclude(cpf='')
+        for client in clients:
+            # Remover formatação do CPF no banco
+            cpf_sem_formatacao = re.sub(r'\D', '', client.cpf or '')
+            if cpf_sem_formatacao == document_value:
+                exists = True
+                break
+        message = 'Já existe um cliente cadastrado com este CPF' if exists else ''
+    elif document_type == 'cnpj':
+        from django.db.models import Q
+        import re
+        # Buscar clientes que tenham CNPJ
+        clients = Client.objects.filter(cnpj__isnull=False).exclude(cnpj='')
+        for client in clients:
+            # Remover formatação do CNPJ no banco
+            cnpj_sem_formatacao = re.sub(r'\D', '', client.cnpj or '')
+            if cnpj_sem_formatacao == document_value:
+                exists = True
+                break
+        message = 'Já existe um cliente cadastrado com este CNPJ' if exists else ''
+    
+    return JsonResponse({
+        'exists': exists,
+        'message': message
+    })
+
+
+@login_required
 @require_http_methods(["POST"])
 def client_create_ajax(request):
     """Criar cliente via AJAX."""

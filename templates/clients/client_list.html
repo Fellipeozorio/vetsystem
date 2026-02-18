@@ -96,38 +96,7 @@
     </table>
   </div>
   
-  {% if clients.has_other_pages %}
-  <div class="card-footer d-flex align-items-center">
-    <p class="m-0 text-secondary">
-      Mostrando <span>{{ clients.start_index }}</span> a <span>{{ clients.end_index }}</span> de <span>{{ clients.paginator.count }}</span> clientes
-    </p>
-    <ul class="pagination m-0 ms-auto">
-      {% if clients.has_previous %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ clients.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}">
-          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
-          anterior
-        </a>
-      </li>
-      {% endif %}
-      {% for num in clients.paginator.page_range %}
-        {% if clients.number == num %}
-        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
-        {% elif num > clients.number|add:'-3' and num < clients.number|add:'3' %}
-        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}">{{ num }}</a></li>
-        {% endif %}
-      {% endfor %}
-      {% if clients.has_next %}
-      <li class="page-item">
-        <a class="page-link" href="?page={{ clients.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if tipo_filter %}&tipo={{ tipo_filter }}{% endif %}">
-          próximo
-          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
-        </a>
-      </li>
-      {% endif %}
-    </ul>
-  </div>
-  {% endif %}
+  
 </div>
 
 <!-- Wizard Lateral (Offcanvas) -->
@@ -136,7 +105,7 @@
     <h5 class="offcanvas-title">Novo Cliente</h5>
     <button type="button" class="btn-close" id="wizard-close-btn"></button>
   </div>
-  <div class="offcanvas-body p-0">
+  <div class="offcanvas-body p-0" style="position: relative;">
     <form id="form-wizard-cliente">
       {% csrf_token %}
       
@@ -186,7 +155,7 @@
       </div>
       
       <!-- Conteúdo das Etapas -->
-      <div class="wizard-content p-4" style="height: calc(100vh - 240px); overflow-y: auto;">
+      <div class="wizard-content p-4" style="height: calc(100vh - 220px); overflow-y: auto;">
         
         <!-- Etapa 1: Informações do Cliente -->
         <div class="wizard-step" id="step-1">
@@ -283,13 +252,14 @@
           <div id="campos-pj" style="display: none;">
             <div class="mb-3">
               <label class="form-label">Nome Completo <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" name="nome_completo_pj">
+              <input type="text" class="form-control" name="nome_completo_pj" required>
             </div>
             
             <div class="row">
               <div class="col-md-6 mb-3">
                 <label class="form-label">CNPJ <span class="text-danger">*</span></label>
-                <input type="text" class="form-control" name="cnpj" id="cnpj" maxlength="18">
+                <input type="text" class="form-control" name="cnpj" id="cnpj" maxlength="18" required>
+                <div class="invalid-feedback"></div>
               </div>
               <div class="col-md-6 mb-3">
                 <label class="form-label">Nacionalidade <span class="text-danger">*</span></label>
@@ -533,9 +503,11 @@
             Adicionar Novo Animal
           </button>
         </div>
-        
-        <!-- Botões de Navegação -->
-        <div class="d-flex justify-content-between px-0 py-3 mt-3 border-top">
+      </div>
+      
+      <!-- Botões de Navegação Fixos -->
+      <div class="wizard-footer border-top bg-white p-3" style="position: absolute; bottom: 0; left: 0; right: 0;">
+        <div class="d-flex justify-content-between">
           <button type="button" class="btn" id="btn-prev-step" style="display: none;">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
             Anterior
@@ -827,10 +799,10 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   
   // Navegação entre etapas
-  document.getElementById('btn-next-step').addEventListener('click', function() {
+  document.getElementById('btn-next-step').addEventListener('click', async function() {
     if (currentStep < totalSteps) {
       // Validar campos obrigatórios antes de avançar
-      if (!validateCurrentStep()) {
+      if (!(await validateCurrentStep())) {
         return;
       }
       currentStep++;
@@ -838,9 +810,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
-  function validateCurrentStep() {
+  async function validateCurrentStep() {
     const currentStepEl = document.getElementById('step-' + currentStep);
-    const requiredInputs = currentStepEl.querySelectorAll('[required]');
+    const allRequiredInputs = currentStepEl.querySelectorAll('[required]');
+    // Filtrar apenas inputs visíveis (ignorar campos PF/PJ ocultos)
+    const requiredInputs = Array.from(allRequiredInputs).filter(input => {
+      return input.offsetParent !== null; // visible
+    });
     let isValid = true;
     
     // Limpar mensagens anteriores
@@ -875,9 +851,11 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
     
-    // Validar radio buttons obrigatórios
+    // Validar radio buttons obrigatórios (somente visíveis)
     const radioGroups = {};
-    currentStepEl.querySelectorAll('input[type="radio"][required]').forEach(radio => {
+    const allRadios = currentStepEl.querySelectorAll('input[type="radio"][required]');
+    Array.from(allRadios).forEach(radio => {
+      if (radio.offsetParent === null) return; // ignorar radios ocultos
       if (!radioGroups[radio.name]) {
         radioGroups[radio.name] = [];
       }
@@ -891,6 +869,58 @@ document.addEventListener('DOMContentLoaded', function() {
         group[0].parentElement.parentElement.classList.add('border', 'border-danger');
       }
     });
+    
+    // Validar CPF/CNPJ duplicado no step 1 antes de avançar
+    if (currentStep === 1) {
+      const tipoRadio = document.querySelector('input[name="tipo"]:checked');
+      if (tipoRadio) {
+        const tipo = tipoRadio.value;
+        let documentValue = '';
+        let documentType = '';
+        
+        if (tipo === 'PF') {
+          const cpfInput = document.getElementById('cpf');
+          if (cpfInput && cpfInput.offsetParent !== null && cpfInput.value.trim()) {
+            documentValue = cpfInput.value.replace(/\D/g, '');
+            documentType = 'cpf';
+          }
+        } else if (tipo === 'PJ') {
+          const cnpjInput = document.getElementById('cnpj');
+          if (cnpjInput && cnpjInput.offsetParent !== null && cnpjInput.value.trim()) {
+            documentValue = cnpjInput.value.replace(/\D/g, '');
+            documentType = 'cnpj';
+          }
+        }
+        
+        if (documentValue && documentType) {
+          const response = await fetch(`/clientes/check-duplicate/?type=${documentType}&value=${documentValue}`);
+          const data = await response.json();
+          
+          if (data.exists) {
+            isValid = false;
+            const input = document.getElementById(documentType);
+            if (input) {
+              input.classList.add('is-invalid');
+              input.focus();
+              
+              const feedbackDiv = input.parentElement.querySelector('.invalid-feedback') || 
+                                 input.closest('.mb-3')?.querySelector('.invalid-feedback');
+              if (feedbackDiv) {
+                feedbackDiv.textContent = data.message || `Este ${documentType.toUpperCase()} já está cadastrado em outro cliente.`;
+                feedbackDiv.style.display = 'block';
+              }
+              
+              input.addEventListener('input', function() {
+                this.classList.remove('is-invalid');
+                if (feedbackDiv) {
+                  feedbackDiv.style.display = 'none';
+                }
+              }, { once: true });
+            }
+          }
+        }
+      }
+    }
     
     return isValid;
   }
@@ -927,13 +957,59 @@ document.addEventListener('DOMContentLoaded', function() {
   }
   
   // Toggle entre Pessoa Física e Jurídica
+  // Primeiro, marcar todos os campos required com data-required
+  (function() {
+    const camposPF = document.getElementById('campos-pf');
+    const camposPJ = document.getElementById('campos-pj');
+    
+    camposPF.querySelectorAll('[required]').forEach(el => {
+      el.setAttribute('data-required', 'true');
+    });
+    camposPJ.querySelectorAll('[required]').forEach(el => {
+      el.setAttribute('data-required', 'true');
+    });
+  })();
+  
+  function toggleTipoPessoa(tipo) {
+    const camposPF = document.getElementById('campos-pf');
+    const camposPJ = document.getElementById('campos-pj');
+    
+    if (tipo === 'PF') {
+      camposPF.style.display = 'block';
+      camposPJ.style.display = 'none';
+      // Habilitar required nos campos PF
+      camposPF.querySelectorAll('[data-required="true"]').forEach(el => {
+        el.setAttribute('required', 'required');
+      });
+      // Desabilitar required nos campos PJ
+      camposPJ.querySelectorAll('[data-required="true"]').forEach(el => {
+        el.removeAttribute('required');
+      });
+    } else {
+      camposPF.style.display = 'none';
+      camposPJ.style.display = 'block';
+      // Desabilitar required nos campos PF
+      camposPF.querySelectorAll('[data-required="true"]').forEach(el => {
+        el.removeAttribute('required');
+      });
+      // Habilitar required nos campos PJ
+      camposPJ.querySelectorAll('[data-required="true"]').forEach(el => {
+        el.setAttribute('required', 'required');
+      });
+    }
+  }
+  
   document.querySelectorAll('input[name="tipo"]').forEach(radio => {
     radio.addEventListener('change', function() {
-      const tipo = this.value;
-      document.getElementById('campos-pf').style.display = tipo === 'PF' ? 'block' : 'none';
-      document.getElementById('campos-pj').style.display = tipo === 'PJ' ? 'block' : 'none';
+      toggleTipoPessoa(this.value);
     });
   });
+  
+  // Inicializar estado correto no carregamento
+  const tipoChecked = document.querySelector('input[name="tipo"]:checked');
+  if (tipoChecked) {
+    toggleTipoPessoa(tipoChecked.value);
+  }
   
   // Máscaras
   document.getElementById('cpf')?.addEventListener('input', function(e) {
