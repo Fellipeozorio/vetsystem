@@ -40,11 +40,15 @@
       </div>
       <div class="card-body">
         <div class="row mb-3">
-          <div class="col-md-6">
+          <div class="col-md-4">
+            <label class="form-label fw-bold">Código</label>
+            <div>{{ client.codigo|default:"-" }}</div>
+          </div>
+          <div class="col-md-4">
             <label class="form-label fw-bold">Nome Completo</label>
             <div>{{ client.nome_completo }}</div>
           </div>
-          <div class="col-md-6">
+          <div class="col-md-4">
             <label class="form-label fw-bold">Tipo</label>
             <div>{{ client.get_tipo_display }}</div>
           </div>
@@ -120,6 +124,18 @@
             <div>{{ client.get_como_conheceu_display|default:"-" }}</div>
           </div>
         </div>
+        {% if client.tags %}
+        <div class="row mb-3">
+          <div class="col-md-12">
+            <label class="form-label fw-bold">Marcação</label>
+            <div>
+              {% for tag in client.get_tags_list %}
+                <span class="badge bg-blue-lt me-1">{{ tag }}</span>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
     
@@ -455,8 +471,9 @@
       <h4 class="mb-3">Informações Complementares</h4>
       
       <div class="mb-3">
-        <label class="form-label">Tags</label>
+        <label class="form-label">Marcação</label>
         <input type="text" class="form-control" id="edit-tags-input" placeholder="Digite e pressione Enter">
+        <small class="form-hint">Fixe informações como "Bom pagador" ou "Cliente fiel" que serão exibidas nas telas de Clientes, Agenda e PDV.</small>
         <input type="hidden" name="tags" id="edit-tags-hidden" value="{{ client.tags|default:'' }}">
         <div id="edit-tags-display" class="mt-2"></div>
       </div>
