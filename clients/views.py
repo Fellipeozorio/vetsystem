@@ -236,9 +236,17 @@ def client_update_ajax(request, pk):
     try:
         client = get_object_or_404(Client, pk=pk)
         
+        # Debug: Log dos dados recebidos
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.info(f"=== UPDATE CLIENT {pk} ===")
+        logger.info(f"POST data: {dict(request.POST)}")
+        
         # Identificar qual formulário está sendo enviado
         tipo = request.POST.get('tipo')
         nome_completo = request.POST.get('nome_completo') or request.POST.get('nome_completo_pj')
+        
+        logger.info(f"tipo: {tipo}, nome_completo: {nome_completo}")
         
         # Se tipo ou nome_completo estão presentes, é o formulário de informações
         # Nesse caso, validar campos obrigatórios

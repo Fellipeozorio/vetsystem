@@ -124,7 +124,7 @@
             <div>{{ client.inscricao_municipal|default:"-" }}</div>
           </div>
           <div class="col-md-6">
-            <label class="form-label fw-bold">Como Conheceu</label>
+            <label class="form-label fw-bold">Como nos Conheceu?</label>
             <div>{{ client.get_como_conheceu_display|default:"-" }}</div>
           </div>
         </div>
@@ -458,7 +458,7 @@
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Como Conheceu</label>
+        <label class="form-label">Como nos Conheceu?</label>
         <select class="form-select" name="como_conheceu">
           <option value="">Selecione...</option>
           <option value="rua" {% if client.como_conheceu == 'rua' %}selected{% endif %}>Passando na rua</option>
@@ -519,10 +519,20 @@
           <label class="btn btn-outline-secondary" for="edit-whatsapp-no">Não</label>
         </div>
       </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Observações do Celular</label>
+        <textarea class="form-control" name="obs_celular" rows="2" placeholder="Observações sobre o celular"></textarea>
+      </div>
 
       <div class="mb-3">
         <label class="form-label">E-mail <span class="text-danger">*</span></label>
         <input type="email" class="form-control" name="email" value="{{ client.email|default:'' }}" required>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-label">Observações do E-mail</label>
+        <textarea class="form-control" name="obs_email" rows="2" placeholder="Observações sobre o e-mail"></textarea>
       </div>
 
       <hr class="my-4">
@@ -869,9 +879,31 @@ function toggleEditCampos() {
   if (tipoPF) {
     camposPF.style.display = 'block';
     camposPJ.style.display = 'none';
+    
+    // Habilitar required nos campos PF
+    camposPF.querySelectorAll('input[data-required="true"], select[data-required="true"]').forEach(field => {
+      field.required = true;
+    });
+    
+    // Desabilitar required nos campos PJ
+    camposPJ.querySelectorAll('input[required], select[required]').forEach(field => {
+      field.dataset.required = 'true';
+      field.required = false;
+    });
   } else {
     camposPF.style.display = 'none';
     camposPJ.style.display = 'block';
+    
+    // Desabilitar required nos campos PF
+    camposPF.querySelectorAll('input[required], select[required]').forEach(field => {
+      field.dataset.required = 'true';
+      field.required = false;
+    });
+    
+    // Habilitar required nos campos PJ
+    camposPJ.querySelectorAll('input[data-required="true"], select[data-required="true"]').forEach(field => {
+      field.required = true;
+    });
   }
 }
 
