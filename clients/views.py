@@ -256,42 +256,53 @@ def client_update_ajax(request, pk):
             if cnpj and Client.objects.filter(cnpj=cnpj).exclude(id=client.id).exists():
                 return JsonResponse({'success': False, 'error': 'Já existe outro cliente cadastrado com este CNPJ'})
         
-        # Atualizar cliente
+        # Atualizar tipo e nome
+        tipo_mudou = client.tipo != tipo
         client.tipo = tipo
         client.nome_completo = nome_completo
         
-        # Limpar campos do tipo anterior
-        if tipo == 'PF':
-            # Limpar campos PJ
-            client.cnpj = ''
-            client.razao_social = ''
-            client.regime_tributario = ''
-            client.inscricao_estadual = ''
-            # Atualizar campos PF
-            client.nacionalidade = request.POST.get('nacionalidade', '')
-            client.sexo = request.POST.get('sexo', '')
-            client.cpf = request.POST.get('cpf', '')
-            client.rg = request.POST.get('rg', '')
-            data_aniversario = request.POST.get('data_aniversario', '')
-            if data_aniversario:
-                client.data_aniversario = data_aniversario
-            else:
+        # Apenas limpar e atualizar campos específicos se o tipo mudou
+        if tipo_mudou:
+            if tipo == 'PF':
+                # Limpar campos PJ
+                client.cnpj = ''
+                client.regime_tributario = ''
+                client.inscricao_estadual = ''
+            elif tipo == 'PJ':
+                # Limpar campos PF
+                client.cpf = ''
+                client.rg = ''
+                client.sexo = ''
                 client.data_aniversario = None
-            client.profissao = request.POST.get('profissao', '')
+                client.profissao = ''
+        
+        # Atualizar campos específicos do tipo (se fornecidos no POST)
+        if tipo == 'PF':
+            # Atualizar campos PF (se fornecidos)
+            if 'nacionalidade' in request.POST:
+                client.nacionalidade = request.POST.get('nacionalidade', '')
+            if 'sexo' in request.POST:
+                client.sexo = request.POST.get('sexo', '')
+            if 'cpf' in request.POST:
+                client.cpf = request.POST.get('cpf', '')
+            if 'rg' in request.POST:
+                client.rg = request.POST.get('rg', '')
+            if 'data_aniversario' in request.POST:
+                data_aniversario = request.POST.get('data_aniversario', '')
+                client.data_aniversario = data_aniversario if data_aniversario else None
+            if 'profissao' in request.POST:
+                client.profissao = request.POST.get('profissao', '')
         
         elif tipo == 'PJ':
-            # Limpar campos PF
-            client.cpf = ''
-            client.rg = ''
-            client.sexo = ''
-            client.data_aniversario = None
-            client.profissao = ''
-            # Atualizar campos PJ
-            client.cnpj = request.POST.get('cnpj', '')
-            client.razao_social = request.POST.get('razao_social', '')
-            client.regime_tributario = request.POST.get('regime_tributario', '')
-            client.inscricao_estadual = request.POST.get('inscricao_estadual', '')
-            client.nacionalidade = request.POST.get('nacionalidade', '')
+            # Atualizar campos PJ (se fornecidos)
+            if 'cnpj' in request.POST:
+                client.cnpj = request.POST.get('cnpj', '')
+            if 'regime_tributario' in request.POST:
+                client.regime_tributario = request.POST.get('regime_tributario', '')
+            if 'inscricao_estadual' in request.POST:
+                client.inscricao_estadual = request.POST.get('inscricao_estadual', '')
+            if 'nacionalidade' in request.POST:
+                client.nacionalidade = request.POST.get('nacionalidade', '')
         
         # Campos comuns
         client.inscricao_municipal = request.POST.get('inscricao_municipal', '')

@@ -63,12 +63,22 @@
         </div>
         <div class="row mb-3">
           <div class="col-md-6">
+            <label class="form-label fw-bold">Nacionalidade</label>
+            <div>{% if client.nacionalidade == 'brasileiro' %}Brasileiro{% elif client.nacionalidade == 'estrangeiro' %}Estrangeiro{% else %}-{% endif %}</div>
+          </div>
+          <div class="col-md-6">
             <label class="form-label fw-bold">Sexo</label>
             <div>{{ client.get_sexo_display|default:"-" }}</div>
           </div>
+        </div>
+        <div class="row mb-3">
           <div class="col-md-6">
             <label class="form-label fw-bold">Data de Aniversário</label>
             <div>{{ client.data_aniversario|date:"d/m/Y"|default:"-" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Profissão</label>
+            <div>{{ client.profissao|default:"-" }}</div>
           </div>
         </div>
         {% else %}
@@ -78,11 +88,38 @@
             <div>{{ client.cnpj|default:"-" }}</div>
           </div>
           <div class="col-md-6">
+            <label class="form-label fw-bold">Razão Social</label>
+            <div>{{ client.razao_social|default:"-" }}</div>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-6">
             <label class="form-label fw-bold">Regime Tributário</label>
             <div>{{ client.get_regime_tributario_display|default:"-" }}</div>
           </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Inscrição Estadual</label>
+            <div>{{ client.get_inscricao_estadual_display|default:"-" }}</div>
+          </div>
+        </div>
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Nacionalidade</label>
+            <div>{% if client.nacionalidade == 'brasileiro' %}Brasileiro{% elif client.nacionalidade == 'estrangeiro' %}Estrangeiro{% else %}-{% endif %}</div>
+          </div>
+          <div class="col-md-6"></div>
         </div>
         {% endif %}
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Inscrição Municipal</label>
+            <div>{{ client.inscricao_municipal|default:"-" }}</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold">Como Conheceu</label>
+            <div>{{ client.get_como_conheceu_display|default:"-" }}</div>
+          </div>
+        </div>
       </div>
     </div>
     
@@ -313,7 +350,7 @@
         <div class="row">
           <div class="col-md-6 mb-3">
             <label class="form-label required">CPF</label>
-            <input type="text" class="form-control" name="cpf" value="{{ client.cpf }}" required>
+            <input type="text" class="form-control" name="cpf" value="{{ client.cpf }}" maxlength="14" required>
           </div>
           <div class="col-md-6 mb-3">
             <label class="form-label">RG</label>
@@ -358,24 +395,38 @@
           <input type="text" class="form-control" name="nome_completo_pj" value="{{ client.nome_completo }}" required>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label">Razão Social</label>
-          <input type="text" class="form-control" name="razao_social" value="{{ client.razao_social|default:'' }}">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label required">CNPJ <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" name="cnpj" value="{{ client.cnpj }}" maxlength="18" required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Nacionalidade <span class="text-danger">*</span></label>
+            <select class="form-select" name="nacionalidade">
+              <option value="brasileiro" {% if client.nacionalidade == 'brasileiro' %}selected{% endif %}>Brasileiro</option>
+              <option value="estrangeiro" {% if client.nacionalidade == 'estrangeiro' %}selected{% endif %}>Estrangeiro</option>
+            </select>
+          </div>
         </div>
 
-        <div class="mb-3">
-          <label class="form-label required">CNPJ <span class="text-danger">*</span></label>
-          <input type="text" class="form-control" name="cnpj" value="{{ client.cnpj }}" required>
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Regime Tributário</label>
-          <select class="form-select" name="regime_tributario">
-            <option value="">Selecione...</option>
-            <option value="SN" {% if client.regime_tributario == 'SN' %}selected{% endif %}>Simples Nacional</option>
-            <option value="LP" {% if client.regime_tributario == 'LP' %}selected{% endif %}>Lucro Presumido</option>
-            <option value="LR" {% if client.regime_tributario == 'LR' %}selected{% endif %}>Lucro Real</option>
-          </select>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Regime Tributário</label>
+            <select class="form-select" name="regime_tributario">
+              <option value="">Selecione...</option>
+              <option value="normal" {% if client.regime_tributario == 'normal' %}selected{% endif %}>Normal</option>
+              <option value="simples" {% if client.regime_tributario == 'simples' %}selected{% endif %}>Simples</option>
+            </select>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Inscrição Estadual</label>
+            <select class="form-select" name="inscricao_estadual">
+              <option value="">Selecione...</option>
+              <option value="contribuinte" {% if client.inscricao_estadual == 'contribuinte' %}selected{% endif %}>Contribuinte de ICMS</option>
+              <option value="nao_contribuinte" {% if client.inscricao_estadual == 'nao_contribuinte' %}selected{% endif %}>Não contribuinte de ICMS</option>
+              <option value="isento" {% if client.inscricao_estadual == 'isento' %}selected{% endif %}>Isento de inscrição</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -383,16 +434,19 @@
       <div class="mb-3">
         <label class="form-label">Inscrição Municipal</label>
         <input type="text" class="form-control" name="inscricao_municipal" value="{{ client.inscricao_municipal|default:'' }}">
+        <small class="form-hint">Preencha apenas se a pessoa possuir Inscrição municipal junto à prefeitura. Essa informação serve exclusivamente para emissão de notas fiscais de serviço.</small>
       </div>
 
       <div class="mb-3">
         <label class="form-label">Como Conheceu</label>
         <select class="form-select" name="como_conheceu">
           <option value="">Selecione...</option>
-          <option value="IND" {% if client.como_conheceu == 'IND' %}selected{% endif %}>Indicação</option>
-          <option value="RS" {% if client.como_conheceu == 'RS' %}selected{% endif %}>Redes Sociais</option>
-          <option value="INT" {% if client.como_conheceu == 'INT' %}selected{% endif %}>Internet</option>
-          <option value="OUT" {% if client.como_conheceu == 'OUT' %}selected{% endif %}>Outro</option>
+          <option value="rua" {% if client.como_conheceu == 'rua' %}selected{% endif %}>Passando na rua</option>
+          <option value="facebook" {% if client.como_conheceu == 'facebook' %}selected{% endif %}>Facebook</option>
+          <option value="site" {% if client.como_conheceu == 'site' %}selected{% endif %}>Site</option>
+          <option value="instagram" {% if client.como_conheceu == 'instagram' %}selected{% endif %}>Instagram</option>
+          <option value="indicacao" {% if client.como_conheceu == 'indicacao' %}selected{% endif %}>Indicação</option>
+          <option value="outros" {% if client.como_conheceu == 'outros' %}selected{% endif %}>Outros</option>
         </select>
       </div>
 
@@ -433,7 +487,7 @@
       
       <div class="mb-3">
         <label class="form-label required">Celular</label>
-        <input type="text" class="form-control" id="edit-celular" name="celular" value="{{ client.celular }}" required>
+        <input type="text" class="form-control" id="edit-celular" name="celular" value="{{ client.celular }}" maxlength="15" required>
       </div>
 
       <div class="mb-3">
@@ -515,6 +569,7 @@
       <div class="mb-3">
         <label class="form-label">CEP</label>
         <input type="text" class="form-control" name="cep" id="edit-cep" value="{{ client.cep|default:'' }}" maxlength="9">
+        <small class="form-hint">Digite o CEP para preencher o endereço automaticamente. Caso necessário consulte diretamente nos <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank">Correios</a>.</small>
       </div>
 
       <div class="mb-3">
@@ -1003,6 +1058,39 @@ document.addEventListener('DOMContentLoaded', function() {
         value = value.replace(/(\d{5})(\d)/, '$1-$2');
         e.target.value = value;
       }
+    });
+  }
+  
+  // Máscaras CPF e CNPJ nos modais de edição
+  const modalEditInfo = document.getElementById('modal-edit-info');
+  if (modalEditInfo) {
+    // Máscara CPF
+    const cpfInputs = modalEditInfo.querySelectorAll('input[name="cpf"]');
+    cpfInputs.forEach(input => {
+      input.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 11) {
+          value = value.replace(/(\d{3})(\d)/, '$1.$2');
+          value = value.replace(/(\d{3})(\d)/, '$1.$2');
+          value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+          e.target.value = value;
+        }
+      });
+    });
+    
+    // Máscara CNPJ
+    const cnpjInputs = modalEditInfo.querySelectorAll('input[name="cnpj"]');
+    cnpjInputs.forEach(input => {
+      input.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (value.length <= 14) {
+          value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+          value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+          value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+          value = value.replace(/(\d{4})(\d)/, '$1-$2');
+          e.target.value = value;
+        }
+      });
     });
   }
 });
