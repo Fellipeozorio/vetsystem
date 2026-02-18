@@ -417,7 +417,7 @@
 
         <div class="row">
           <div class="col-md-6 mb-3">
-            <label class="form-label required">CNPJ <span class="text-danger">*</span></label>
+            <label class="form-label required">CNPJ</label>
             <input type="text" class="form-control" name="cnpj" value="{{ client.cnpj }}" maxlength="18" required>
           </div>
           <div class="col-md-6 mb-3">
@@ -829,6 +829,14 @@ window.openEditModal = function(section) {
   if (modalElement) {
     const offcanvas = new bootstrap.Offcanvas(modalElement);
     offcanvas.show();
+    
+    // Se for o modal de informações, inicializar o estado dos campos PF/PJ
+    if (section === 'info') {
+      // Usar setTimeout para garantir que o modal está completamente visível
+      setTimeout(() => {
+        toggleEditCampos();
+      }, 100);
+    }
   }
 };
 // Função para abrir modal de privacidade
@@ -872,38 +880,40 @@ window.showDeleteModal = function(clientId, clientName) {
 };
 // Toggle entre campos PF e PJ no modal de edição
 function toggleEditCampos() {
-  const tipoPF = document.getElementById('edit-tipo-pf').checked;
+  const tipoPF = document.getElementById('edit-tipo-pf')?.checked;
   const camposPF = document.getElementById('edit-campos-pf');
   const camposPJ = document.getElementById('edit-campos-pj');
   
+  if (!camposPF || !camposPJ) return;
+  
   if (tipoPF) {
+    // Mostrar campos PF e ocultar PJ
     camposPF.style.display = 'block';
     camposPJ.style.display = 'none';
     
-    // Habilitar required nos campos PF
-    camposPF.querySelectorAll('input[data-required="true"], select[data-required="true"]').forEach(field => {
-      field.required = true;
+    // Remover required de TODOS os campos PJ (ocultos)
+    camposPJ.querySelectorAll('input, select, textarea').forEach(field => {
+      field.removeAttribute('required');
     });
     
-    // Desabilitar required nos campos PJ
-    camposPJ.querySelectorAll('input[required], select[required]').forEach(field => {
-      field.dataset.required = 'true';
-      field.required = false;
-    });
+    // Adicionar required nos campos PF que precisam ser obrigatórios
+    camposPF.querySelector('input[name="nome_completo"]')?.setAttribute('required', 'required');
+    camposPF.querySelector('input[name="cpf"]')?.setAttribute('required', 'required');
+    camposPF.querySelector('select[name="nacionalidade"]')?.setAttribute('required', 'required');
+    camposPF.querySelector('select[name="sexo"]')?.setAttribute('required', 'required');
   } else {
+    // Mostrar campos PJ e ocultar PF
     camposPF.style.display = 'none';
     camposPJ.style.display = 'block';
     
-    // Desabilitar required nos campos PF
-    camposPF.querySelectorAll('input[required], select[required]').forEach(field => {
-      field.dataset.required = 'true';
-      field.required = false;
+    // Remover required de TODOS os campos PF (ocultos)
+    camposPF.querySelectorAll('input, select, textarea').forEach(field => {
+      field.removeAttribute('required');
     });
     
-    // Habilitar required nos campos PJ
-    camposPJ.querySelectorAll('input[data-required="true"], select[data-required="true"]').forEach(field => {
-      field.required = true;
-    });
+    // Adicionar required nos campos PJ que precisam ser obrigatórios
+    camposPJ.querySelector('input[name="nome_completo_pj"]')?.setAttribute('required', 'required');
+    camposPJ.querySelector('input[name="cnpj"]')?.setAttribute('required', 'required');
   }
 }
 
