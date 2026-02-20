@@ -21,7 +21,8 @@ class Raca(BaseCadastro):
     especie = models.ForeignKey(
         Especie,
         on_delete=models.CASCADE,
-        related_name='racas'
+        related_name='racas',
+        verbose_name='Espécie'
     )
 
 
@@ -30,27 +31,28 @@ class Pelagem(BaseCadastro):
 
 
 class FilaAtendimento(BaseCadastro):
-    descricao = models.TextField(blank=True, null=True)
+    descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
 
 
 class Patologia(BaseCadastro):
-    codigo = models.CharField(max_length=50, blank=True, null=True)
-    descricao = models.TextField(blank=True, null=True)
+    codigo = models.CharField(max_length=50, blank=True, null=True, verbose_name='Código')
+    descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
 
 
 class TipoAtendimento(BaseCadastro):
     duracao_padrao = models.PositiveIntegerField(
         help_text="Duração em minutos",
-        default=30
+        default=30,
+        verbose_name='Duração Padrão (min)'
     )
 
 
 class Vacina(BaseCadastro):
-    grupo = models.CharField(max_length=150, blank=True, null=True)
+    grupo = models.CharField(max_length=150, blank=True, null=True, verbose_name='Grupo')
 
 
 class Exame(BaseCadastro):
-    descricao = models.TextField(blank=True, null=True)
+    descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
 
 
 class AtributoExame(models.Model):

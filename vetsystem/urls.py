@@ -46,6 +46,7 @@ urlpatterns = [
     
     path('', dashboard_view, name='dashboard'),
     path('clientes/', include('clients.urls')),
+    path('cadastros/', include('cadastros.urls')),
 ]
 
 # Servir arquivos de mídia no desenvolvimento

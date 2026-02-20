@@ -12,7 +12,7 @@
   <link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.3.0/dist/tabler-icons.min.css" rel="stylesheet"/>
   
   <style>
-    /* Ensure active indicator shows on sidebar */
+    /* Active indicator on sidebar */
     .navbar-vertical .nav-link.active {
       background-color: rgba(32, 107, 196, 0.06);
       color: #206bc4;
@@ -29,6 +29,32 @@
     .navbar-vertical .nav-link {
       position: relative;
     }
+    
+    /* Hover effect on sidebar links */
+    .navbar-vertical .nav-link:hover {
+      background-color: rgba(32, 107, 196, 0.04);
+      color: #206bc4;
+    }
+    
+    /* Dropdown menu items hover */
+    .navbar-vertical .dropdown-menu .dropdown-item:hover {
+      background-color: rgba(32, 107, 196, 0.06);
+      color: #206bc4;
+    }
+    
+    /* Active dropdown item */
+    .navbar-vertical .dropdown-menu .dropdown-item.active {
+      background-color: rgba(32, 107, 196, 0.1);
+      color: #206bc4;
+      font-weight: 600;
+    }
+    
+    /* Keep dropdown open when child is active */
+    .navbar-vertical .nav-item.dropdown.show > .nav-link {
+      background-color: rgba(32, 107, 196, 0.06);
+      color: #206bc4;
+    }
+    
     /* Negrito nos itens do sidebar */
     .navbar-vertical .nav-link-title {
       font-weight: 600;
@@ -58,6 +84,7 @@
   </style>
 
   {% block extra_css %}{% endblock %}
+  {% block extra_head %}{% endblock %}
 </head>
 
 <body>
@@ -140,6 +167,34 @@
               <span class="nav-link-title">Clientes</span>
             </a>
           </li>
+          
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#navbar-cadastros" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+              <span class="nav-link-icon d-md-none d-lg-inline-block">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /><path d="M9 12l.01 0" /><path d="M13 12l2 0" /><path d="M9 16l.01 0" /><path d="M13 16l2 0" /></svg>
+              </span>
+              <span class="nav-link-title">Cadastros</span>
+            </a>
+            <div class="dropdown-menu">
+              <div class="dropdown-menu-columns">
+                <div class="dropdown-menu-column">
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'especies' %}">Espécies</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'racas' %}">Raças</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'filas-atendimento' %}">Filas de Atendimento</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'pelagens' %}">Pelagens</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'patologias' %}">Patologias</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'tipos-atendimento' %}">Tipos de Atendimento</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'vacinas' %}">Vacinas</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'exames' %}">Exames</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'atributos-exames' %}">Atributos de Exames</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'referencias-exames' %}">Referências de Exames</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'modelos-receita' %}">Modelos de Receita</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'origens-cliente' %}">Origens dos Clientes</a>
+                  <a class="dropdown-item" href="{% url 'cadastros:list' 'modelos-documento' %}">Modelos de Documento</a>
+                </div>
+              </div>
+            </div>
+          </li>
           {% endblock %}
         </ul>
       </div>
@@ -199,8 +254,10 @@
   // Mark active nav item based on current URL
   document.addEventListener('DOMContentLoaded', function() {
     const currentPath = window.location.pathname;
-    const navLinks = document.querySelectorAll('.navbar-vertical .nav-link');
+    const navLinks = document.querySelectorAll('.navbar-vertical .nav-link:not(.dropdown-toggle)');
+    const dropdownItems = document.querySelectorAll('.navbar-vertical .dropdown-item');
     
+    // Check regular nav links
     navLinks.forEach(link => {
       const href = link.getAttribute('href');
       if (!href) return;
@@ -216,6 +273,33 @@
       // Root path matches
       else if (currentPath === '/' && href === '/') {
         link.classList.add('active');
+      }
+    });
+    
+    // Check dropdown items
+    let hasActiveDropdownItem = false;
+    dropdownItems.forEach(item => {
+      const href = item.getAttribute('href');
+      if (!href) return;
+      
+      if (currentPath === href || (href !== '/' && currentPath.startsWith(href))) {
+        item.classList.add('active');
+        hasActiveDropdownItem = true;
+        
+        // Find parent dropdown and keep it open
+        const dropdown = item.closest('.dropdown');
+        if (dropdown) {
+          dropdown.classList.add('show');
+          const dropdownToggle = dropdown.querySelector('.dropdown-toggle');
+          if (dropdownToggle) {
+            dropdownToggle.classList.add('active');
+            dropdownToggle.setAttribute('aria-expanded', 'true');
+          }
+          const dropdownMenu = dropdown.querySelector('.dropdown-menu');
+          if (dropdownMenu) {
+            dropdownMenu.classList.add('show');
+          }
+        }
       }
     });
   });

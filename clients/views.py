@@ -244,13 +244,19 @@ def client_update_ajax(request, pk):
         
         # Identificar qual formulário está sendo enviado
         tipo = request.POST.get('tipo')
-        nome_completo = request.POST.get('nome_completo') or request.POST.get('nome_completo_pj')
         
-        logger.info(f"tipo: {tipo}, nome_completo: {nome_completo}")
+        # Determinar qual campo de nome usar baseado no tipo
+        if tipo == 'PJ':
+            nome_completo = request.POST.get('nome_completo_pj', '')
+        else:
+            nome_completo = request.POST.get('nome_completo', '')
+        
+        logger.info(f"tipo: {tipo}, nome_completo (PF): {request.POST.get('nome_completo')}, nome_completo_pj (PJ): {request.POST.get('nome_completo_pj')}")
+        logger.info(f"Usando nome_completo: {nome_completo}")
         
         # Se tipo ou nome_completo estão presentes, é o formulário de informações
         # Nesse caso, validar campos obrigatórios
-        if tipo is not None or nome_completo is not None:
+        if tipo is not None or nome_completo:
             # Validação de informações básicas
             if not nome_completo:
                 return JsonResponse({'success': False, 'error': 'Nome completo é obrigatório'})
@@ -275,17 +281,18 @@ def client_update_ajax(request, pk):
             tipo_mudou = client.tipo != tipo
             client.tipo = tipo
             client.nome_completo = nome_completo
+            logger.info(f"Atualizando nome_completo para: {nome_completo}")
             
             # Apenas limpar e atualizar campos específicos se o tipo mudou
             if tipo_mudou:
                 if tipo == 'PF':
-                    # Limpar campos PJ
-                    client.cnpj = ''
+                    # Limpar campos PJ (usar None para campos unique)
+                    client.cnpj = None
                     client.regime_tributario = ''
                     client.inscricao_estadual = ''
                 elif tipo == 'PJ':
-                    # Limpar campos PF
-                    client.cpf = ''
+                    # Limpar campos PF (usar None para campos unique)
+                    client.cpf = None
                     client.rg = ''
                     client.sexo = ''
                     client.data_aniversario = None
@@ -299,7 +306,8 @@ def client_update_ajax(request, pk):
                 if 'sexo' in request.POST:
                     client.sexo = request.POST.get('sexo', '')
                 if 'cpf' in request.POST:
-                    client.cpf = request.POST.get('cpf', '')
+                    cpf_value = request.POST.get('cpf', '').strip()
+                    client.cpf = cpf_value if cpf_value else None
                 if 'rg' in request.POST:
                     client.rg = request.POST.get('rg', '')
                 if 'data_aniversario' in request.POST:
@@ -311,7 +319,8 @@ def client_update_ajax(request, pk):
             elif tipo == 'PJ':
                 # Atualizar campos PJ (se fornecidos)
                 if 'cnpj' in request.POST:
-                    client.cnpj = request.POST.get('cnpj', '')
+                    cnpj_value = request.POST.get('cnpj', '').strip()
+                    client.cnpj = cnpj_value if cnpj_value else None
                 if 'regime_tributario' in request.POST:
                     client.regime_tributario = request.POST.get('regime_tributario', '')
                 if 'inscricao_estadual' in request.POST:
@@ -326,15 +335,17 @@ def client_update_ajax(request, pk):
                 client.como_conheceu = request.POST.get('como_conheceu', '')
         
         # Contatos (se fornecidos)
-        celular = request.POST.get('celular')
-        if celular:
+        if 'celular' in request.POST:
+            celular = request.POST.get('celular')
             client.celular = celular
             whatsapp_value = request.POST.get('celular_whatsapp', '0')
             client.celular_whatsapp = whatsapp_value == '1' or whatsapp_value == 'true'
+            client.obs_celular = request.POST.get('obs_celular', '')
         
-        email = request.POST.get('email')
-        if email is not None:
+        if 'email' in request.POST:
+            email = request.POST.get('email')
             client.email = email
+            client.obs_email = request.POST.get('obs_email', '')
         
         # Endereço (se fornecido)
         if 'cep' in request.POST:
@@ -354,37 +365,51 @@ def client_update_ajax(request, pk):
             client.observacoes = request.POST.get('observacoes', '')
         
         # Preferências de privacidade
-        if 'aceita_email' in request.POST:
+        # Processar APENAS se for o formulário de privacidade específico
+        if request.POST.get('form_type') == 'privacy':
+            # Checkboxes não enviados = False (desmarcados)
             client.aceita_email = 'aceita_email' in request.POST
-        if 'aceita_sms' in request.POST:
             client.aceita_sms = 'aceita_sms' in request.POST
-        if 'aceita_whatsapp' in request.POST:
             client.aceita_whatsapp = 'aceita_whatsapp' in request.POST
-        if 'aceita_campanha_sms' in request.POST:
             client.aceita_campanha_sms = 'aceita_campanha_sms' in request.POST
+            logger.info(f"Atualizando privacidade - email: {client.aceita_email}, sms: {client.aceita_sms}, whatsapp: {client.aceita_whatsapp}, campanha_sms: {client.aceita_campanha_sms}")
         
+        logger.info(f"Salvando cliente - tipo: {client.tipo}, nome_completo: {client.nome_completo}")
         client.save()
+        logger.info(f"Cliente salvo com sucesso - ID: {client.id}")
         
-        # Atualizar contatos adicionais (se fornecidos)
-        if 'contatos_adicionais_tipo[]' in request.POST:
-            # Remover contatos existentes
+        # Atualizar contatos adicionais (se flag estiver presente)
+        if 'update_contatos_adicionais' in request.POST:
+            logger.info("Processando contatos adicionais")
+            # Sempre remover contatos existentes quando formulário é submetido
+            deleted_count = client.contatos_adicionais.count()
             client.contatos_adicionais.all().delete()
+            logger.info(f"{deleted_count} contatos anteriores removidos")
             
-            # Adicionar novos contatos
+            # Adicionar novos contatos (se houver)
             tipos = request.POST.getlist('contatos_adicionais_tipo[]')
             valores = request.POST.getlist('contatos_adicionais_valor[]')
             obs_list = request.POST.getlist('contatos_adicionais_obs[]')
-            whatsapp_list = request.POST.getlist('contatos_adicionais_whatsapp[]')
+            whatsapp_list = request.POST.getlist('contatos_adicionais_whatsapp_processed[]')
+            
+            logger.info(f"Tipos: {tipos}")
+            logger.info(f"Valores: {valores}")
+            logger.info(f"Observações: {obs_list}")
+            logger.info(f"WhatsApp processed: {whatsapp_list}")
             
             for i, (tipo_contato, valor) in enumerate(zip(tipos, valores)):
                 if valor.strip():  # Só criar se tiver valor
-                    ContatoAdicional.objects.create(
+                    # Usar a lista processada de WhatsApp (0 ou 1)
+                    tem_whatsapp = whatsapp_list[i] == '1' if i < len(whatsapp_list) else False
+                    
+                    contato = ContatoAdicional.objects.create(
                         cliente=client,
                         tipo=tipo_contato,
                         valor=valor,
-                        whatsapp='on' in whatsapp_list if i < len(whatsapp_list) else False,
+                        whatsapp=tem_whatsapp,
                         observacoes=obs_list[i] if i < len(obs_list) else ''
                     )
+                    logger.info(f"Contato adicional criado: {contato.tipo} - {contato.valor} (WhatsApp: {contato.whatsapp})")
         
         return JsonResponse({
             'success': True,

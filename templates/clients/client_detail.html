@@ -15,6 +15,12 @@
       </div>
       <div class="col-auto ms-auto d-print-none">
         <div class="btn-list">
+          {% if client.celular and client.celular_whatsapp %}
+          <a href="https://wa.me/55{{ client.celular|cut:' '|cut:'('|cut:')'|cut:'-' }}" target="_blank" class="btn btn-success" title="Enviar mensagem no WhatsApp">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+            WhatsApp
+          </a>
+          {% endif %}
           <button class="btn btn-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-more-actions">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>
             Mais ações
@@ -41,7 +47,7 @@
       <div class="card-body">
         <div class="row mb-3">
           <div class="col-md-6">
-            <label class="form-label fw-bold">Nome Completo</label>
+            <label class="form-label fw-bold">{% if client.tipo == 'PJ' %}Razão Social{% else %}Nome Completo{% endif %}</label>
             <div>{{ client.nome_completo }}</div>
           </div>
           <div class="col-md-6">
@@ -55,7 +61,12 @@
             <label class="form-label fw-bold">Tipo</label>
             <div>{{ client.get_tipo_display }}</div>
           </div>
-          <div class="col-md-6"></div>
+          <div class="col-md-6">
+            {% if client.tipo == 'PJ' %}
+            <label class="form-label fw-bold">CNPJ</label>
+            <div>{{ client.cnpj|default:"-" }}</div>
+            {% endif %}
+          </div>
         </div>
         
         {% if client.tipo == 'PF' %}
@@ -90,16 +101,6 @@
           </div>
         </div>
         {% else %}
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <label class="form-label fw-bold">CNPJ</label>
-            <div>{{ client.cnpj|default:"-" }}</div>
-          </div>
-          <div class="col-md-6">
-            <label class="form-label fw-bold">Razão Social</label>
-            <div>{{ client.razao_social|default:"-" }}</div>
-          </div>
-        </div>
         <div class="row mb-3">
           <div class="col-md-6">
             <label class="form-label fw-bold">Regime Tributário</label>
@@ -140,6 +141,14 @@
           </div>
         </div>
         {% endif %}
+        {% if client.observacoes %}
+        <div class="row">
+          <div class="col-md-12">
+            <label class="form-label fw-bold">Observações</label>
+            <div>{{ client.observacoes|linebreaks }}</div>
+          </div>
+        </div>
+        {% endif %}
       </div>
     </div>
     
@@ -161,10 +170,16 @@
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-whatsapp text-success" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
               {% endif %}
             </div>
+            {% if client.obs_celular %}
+              <div class="text-secondary small">{{ client.obs_celular }}</div>
+            {% endif %}
           </div>
           <div class="col-md-6">
             <label class="form-label fw-bold">E-mail</label>
             <div>{{ client.email|default:"-" }}</div>
+            {% if client.obs_email %}
+              <div class="text-secondary small">{{ client.obs_email }}</div>
+            {% endif %}
           </div>
         </div>
         
@@ -220,20 +235,7 @@
       </div>
     </div>
     
-    {% if client.observacoes %}
-    <!-- Observações -->
-    <div class="card mb-3 card-clickable" style="cursor: pointer;" onclick="openEditModal('info')">
-      <div class="card-header">
-        <h3 class="card-title">Observações</h3>
-        <div class="card-actions">
-          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
-        </div>
-      </div>
-      <div class="card-body">
-        {{ client.observacoes|linebreaks }}
-      </div>
-    </div>
-    {% endif %}
+
   </div>
   
   <!-- Coluna 2: Saldo e Privacidade -->
@@ -399,7 +401,7 @@
         <div class="row">
           <div class="col-md-6 mb-3">
             <label class="form-label">Data de Aniversário</label>
-            <input type="date" class="form-control" name="data_aniversario" value="{{ client.data_aniversario|default:'' }}">
+            <input type="date" class="form-control" name="data_aniversario" value="{{ client.data_aniversario|date:'Y-m-d'|default:'' }}">
           </div>
           <div class="col-md-6 mb-3">
             <label class="form-label">Profissão</label>
@@ -411,7 +413,7 @@
       <!-- Campos Pessoa Jurídica -->
       <div id="edit-campos-pj" {% if client.tipo != 'PJ' %}style="display: none;"{% endif %}>
         <div class="mb-3">
-          <label class="form-label required">Nome Fantasia</label>
+          <label class="form-label required">Razão Social</label>
           <input type="text" class="form-control" name="nome_completo_pj" value="{{ client.nome_completo }}" required>
         </div>
 
@@ -504,6 +506,7 @@
     <form id="form-edit-contatos">
       {% csrf_token %}
       <input type="hidden" name="client_id" value="{{ client.id }}">
+      <input type="hidden" name="update_contatos_adicionais" value="1">
       
       <div class="mb-3">
         <label class="form-label required">Celular</label>
@@ -522,7 +525,7 @@
       
       <div class="mb-3">
         <label class="form-label">Observações do Celular</label>
-        <textarea class="form-control" name="obs_celular" rows="2" placeholder="Observações sobre o celular"></textarea>
+        <textarea class="form-control" name="obs_celular" rows="2" placeholder="Observações sobre o celular">{{ client.obs_celular|default:'' }}</textarea>
       </div>
 
       <div class="mb-3">
@@ -532,7 +535,7 @@
       
       <div class="mb-3">
         <label class="form-label">Observações do E-mail</label>
-        <textarea class="form-control" name="obs_email" rows="2" placeholder="Observações sobre o e-mail"></textarea>
+        <textarea class="form-control" name="obs_email" rows="2" placeholder="Observações sobre o e-mail">{{ client.obs_email|default:'' }}</textarea>
       </div>
 
       <hr class="my-4">
@@ -540,23 +543,31 @@
       
       <div id="edit-contatos-adicionais-container">
         {% for contato in contatos_adicionais %}
-        <div class="card mb-3">
+        <div class="card mb-3" data-existing-contact>
           <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <h6 class="mb-0">{{ contato.get_tipo_display }}</h6>
+              <button type="button" class="btn btn-sm btn-danger" onclick="removeContatoCard(this)">Remover</button>
+            </div>
             <div class="row">
               <div class="col-md-4 mb-2">
+                <label class="form-label">Tipo</label>
                 <select class="form-select" name="contatos_adicionais_tipo[]">
-                  <option value="CEL" {% if contato.tipo == 'CEL' %}selected{% endif %}>Celular</option>
-                  <option value="TEL" {% if contato.tipo == 'TEL' %}selected{% endif %}>Telefone</option>
-                  <option value="EMAIL" {% if contato.tipo == 'EMAIL' %}selected{% endif %}>E-mail</option>
-                  <option value="OUT" {% if contato.tipo == 'OUT' %}selected{% endif %}>Outro</option>
+                  <option value="celular" {% if contato.tipo == 'celular' %}selected{% endif %}>Celular</option>
+                  <option value="email" {% if contato.tipo == 'email' %}selected{% endif %}>E-mail</option>
+                  <option value="telefone_residencial" {% if contato.tipo == 'telefone_residencial' %}selected{% endif %}>Telefone Residencial</option>
+                  <option value="telefone_comercial" {% if contato.tipo == 'telefone_comercial' %}selected{% endif %}>Telefone Comercial</option>
+                  <option value="outros" {% if contato.tipo == 'outros' %}selected{% endif %}>Outros</option>
                 </select>
               </div>
               <div class="col-md-8 mb-2">
+                <label class="form-label">Contato</label>
                 <input type="text" class="form-control" name="contatos_adicionais_valor[]" value="{{ contato.valor }}" placeholder="Contato">
               </div>
             </div>
             <div class="row">
               <div class="col-md-8 mb-2">
+                <label class="form-label">Observações</label>
                 <input type="text" class="form-control" name="contatos_adicionais_obs[]" value="{{ contato.observacoes|default:'' }}" placeholder="Observações (ex: Comercial)">
               </div>
               <div class="col-md-4 mb-2">
@@ -566,7 +577,6 @@
                 </div>
               </div>
             </div>
-            <button type="button" class="btn btn-sm btn-danger" onclick="this.closest('.card').remove()">Remover</button>
           </div>
         </div>
         {% endfor %}
@@ -748,6 +758,7 @@
     <form id="form-edit-privacy">
       {% csrf_token %}
       <input type="hidden" name="client_id" value="{{ client.id }}">
+      <input type="hidden" name="form_type" value="privacy">
       
       <p class="text-secondary">Gerencie as preferências de comunicação do cliente.</p>
       
@@ -891,12 +902,16 @@ function toggleEditCampos() {
     camposPF.style.display = 'block';
     camposPJ.style.display = 'none';
     
-    // Remover required de TODOS os campos PJ (ocultos)
+    // Desabilitar campos PJ (ocultos) sem limpar valores - backend limpará
     camposPJ.querySelectorAll('input, select, textarea').forEach(field => {
       field.removeAttribute('required');
+      field.disabled = true;
     });
     
-    // Adicionar required nos campos PF que precisam ser obrigatórios
+    // Reabilitar e adicionar required nos campos PF que precisam ser obrigatórios
+    camposPF.querySelectorAll('input, select, textarea').forEach(field => {
+      field.disabled = false;
+    });
     camposPF.querySelector('input[name="nome_completo"]')?.setAttribute('required', 'required');
     camposPF.querySelector('input[name="cpf"]')?.setAttribute('required', 'required');
     camposPF.querySelector('select[name="nacionalidade"]')?.setAttribute('required', 'required');
@@ -906,12 +921,16 @@ function toggleEditCampos() {
     camposPF.style.display = 'none';
     camposPJ.style.display = 'block';
     
-    // Remover required de TODOS os campos PF (ocultos)
+    // Desabilitar campos PF (ocultos) sem limpar valores - backend limpará
     camposPF.querySelectorAll('input, select, textarea').forEach(field => {
       field.removeAttribute('required');
+      field.disabled = true;
     });
     
-    // Adicionar required nos campos PJ que precisam ser obrigatórios
+    // Reabilitar e adicionar required nos campos PJ que precisam ser obrigatórios
+    camposPJ.querySelectorAll('input, select, textarea').forEach(field => {
+      field.disabled = false;
+    });
     camposPJ.querySelector('input[name="nome_completo_pj"]')?.setAttribute('required', 'required');
     camposPJ.querySelector('input[name="cnpj"]')?.setAttribute('required', 'required');
   }
@@ -919,6 +938,15 @@ function toggleEditCampos() {
 
 // Adicionar contato adicional no modal de edição
 let editContatoCount = 0;
+// Função para remover card de contato (marca como removido)
+function removeContatoCard(button) {
+  const card = button.closest('.card');
+  if (card) {
+    card.classList.add('contato-removido');
+    card.style.display = 'none';
+  }
+}
+
 function addEditContatoAdicional() {
   editContatoCount++;
   const container = document.getElementById('edit-contatos-adicionais-container');
@@ -927,8 +955,8 @@ function addEditContatoAdicional() {
   div.innerHTML = `
     <div class="card-body">
       <div class="d-flex justify-content-between align-items-center mb-2">
-        <h6 class="mb-0">Contato Adicional</h6>
-        <button type="button" class="btn btn-sm btn-ghost-danger" onclick="this.closest('.card').remove()">Remover</button>
+        <h6 class="mb-0">Contato Adicional ${editContatoCount}</h6>
+        <button type="button" class="btn btn-sm btn-ghost-danger" onclick="removeContatoCard(this)">Remover</button>
       </div>
       <div class="mb-2">
         <label class="form-label">Tipo</label>
@@ -956,21 +984,22 @@ function addEditContatoAdicional() {
       camposDiv.innerHTML = `
         <div class="mb-2">
           <label class="form-label">Celular</label>
-          <input type="text" class="form-control edit-contato-phone-mask" name="contato_valor_${count}">
+          <input type="text" class="form-control edit-contato-phone-mask" name="edit_contato_valor_${count}">
         </div>
         <div class="mb-2">
           <label class="form-label">Este Número é WhatsApp?</label>
           <div class="btn-group w-100" role="group">
-            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-sim-${count}" value="true" checked autocomplete="off">
+            <input type="radio" class="btn-check" name="edit_contato_whatsapp_${count}" id="edit-contato-whatsapp-sim-${count}" value="true" checked autocomplete="off">
             <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-sim-${count}">Sim</label>
-            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-nao-${count}" value="false" autocomplete="off">
+            <input type="radio" class="btn-check" name="edit_contato_whatsapp_${count}" id="edit-contato-whatsapp-nao-${count}" value="false" autocomplete="off">
             <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-nao-${count}">Não</label>
           </div>
         </div>
         <div class="mb-2">
           <label class="form-label">Observações</label>
-          <textarea class="form-control" name="contato_obs_${count}" rows="2"></textarea>
+          <textarea class="form-control" name="edit_contato_obs_${count}" rows="2"></textarea>
         </div>
+        <input type="hidden" name="edit_contato_tipo_${count}" value="celular">
       `;
       // Aplicar máscara
       setTimeout(() => {
@@ -991,21 +1020,22 @@ function addEditContatoAdicional() {
       camposDiv.innerHTML = `
         <div class="mb-2">
           <label class="form-label">${tipoLabel}</label>
-          <input type="text" class="form-control edit-contato-phone-mask" name="contato_valor_${count}">
+          <input type="text" class="form-control edit-contato-phone-mask" name="edit_contato_valor_${count}">
         </div>
         <div class="mb-2">
           <label class="form-label">Este Número é WhatsApp?</label>
           <div class="btn-group w-100" role="group">
-            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-sim-${count}" value="true" autocomplete="off">
+            <input type="radio" class="btn-check" name="edit_contato_whatsapp_${count}" id="edit-contato-whatsapp-sim-${count}" value="true" autocomplete="off">
             <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-sim-${count}">Sim</label>
-            <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="edit-contato-whatsapp-nao-${count}" value="false" checked autocomplete="off">
+            <input type="radio" class="btn-check" name="edit_contato_whatsapp_${count}" id="edit-contato-whatsapp-nao-${count}" value="false" checked autocomplete="off">
             <label class="btn btn-outline-secondary" for="edit-contato-whatsapp-nao-${count}">Não</label>
           </div>
         </div>
         <div class="mb-2">
           <label class="form-label">Observações</label>
-          <textarea class="form-control" name="contato_obs_${count}" rows="2"></textarea>
+          <textarea class="form-control" name="edit_contato_obs_${count}" rows="2"></textarea>
         </div>
+        <input type="hidden" name="edit_contato_tipo_${count}" value="${tipo}">
       `;
       // Aplicar máscara
       setTimeout(() => {
@@ -1025,12 +1055,13 @@ function addEditContatoAdicional() {
       camposDiv.innerHTML = `
         <div class="mb-2">
           <label class="form-label">${tipo === 'email' ? 'E-mail' : 'Valor'}</label>
-          <input type="${tipo === 'email' ? 'email' : 'text'}" class="form-control" name="contato_valor_${count}">
+          <input type="${tipo === 'email' ? 'email' : 'text'}" class="form-control" name="edit_contato_valor_${count}">
         </div>
         <div class="mb-2">
           <label class="form-label">Observações</label>
-          <textarea class="form-control" name="contato_obs_${count}" rows="2"></textarea>
+          <textarea class="form-control" name="edit_contato_obs_${count}" rows="2"></textarea>
         </div>
+        <input type="hidden" name="edit_contato_tipo_${count}" value="${tipo}">
       `;
     } else {
       camposDiv.innerHTML = '';
@@ -1205,12 +1236,24 @@ function buscarCEPEdit(cep) {
 // Submeter formulário de edição de informações
 document.getElementById('form-edit-info').addEventListener('submit', function(e) {
   e.preventDefault();
+  
+  // Habilitar todos os campos antes de enviar (para que sejam incluídos no POST)
+  this.querySelectorAll('input, select, textarea').forEach(field => {
+    field.disabled = false;
+  });
+  
   const formData = new FormData(this);
   
+  // Debug: mostrar valores
+  const tipo = formData.get('tipo');
+  const nome_pf = formData.get('nome_completo');
+  const nome_pj = formData.get('nome_completo_pj');
+  
   console.log('=== Editando Informações do Cliente ===');
-  for (let [key, value] of formData.entries()) {
-    console.log(`${key}: ${value}`);
-  }
+  console.log('Tipo:', tipo);
+  console.log('Nome Completo (PF):', nome_pf);
+  console.log('Razão Social (PJ):', nome_pj);
+  console.log('Valor que será usado:', tipo === 'PJ' ? nome_pj : nome_pf);
   
   fetch("{% url 'clients:update_ajax' client.id %}", {
     method: 'POST',
@@ -1236,18 +1279,78 @@ document.getElementById('form-edit-info').addEventListener('submit', function(e)
 // Submeter formulário de edição de contatos
 document.getElementById('form-edit-contatos').addEventListener('submit', function(e) {
   e.preventDefault();
-  const formData = new FormData(this);
+  
+  // Criar novo FormData vazio
+  const newFormData = new FormData();
+  
+  // Copiar campos base (client_id, csrf)
+  const baseFormData = new FormData(this);
+  newFormData.append('csrfmiddlewaretoken', baseFormData.get('csrfmiddlewaretoken'));
+  newFormData.append('client_id', baseFormData.get('client_id'));
+  newFormData.append('update_contatos_adicionais', '1'); // Flag para indicar que contatos devem ser atualizados
+  newFormData.append('celular', baseFormData.get('celular'));
+  newFormData.append('celular_whatsapp', baseFormData.get('celular_whatsapp'));
+  newFormData.append('obs_celular', baseFormData.get('obs_celular'));
+  newFormData.append('email', baseFormData.get('email'));
+  newFormData.append('obs_email', baseFormData.get('obs_email'));
+  
+  // Processar APENAS os contatos que NÃO foram marcados como removidos
+  const existingCards = this.querySelectorAll('[data-existing-contact]:not(.contato-removido)');
+  existingCards.forEach(card => {
+    const tipo = card.querySelector('select[name="contatos_adicionais_tipo[]"]').value;
+    const valor = card.querySelector('input[name="contatos_adicionais_valor[]"]').value;
+    const obs = card.querySelector('input[name="contatos_adicionais_obs[]"]').value;
+    const whatsapp = card.querySelector('input[name="contatos_adicionais_whatsapp[]"]');
+    
+    newFormData.append('contatos_adicionais_tipo[]', tipo);
+    newFormData.append('contatos_adicionais_valor[]', valor);
+    newFormData.append('contatos_adicionais_obs[]', obs);
+    newFormData.append('contatos_adicionais_whatsapp_processed[]', whatsapp && whatsapp.checked ? '1' : '0');
+  });
+  
+  // Processar novos contatos adicionados dinamicamente (excluir os removidos)
+  const newContatoElements = this.querySelectorAll('[name^="edit_contato_tipo_"]');
+  newContatoElements.forEach(tipoInput => {
+    const card = tipoInput.closest('.card');
+    
+    // Ignorar se o card foi marcado como removido
+    if (card && card.classList.contains('contato-removido')) {
+      return;
+    }
+    
+    const count = tipoInput.name.match(/\d+/)[0];
+    const tipo = tipoInput.value;
+    const valorInput = card.querySelector(`[name="edit_contato_valor_${count}"]`);
+    const obsInput = card.querySelector(`[name="edit_contato_obs_${count}"]`);
+    const whatsappInputs = card.querySelectorAll(`[name="edit_contato_whatsapp_${count}"]`);
+    
+    const valor = valorInput ? valorInput.value : '';
+    const obs = obsInput ? obsInput.value : '';
+    let whatsapp = 'false';
+    whatsappInputs.forEach(input => {
+      if (input.checked) {
+        whatsapp = input.value;
+      }
+    });
+    
+    if (valor.trim()) {
+      newFormData.append('contatos_adicionais_tipo[]', tipo);
+      newFormData.append('contatos_adicionais_valor[]', valor);
+      newFormData.append('contatos_adicionais_obs[]', obs);
+      newFormData.append('contatos_adicionais_whatsapp_processed[]', whatsapp === 'true' ? '1' : '0');
+    }
+  });
   
   console.log('=== Editando Contatos do Cliente ===');
-  for (let [key, value] of formData.entries()) {
+  for (let [key, value] of newFormData.entries()) {
     console.log(`${key}: ${value}`);
   }
   
   fetch("{% url 'clients:update_ajax' client.id %}", {
     method: 'POST',
-    body: formData,
+    body: newFormData,
     headers: {
-      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+      'X-CSRFToken': newFormData.get('csrfmiddlewaretoken')
     }
   })
   .then(response => response.json())

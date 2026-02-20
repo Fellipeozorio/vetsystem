@@ -1,0 +1,612 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% load cadastros_filters %}
+
+{% block title %}{{ label }} - VetSystem{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Cadastros</div>
+        <h2 class="page-title">{{ label }}</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page Body -->
+<div class="page-body">
+  <div class="container-xl">
+    <!-- Filtros -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <form method="get" id="search-form">
+          {% for key, value in active_filters.items %}
+          <input type="hidden" name="filter_{{ key }}" value="{{ value }}">
+          {% endfor %}
+          <div class="input-group">
+            <input type="text" class="form-control" name="q" placeholder="Buscar por nome..." value="{{ query }}">
+            <button class="btn btn-primary" type="submit">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+              Buscar
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100" type="button" onclick="openFilterOffcanvas()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+          Filtros Avançados
+        </button>
+      </div>
+      <div class="col-md-6 text-end">
+        <button type="button" class="btn btn-primary" onclick="openAddOffcanvas()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+          Adicionar
+        </button>
+        <a href="?relatorio=pdf" class="btn btn-outline-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
+          Relatório
+        </a>
+      </div>
+    </div>
+    
+    <!-- Filtros Ativos -->
+    {% if active_filters or query %}
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="text-muted">Filtros ativos:</span>
+          
+          {% if query %}
+          <span class="tag">
+            Nome: "{{ query }}"
+            <a href="?{% for key, value in active_filters.items %}filter_{{ key }}={{ value }}&{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+          </span>
+          {% endif %}
+          
+          {% for key, value in active_filters.items %}
+          <span class="tag tag-blue">
+            {% if key == 'ativo' %}
+              Status: {% if value == 'True' or value == '1' %}Ativo{% else %}Inativo{% endif %}
+            {% elif key == 'nome' %}
+              Nome: "{{ value }}"
+            {% else %}
+              {{ key|title }}: "{{ value }}"
+            {% endif %}
+            <a href="?{% if query %}q={{ query }}&{% endif %}{% for k, v in active_filters.items %}{% if k != key %}filter_{{ k }}={{ v }}&{% endif %}{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+          </span>
+          {% endfor %}
+          
+          <a href="?" class="btn btn-sm btn-ghost-secondary">
+            Limpar todos os filtros
+          </a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabela -->
+    <div class="row row-cards">
+      <div class="col-12">
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+              <thead>
+                <tr>
+                  {% block table_header %}
+                  <th>Nome</th>
+                  <th>Status</th>
+                  <th class="w-1">Ações</th>
+                  {% endblock %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for item in page_obj %}
+                <tr class="cursor-pointer" onclick="viewItem({{ item.id }})">
+                  {% block table_row %}
+                  <td>{{ item.nome }}</td>
+                  <td>
+                    {% if item.ativo %}
+                    <span class="badge bg-success text-white">Ativo</span>
+                    {% else %}
+                    <span class="badge bg-danger text-white">Inativo</span>
+                    {% endif %}
+                  </td>
+                  <td onclick="event.stopPropagation()">
+                    <div class="btn-list flex-nowrap">
+                      <button class="btn btn-sm btn-icon btn-ghost-secondary" onclick="editItem({{ item.id }})" title="Editar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+                      </button>
+                      <button class="btn btn-sm btn-icon btn-ghost-danger" onclick="deleteItem({{ item.id }}, '{{ item.nome|escapejs }}')" title="Excluir">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                      </button>
+                    </div>
+                  </td>
+                  {% endblock %}
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="10" class="text-center text-muted py-5">
+                    <div class="empty">
+                      <div class="empty-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /></svg>
+                      </div>
+                      <p class="empty-title">Nenhum registro encontrado</p>
+                      <p class="empty-subtitle text-secondary">Adicione o primeiro registro clicando no botão acima.</p>
+                      <div class="empty-action">
+                        <button type="button" class="btn btn-primary" onclick="openAddOffcanvas()">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                          Adicionar o primeiro registro
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Paginação -->
+          {% if page_obj.has_other_pages %}
+          <div class="card-footer d-flex align-items-center">
+            <p class="m-0 text-secondary">
+              Mostrando <span>{{ page_obj.start_index }}</span> a <span>{{ page_obj.end_index }}</span> de <span>{{ page_obj.paginator.count }}</span> registros
+            </p>
+            <ul class="pagination m-0 ms-auto">
+              {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 7l-5 5l5 5" /><path d="M17 7l-5 5l5 5" /></svg>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6" /></svg>
+                </a>
+              </li>
+              {% endif %}
+              
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">{{ num }}</a></li>
+                {% endif %}
+              {% endfor %}
+              
+              {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7l5 5l-5 5" /><path d="M13 7l5 5l-5 5" /></svg>
+                </a>
+              </li>
+              {% endif %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Offcanvas Adicionar -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-add" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Adicionar {{ label }}</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-create">
+      {% csrf_token %}
+      {% block form_fields %}
+      <div class="mb-3">
+        <label class="form-label required">Nome</label>
+        <input type="text" class="form-control" name="nome" required>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" name="ativo" checked>
+          <span class="form-check-label">Ativo</span>
+        </label>
+      </div>
+      {% endblock %}
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+          Salvar
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Offcanvas Editar -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-edit" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Editar {{ label }}</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-edit">
+      {% csrf_token %}
+      <input type="hidden" id="edit-id" name="id">
+      
+      {% block form_fields_edit %}
+      <div class="mb-3">
+        <label class="form-label required">Nome</label>
+        <input type="text" class="form-control" id="edit-nome" name="nome" required>
+      </div>
+      
+      <div class="mb-3">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="edit-ativo" name="ativo" checked>
+          <span class="form-check-label">Ativo</span>
+        </label>
+      </div>
+      {% endblock %}
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+          Salvar
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Offcanvas Filtros Avançados -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filters" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      <input type="hidden" name="q" value="{{ query }}">
+      
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+      
+      <!-- Campo Nome -->
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" name="filter_nome" 
+               placeholder="Digite o nome"
+               value="{{ active_filters|get_item:'nome' }}">
+      </div>
+      
+      {% for field in model_fields %}
+      <div class="mb-3">
+        <label class="form-label">{{ field.verbose_name }}</label>
+        {% if field.type == 'foreignkey' and field.related_model == 'especie' %}
+          <select class="form-select" name="filter_{{ field.name }}">
+            <option value="">Todos</option>
+            {% for especie in especies %}
+            <option value="{{ especie.id }}" {% if active_filters|get_item:field.name == especie.id|stringformat:"s" %}selected{% endif %}>{{ especie.nome }}</option>
+            {% endfor %}
+          </select>
+        {% else %}
+          <input type="text" class="form-control" name="filter_{{ field.name }}" 
+                 placeholder="Digite o nome"
+                 value="{{ active_filters|get_item:field.name }}">
+        {% endif %}
+      </div>
+      {% endfor %}
+      
+      <!-- Campo Status -->
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="filter_ativo">
+          <option value="">Todos</option>
+          <option value="True" {% if active_filters|get_item:'ativo' == 'True' or active_filters|get_item:'ativo' == '1' %}selected{% endif %}>Ativo</option>
+          <option value="False" {% if active_filters|get_item:'ativo' == 'False' or active_filters|get_item:'ativo' == '0' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Confirmação de Exclusão -->
+<div class="modal modal-blur fade" id="modal-confirm-delete" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Confirmar Exclusão</h3>
+        <div class="text-secondary" id="delete-confirm-message">Tem certeza que deseja excluir este registro?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" id="btn-confirm-delete">Excluir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Sucesso -->
+<div class="modal modal-blur fade" id="modal-success" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></svg>
+        <h3>Sucesso!</h3>
+        <div class="text-secondary" id="success-message">Operação realizada com sucesso.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" onclick="location.reload()">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Erro -->
+<div class="modal modal-blur fade" id="modal-danger" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Erro!</h3>
+        <div class="text-secondary" id="error-message">Ocorreu um erro ao processar a operação.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+.cursor-pointer {
+  cursor: pointer;
+}
+.table tbody tr.cursor-pointer:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+</style>
+
+<script>
+// Abrir offcanvas de adicionar
+function openAddOffcanvas() {
+  const offcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvas-add'));
+  offcanvas.show();
+}
+
+// Abrir offcanvas de filtros avançados
+function openFilterOffcanvas() {
+  const offcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvas-filters'));
+  offcanvas.show();
+}
+
+// Visualizar item (clique na linha)
+function viewItem(id) {
+  editItem(id);
+}
+
+// Editar item
+function editItem(id) {
+  // Buscar dados do item
+  fetch(`{% url 'cadastros:detail' tipo 0 %}`.replace('/0/', `/${id}/`))
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        const data = result.data;
+        
+        // Preencher formulário
+        document.getElementById('edit-id').value = data.id;
+        document.getElementById('edit-nome').value = data.nome || '';
+        document.getElementById('edit-ativo').checked = data.ativo !== false;
+        
+        // Campos específicos (a serem estendidos pelos templates filhos)
+        if (typeof populateEditForm === 'function') {
+          populateEditForm(data);
+        }
+        
+        // Abrir offcanvas
+        const offcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvas-edit'));
+        offcanvas.show();
+      } else {
+        showErrorModal('Erro ao carregar dados do registro');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showErrorModal('Erro ao carregar dados do registro');
+    });
+}
+
+// Variáveis para controle de exclusão
+let deleteItemId = null;
+let deleteItemName = null;
+
+// Deletar item
+function deleteItem(id, nome) {
+  deleteItemId = id;
+  deleteItemName = nome;
+  
+  document.getElementById('delete-confirm-message').textContent = 
+    `Tem certeza que deseja excluir "${nome}"?`;
+  
+  const modalElement = document.getElementById('modal-confirm-delete');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+}
+
+// Confirmar exclusão
+document.getElementById('btn-confirm-delete').addEventListener('click', function() {
+  if (!deleteItemId) return;
+  
+  const formData = new FormData();
+  formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+  
+  fetch(`{% url 'cadastros:delete' tipo 0 %}`.replace('/0/', `/${deleteItemId}/`), {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Fechar modal de confirmação
+    const confirmModal = bootstrap.Modal.getInstance(document.getElementById('modal-confirm-delete'));
+    confirmModal.hide();
+    
+    if (data.success) {
+      // Apenas recarregar a página, sem modal de sucesso
+      location.reload();
+    } else {
+      showErrorModal(data.error || 'Erro ao excluir registro');
+    }
+    
+    deleteItemId = null;
+    deleteItemName = null;
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    
+    const confirmModal = bootstrap.Modal.getInstance(document.getElementById('modal-confirm-delete'));
+    if (confirmModal) confirmModal.hide();
+    
+    showErrorModal('Erro ao excluir registro');
+    
+    deleteItemId = null;
+    deleteItemName = null;
+  });
+});
+
+// Mostrar modal de sucesso
+function showSuccessModal(message) {
+  document.getElementById('success-message').textContent = message;
+  const modalElement = document.getElementById('modal-success');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+}
+
+// Mostrar modal de erro
+function showErrorModal(message) {
+  document.getElementById('error-message').textContent = message;
+  const modalElement = document.getElementById('modal-danger');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+}
+
+// Submeter formulário de criação
+document.getElementById('form-create').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const submitBtn = this.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  
+  fetch("{% url 'cadastros:create' tipo %}", {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    submitBtn.disabled = false;
+    if (data.success) {
+      // Fechar offcanvas
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-add'));
+      offcanvas.hide();
+      
+      // Mostrar modal de sucesso
+      showSuccessModal(data.message);
+    } else {
+      showErrorModal(data.error || 'Erro ao salvar registro');
+    }
+  })
+  .catch(error => {
+    submitBtn.disabled = false;
+    console.error('Erro:', error);
+    showErrorModal('Erro ao salvar registro');
+  });
+});
+
+// Submeter formulário de edição
+document.getElementById('form-edit').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const submitBtn = this.querySelector('button[type="submit"]');
+  const itemId = document.getElementById('edit-id').value;
+  submitBtn.disabled = true;
+  
+  fetch(`{% url 'cadastros:update' tipo 0 %}`.replace('/0/', `/${itemId}/`), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    submitBtn.disabled = false;
+    if (data.success) {
+      // Fechar offcanvas
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit'));
+      offcanvas.hide();
+      
+      // Recarregar página diretamente, sem modal
+      location.reload();
+    } else {
+      showErrorModal(data.error || 'Erro ao atualizar registro');
+    }
+  })
+  .catch(error => {
+    submitBtn.disabled = false;
+    console.error('Erro:', error);
+    showErrorModal('Erro ao atualizar registro');
+  });
+});
+</script>
+
+{% endblock %}

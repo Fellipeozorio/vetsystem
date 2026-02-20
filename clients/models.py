@@ -83,7 +83,9 @@ class Client(models.Model):
     # Contatos principais
     celular = models.CharField(max_length=20, default='')
     celular_whatsapp = models.BooleanField(default=True)
+    obs_celular = models.TextField(blank=True, null=True)
     email = models.EmailField(blank=True, null=True)
+    obs_email = models.TextField(blank=True, null=True)
     
     # Endereço
     cep = models.CharField(max_length=9, blank=True, null=True)
