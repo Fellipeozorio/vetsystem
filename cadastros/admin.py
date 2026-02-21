@@ -32,6 +32,15 @@ admin.site.register(TipoAtendimento, BaseCadastroAdmin)
 admin.site.register(Vacina, BaseCadastroAdmin)
 
 
+class ProtocoloVacinaAdmin(admin.ModelAdmin):
+    list_display = ('nome', 'vacina', 'especie', 'aplicacao', 'intervalo_dias')
+    list_filter = ('especie', 'aplicacao')
+    search_fields = ('nome', 'vacina__nome')
+
+
+admin.site.register(ProtocoloVacina, ProtocoloVacinaAdmin)
+
+
 class AtributoExameInline(admin.TabularInline):
     model = AtributoExame
     extra = 0

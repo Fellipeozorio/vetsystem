@@ -1,17 +1,18 @@
 {% extends 'cadastros/base_list.html' %}
+{% load cadastros_filters %}
 
 {% block table_header %}
 <th>Nome</th>
-<th>Grupo</th>
+<th>Tipo</th>
 <th>Status</th>
 <th class="w-1">Ações</th>
 {% endblock %}
 
 {% block table_row %}
-<td><strong>{{ item.nome }}</strong></td>
+<td><strong>{{ item.nome }}</strong> <span class="text-muted">({{ item.codigo }})</span></td>
 <td>
-  {% if item.grupo %}
-  <span class="badge bg-blue-lt">{{ item.grupo }}</span>
+  {% if item.tipo %}
+  <span class="badge bg-blue-lt">{{ item.get_tipo_display }}</span>
   {% else %}
   <span class="text-muted">-</span>
   {% endif %}
@@ -37,14 +38,25 @@
 
 {% block form_fields %}
 <div class="mb-3">
-  <label class="form-label required">Nome da Vacina</label>
+  <label class="form-label required">Nome</label>
   <input type="text" class="form-control" name="nome" placeholder="Ex: Antirrábica, V10..." required autofocus>
 </div>
 
 <div class="mb-3">
-  <label class="form-label">Grupo</label>
-  <input type="text" class="form-control" name="grupo" placeholder="Ex: Vacinas, Antiparasitário...">
-  <small class="form-hint">Categoria da vacina ou medicamento</small>
+  <label class="form-label required">Tipo</label>
+  <select class="form-select" name="tipo" required>
+    <option value="">Selecione...</option>
+    <option value="antiparasitario">Antiparasitário</option>
+    <option value="vacinas">Vacinas</option>
+    <option value="vermifugos">Vermífugos</option>
+  </select>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Laboratórios</label>
+  <input type="text" class="form-control" name="laboratorios" id="add-laboratorios-input" placeholder="Digite e pressione Enter para adicionar">
+  <div id="add-laboratorios-tags" class="mt-2"></div>
+  <input type="hidden" name="laboratorios_json" id="add-laboratorios-json">
 </div>
 
 <div class="mb-3">
@@ -57,14 +69,25 @@
 
 {% block form_fields_edit %}
 <div class="mb-3">
-  <label class="form-label required">Nome da Vacina</label>
+  <label class="form-label required">Nome</label>
   <input type="text" class="form-control" id="edit-nome" name="nome" placeholder="Ex: Antirrábica, V10..." required autofocus>
 </div>
 
 <div class="mb-3">
-  <label class="form-label">Grupo</label>
-  <input type="text" class="form-control" id="edit-grupo" name="grupo" placeholder="Ex: Vacinas, Antiparasitário...">
-  <small class="form-hint">Categoria da vacina ou medicamento</small>
+  <label class="form-label required">Tipo</label>
+  <select class="form-select" id="edit-tipo" name="tipo" required>
+    <option value="">Selecione...</option>
+    <option value="antiparasitario">Antiparasitário</option>
+    <option value="vacinas">Vacinas</option>
+    <option value="vermifugos">Vermífugos</option>
+  </select>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Laboratórios</label>
+  <input type="text" class="form-control" id="edit-laboratorios-input" placeholder="Digite e pressione Enter para adicionar">
+  <div id="edit-laboratorios-tags" class="mt-2"></div>
+  <input type="hidden" name="laboratorios_json" id="edit-laboratorios-json">
 </div>
 
 <div class="mb-3">
@@ -74,12 +97,543 @@
   </label>
 </div>
 
+<hr class="my-4">
+
+<!-- Seção de Protocolos -->
+<div class="mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Protocolos</h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openProtocolModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+      Adicionar Protocolo
+    </button>
+  </div>
+  <div id="protocolos-list" class="list-group">
+    <!-- Protocolos serão carregados aqui -->
+  </div>
+</div>
+
 <script>
-// Função para popular campos específicos de vacina ao editar
-function populateEditForm(data) {
-  if (data.grupo) {
-    document.getElementById('edit-grupo').value = data.grupo;
+// Arrays para armazenar laboratórios
+let addLaboratorios = [];
+let editLaboratorios = [];
+let currentVacinaId = null;
+let editingProtocolId = null;
+let protocolos = [];
+let deleteProtocoloId = null;
+
+// Função para renderizar tags de laboratórios
+function renderLaboratorioTags(labs, containerId, isEdit = false) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  
+  labs.forEach((lab, index) => {
+    const tag = document.createElement('span');
+    tag.className = 'badge bg-blue-lt me-1 mb-1';
+    tag.innerHTML = `
+      ${lab}
+      <a href="#" class="btn-close ms-1" style="font-size: 0.65rem;" onclick="removeLaboratorio(${index}, ${isEdit}); return false;"></a>
+    `;
+    container.appendChild(tag);
+  });
+}
+
+// Adicionar laboratório (form add)
+document.getElementById('add-laboratorios-input').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const value = this.value.trim();
+    if (value && !addLaboratorios.includes(value)) {
+      addLaboratorios.push(value);
+      renderLaboratorioTags(addLaboratorios, 'add-laboratorios-tags', false);
+      document.getElementById('add-laboratorios-json').value = JSON.stringify(addLaboratorios);
+      this.value = '';
+    }
+  }
+});
+
+// Adicionar laboratório (form edit)
+document.getElementById('edit-laboratorios-input').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const value = this.value.trim();
+    if (value && !editLaboratorios.includes(value)) {
+      editLaboratorios.push(value);
+      renderLaboratorioTags(editLaboratorios, 'edit-laboratorios-tags', true);
+      document.getElementById('edit-laboratorios-json').value = JSON.stringify(editLaboratorios);
+      this.value = '';
+    }
+  }
+});
+
+// Remover laboratório
+function removeLaboratorio(index, isEdit) {
+  if (isEdit) {
+    editLaboratorios.splice(index, 1);
+    renderLaboratorioTags(editLaboratorios, 'edit-laboratorios-tags', true);
+    document.getElementById('edit-laboratorios-json').value = JSON.stringify(editLaboratorios);
+  } else {
+    addLaboratorios.splice(index, 1);
+    renderLaboratorioTags(addLaboratorios, 'add-laboratorios-tags', false);
+    document.getElementById('add-laboratorios-json').value = JSON.stringify(addLaboratorios);
   }
 }
+
+// Função para popular campos específicos de vacina ao editar
+function populateEditForm(data) {
+  currentVacinaId = data.id;
+  
+  if (data.tipo) {
+    document.getElementById('edit-tipo').value = data.tipo;
+  }
+  
+  // Carregar laboratórios
+  editLaboratorios = [];
+  if (data.laboratorios) {
+    try {
+      editLaboratorios = JSON.parse(data.laboratorios);
+    } catch (e) {
+      // Se não for JSON, tenta split por vírgula
+      editLaboratorios = data.laboratorios.split(',').map(l => l.trim()).filter(l => l);
+    }
+  }
+  renderLaboratorioTags(editLaboratorios, 'edit-laboratorios-tags', true);
+  document.getElementById('edit-laboratorios-json').value = JSON.stringify(editLaboratorios);
+  
+  // Carregar protocolos
+  loadProtocolos(data.id);
+}
+
+// Carregar protocolos da vacina
+function loadProtocolos(vacinaId) {
+  fetch(`/cadastros/vacinas/${vacinaId}/protocolos/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        protocolos = data.protocolos;
+        renderProtocolos();
+      }
+    })
+    .catch(error => console.error('Erro ao carregar protocolos:', error));
+}
+
+// Renderizar lista de protocolos
+function renderProtocolos() {
+  const container = document.getElementById('protocolos-list');
+  
+  if (protocolos.length === 0) {
+    container.innerHTML = '<div class="text-muted text-center py-3">Nenhum protocolo cadastrado</div>';
+    return;
+  }
+  
+  container.innerHTML = '';
+  protocolos.forEach(protocolo => {
+    const item = document.createElement('a');
+    item.href = '#';
+    item.className = 'list-group-item list-group-item-action mb-2 border';
+    item.style.transition = 'all 0.2s ease';
+    item.onmouseenter = function() { 
+      this.style.boxShadow = '0 0.125rem 0.25rem rgba(0, 0, 0, 0.075)';
+      this.style.backgroundColor = 'rgba(0, 0, 0, 0.02)';
+    };
+    item.onmouseleave = function() { 
+      this.style.boxShadow = 'none';
+      this.style.backgroundColor = '';
+    };
+    item.onclick = (e) => {
+      e.preventDefault();
+      editProtocolo(protocolo.id);
+    };
+    
+    item.innerHTML = `
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-fill">
+          <div><strong>${protocolo.nome}</strong></div>
+          <div class="text-secondary small">Espécie: ${protocolo.especie_nome}</div>
+          <div class="text-secondary small">Aplicação: ${protocolo.aplicacao_display}</div>
+          <div class="text-secondary small">Intervalo: ${protocolo.intervalo_dias} dias</div>
+          ${protocolo.vem_apos_nome ? '<div class="text-secondary small">Vem após: ' + protocolo.vem_apos_nome + '</div>' : ''}
+        </div>
+        <button class="btn btn-icon btn-ghost-danger" title="Excluir" onclick="showDeleteProtocoloModal(${protocolo.id}); event.stopPropagation(); return false;">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="32" height="32" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+        </button>
+      </div>
+    `;
+    
+    container.appendChild(item);
+  });
+}
+
+// Abrir modal de protocolo
+function openProtocolModal(protocoloId = null) {
+  editingProtocolId = protocoloId;
+  
+  // Resetar form
+  document.getElementById('form-protocolo').reset();
+  document.getElementById('protocolo-id').value = '';
+  
+  // Carregar opções de vem_apos primeiro
+  loadVemAposOptions();
+  
+  // Se editando, carregar dados
+  if (protocoloId) {
+    const protocolo = protocolos.find(p => p.id === protocoloId);
+    if (protocolo) {
+      document.getElementById('protocolo-id').value = protocolo.id;
+      document.getElementById('protocolo-nome').value = protocolo.nome;
+      document.getElementById('protocolo-especie').value = protocolo.especie;
+      document.getElementById('protocolo-aplicacao').value = protocolo.aplicacao;
+      document.getElementById('protocolo-intervalo').value = protocolo.intervalo_dias;
+      // Aguardar um pouco para garantir que as opções foram carregadas
+      setTimeout(() => {
+        document.getElementById('protocolo-vem-apos').value = protocolo.vem_apos || '';
+      }, 50);
+      document.getElementById('modal-protocolo-title').textContent = 'Editar Protocolo';
+      // Mostrar botão de excluir
+      document.getElementById('btn-delete-protocolo').style.display = 'block';
+    }
+  } else {
+    document.getElementById('modal-protocolo-title').textContent = 'Adicionar Protocolo';
+    // Ocultar botão de excluir
+    document.getElementById('btn-delete-protocolo').style.display = 'none';
+  }
+  
+  // Abrir modal
+  const modal = new bootstrap.Modal(document.getElementById('modal-protocolo'));
+  modal.show();
+}
+
+// Editar protocolo
+function editProtocolo(protocoloId) {
+  openProtocolModal(protocoloId);
+}
+
+// Mostrar modal de confirmação de exclusão
+function showDeleteProtocoloModal(protocoloId) {
+  deleteProtocoloId = protocoloId;
+  const modal = new bootstrap.Modal(document.getElementById('modal-delete-protocolo'));
+  modal.show();
+}
+
+// Confirmar exclusão de protocolo
+function confirmDeleteProtocolo() {
+  if (!deleteProtocoloId) return;
+  
+  const formData = new FormData();
+  formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+  
+  fetch(`/cadastros/protocolos/${deleteProtocoloId}/delete/`, {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Fechar modal de confirmação
+      const modalElement = document.getElementById('modal-delete-protocolo');
+      const modal = bootstrap.Modal.getInstance(modalElement);
+      if (modal) {
+        modal.hide();
+      }
+      
+      // Fechar modal de edição se estiver aberto
+      const editModalElement = document.getElementById('modal-protocolo');
+      const editModal = bootstrap.Modal.getInstance(editModalElement);
+      if (editModal) {
+        editModal.hide();
+      }
+      
+      // Recarregar protocolos
+      loadProtocolos(currentVacinaId);
+    } else {
+      alert(data.error || 'Erro ao excluir protocolo');
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    alert('Erro ao excluir protocolo');
+  });
+}
+
+// Carregar opções de "vem após"
+function loadVemAposOptions() {
+  const select = document.getElementById('protocolo-vem-apos');
+  const currentId = document.getElementById('protocolo-id').value;
+  
+  select.innerHTML = '<option value="">Nenhum</option>';
+  
+  protocolos.forEach(protocolo => {
+    // Não incluir o protocolo atual na lista
+    if (currentId && protocolo.id == currentId) return;
+    
+    const option = document.createElement('option');
+    option.value = protocolo.id;
+    option.textContent = protocolo.nome;
+    select.appendChild(option);
+  });
+}
+</script>
+{% endblock %}
+
+{% block offcanvas_filters %}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filters" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      <input type="hidden" name="q" value="{{ query }}">
+      
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+      
+      <!-- Campo Nome -->
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" name="filter_nome" 
+               placeholder="Digite o nome"
+               value="{{ active_filters|get_item:'nome' }}">
+      </div>
+      
+      <!-- Campo Código -->
+      <div class="mb-3">
+        <label class="form-label">Código</label>
+        <input type="text" class="form-control" name="filter_codigo" 
+               placeholder="Digite o código"
+               value="{{ active_filters|get_item:'codigo' }}">
+      </div>
+      
+      <!-- Campo Tipo -->
+      <div class="mb-3">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="filter_tipo">
+          <option value="">Todos</option>
+          <option value="antiparasitario" {% if active_filters|get_item:'tipo' == 'antiparasitario' %}selected{% endif %}>Antiparasitário</option>
+          <option value="vacinas" {% if active_filters|get_item:'tipo' == 'vacinas' %}selected{% endif %}>Vacinas</option>
+          <option value="vermifugos" {% if active_filters|get_item:'tipo' == 'vermifugos' %}selected{% endif %}>Vermífugos</option>
+        </select>
+      </div>
+      
+      <!-- Campo Status -->
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="filter_ativo">
+          <option value="">Todos</option>
+          <option value="True" {% if active_filters|get_item:'ativo' == 'True' or active_filters|get_item:'ativo' == '1' %}selected{% endif %}>Ativo</option>
+          <option value="False" {% if active_filters|get_item:'ativo' == 'False' or active_filters|get_item:'ativo' == '0' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_content %}
+<!-- Modal de Protocolo -->
+<div class="modal modal-blur fade" id="modal-protocolo" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <form id="form-protocolo">
+        {% csrf_token %}
+        <input type="hidden" id="protocolo-id" name="id">
+        
+        <div class="modal-header">
+          <h5 class="modal-title" id="modal-protocolo-title">Adicionar Protocolo</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label required">Nome</label>
+            <input type="text" class="form-control" id="protocolo-nome" name="nome" placeholder="Ex: inicial (3 x 21 dias), anual..." required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label required">Espécie</label>
+            <select class="form-select" id="protocolo-especie" name="especie" required>
+              <option value="">Selecione...</option>
+              {% for especie in especies %}
+              <option value="{{ especie.id }}">{{ especie.nome }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label required">Aplicação</label>
+            <select class="form-select" id="protocolo-aplicacao" name="aplicacao" required>
+              <option value="">Selecione...</option>
+              <option value="indeterminado">Tempo Indeterminado</option>
+              <option value="1">Apenas 1 dose</option>
+              <option value="2">Apenas 2 doses</option>
+              <option value="3">Apenas 3 doses</option>
+              <option value="4">Apenas 4 doses</option>
+              <option value="5">Apenas 5 doses</option>
+              <option value="6">Apenas 6 doses</option>
+              <option value="7">Apenas 7 doses</option>
+              <option value="8">Apenas 8 doses</option>
+              <option value="9">Apenas 9 doses</option>
+              <option value="10">Apenas 10 doses</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label required">Intervalo (dias)</label>
+            <input type="number" class="form-control" id="protocolo-intervalo" name="intervalo_dias" min="0" required>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Vem após</label>
+            <select class="form-select" id="protocolo-vem-apos" name="vem_apos">
+              <option value="">Nenhum</option>
+            </select>
+            <small class="form-hint">Selecione o protocolo que deve vir antes deste</small>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button type="button" id="btn-delete-protocolo" class="btn btn-danger" style="display: none;" onclick="showDeleteProtocoloModal(document.getElementById('protocolo-id').value)">
+            Excluir
+          </button>
+          <div class="ms-auto">
+            <button type="button" class="btn" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-primary">Salvar</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Exclusão -->
+<div class="modal modal-blur fade" id="modal-delete-protocolo" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.24 3.957l-8.422 14.06a1.989 1.989 0 0 0 1.7 2.983h16.845a1.989 1.989 0 0 0 1.7 -2.983l-8.423 -14.06a1.989 1.989 0 0 0 -3.4 0z" /><path d="M12 9v4" /><path d="M12 17h.01" /></svg>
+        <h3>Tem certeza?</h3>
+        <div class="text-secondary">Deseja realmente excluir este protocolo? Esta ação não pode ser desfeita.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" onclick="confirmDeleteProtocolo()">Excluir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+console.log('Script de vacinas_list carregado');
+
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('DOMContentLoaded - Procurando form-protocolo');
+  
+  // Submeter formulário de protocolo
+  const formProtocolo = document.getElementById('form-protocolo');
+  console.log('Form protocolo encontrado:', formProtocolo ? 'SIM' : 'NÃO');
+  
+  if (formProtocolo) {
+    console.log('Anexando event listener ao form-protocolo');
+    formProtocolo.addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      console.log('Form protocolo submetido');
+      console.log('currentVacinaId:', currentVacinaId);
+      
+      if (!currentVacinaId) {
+        alert('Erro: ID da vacina não encontrado');
+        return;
+      }
+      
+      const formData = new FormData(this);
+      formData.append('vacina_id', currentVacinaId);
+      
+      const protocoloId = document.getElementById('protocolo-id').value;
+      const url = protocoloId 
+        ? `/cadastros/protocolos/${protocoloId}/update/`
+        : `/cadastros/protocolos/create/`;
+      
+      console.log('URL:', url);
+      console.log('FormData:', Array.from(formData.entries()));
+      
+      const submitBtn = this.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+      }
+      
+      fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      })
+      .then(response => {
+        console.log('Response status:', response.status);
+        return response.json();
+      })
+      .then(data => {
+        console.log('Response data:', data);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+        
+        if (data.success) {
+          // Fechar modal de protocolo
+          const modalElement = document.getElementById('modal-protocolo');
+          const modal = bootstrap.Modal.getInstance(modalElement);
+          if (modal) {
+            modal.hide();
+          }
+          
+          // Recarregar protocolos
+          loadProtocolos(currentVacinaId);
+        } else {
+          alert(data.error || 'Erro ao salvar protocolo');
+        }
+      })
+      .catch(error => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+        }
+        console.error('Erro ao salvar protocolo:', error);
+        alert('Erro ao salvar protocolo: ' + error.message);
+      });
+    });
+  } else {
+    console.error('ERRO: Form protocolo não encontrado no DOM!');
+  }
+
+  // Prevenir que o modal feche o offcanvas
+  const modalProtocolo = document.getElementById('modal-protocolo');
+  if (modalProtocolo) {
+    modalProtocolo.addEventListener('hide.bs.modal', function (e) {
+      console.log('Modal tentando fechar');
+      // Não prevenir o fechamento, mas garantir que o backdrop não afete o offcanvas
+    });
+
+    // Garantir que o offcanvas de edição permaneça aberto após fechar o modal de protocolo
+    modalProtocolo.addEventListener('hidden.bs.modal', function () {
+      console.log('Modal fechado');
+      // Não precisamos reabrir o offcanvas, ele deve permanecer aberto
+    });
+  }
+});
 </script>
 {% endblock %}

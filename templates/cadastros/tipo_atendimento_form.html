@@ -1,0 +1,599 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Editar{% else %}Adicionar{% endif %} Tipo de Atendimento - VetSystem{% endblock %}
+
+{% block extra_head %}
+<!-- Carregar HugeRTE (MIT License) - CDN oficial -->
+<script src="https://cdn.jsdelivr.net/npm/hugerte@1/hugerte.min.js" referrerpolicy="origin"></script>
+<!-- Carregar idioma português -->
+<script src="{% static 'js/hugerte-pt_BR.js' %}"></script>
+<!-- Carregar helper de inicialização reutilizável -->
+<script src="{% static 'js/hugerte-init.js' %}"></script>
+
+<style>
+  /* Esconder textarea que será transformado em HugeRTE */
+  textarea#modelo-atendimento {
+    display: none;
+  }
+  
+  .hugerte-loading {
+    height: 400px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 14px;
+  }
+  
+  .hugerte-loading::after {
+    content: 'Carregando editor...';
+  }
+  
+  .etiqueta-item {
+    cursor: pointer;
+    padding: 6px 10px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background-color 0.2s;
+    display: block;
+    background-color: transparent;
+  }
+  
+  .etiqueta-item:hover {
+    background-color: #f8f9fa;
+  }
+  
+  .etiqueta-item:last-child {
+    border-bottom: none;
+  }
+  
+  .etiqueta-secao {
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.7rem;
+  }
+  
+  .etiqueta-nome {
+    color: #6c757d;
+    font-size: 0.75rem;
+  }
+  
+  /* Cabeçalhos do accordion mais baixos e com fundo cinza */
+  .accordion-button {
+    padding: 0.5rem 0.75rem;
+    background-color: #f8f9fa;
+    font-size: 0.875rem;
+  }
+  
+  .accordion-button:not(.collapsed) {
+    background-color: #e9ecef;
+  }
+  
+  /* Botões com bordas consistentes */
+  .btn-outline-success,
+  .btn-outline-danger {
+    border-color: #d0d7de;
+  }
+  
+  .btn-outline-success:hover,
+  .btn-check:checked + .btn-outline-success {
+    border-color: #198754;
+  }
+  
+  .btn-outline-danger:hover,
+  .btn-check:checked + .btn-outline-danger {
+    border-color: #dc3545;
+  }
+  
+  .tooltip-icon {
+    cursor: help;
+    margin-left: 5px;
+    color: #6c757d;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          {% if object %}Editar{% else %}Adicionar{% endif %} Tipo de Atendimento
+        </h2>
+      </div>
+      <div class="col-auto ms-auto">
+        <a href="{% url 'cadastros:tipos_atendimento_list' %}" class="btn btn-outline-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M15 6l-6 6l6 6"></path>
+          </svg>
+          Voltar
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="card">
+        <!-- Tabs Navigation -->
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <a href="#tabs-informacoes" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                  <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"></path>
+                  <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"></path>
+                </svg>
+                Informações Básicas
+              </a>
+            </li>
+            <li class="nav-item" role="presentation">
+              <a href="#tabs-modelo" class="nav-link" data-bs-toggle="tab" aria-selected="false" tabindex="-1" role="tab">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                  <path d="M14 3v4a1 1 0 0 0 1 1h4"></path>
+                  <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"></path>
+                  <path d="M9 9l1 0"></path>
+                  <path d="M9 13l6 0"></path>
+                  <path d="M9 17l6 0"></path>
+                </svg>
+                Modelo de Atendimento
+              </a>
+            </li>
+          </ul>
+        </div>
+        
+        <div class="card-body">
+          <div class="tab-content">
+            <!-- Tab 1: Informações Básicas -->
+            <div class="tab-pane active show" id="tabs-informacoes" role="tabpanel">
+              <!-- Linha 1: Nome (2 cols), Duração (1 col), Frequência (1 col) -->
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label required">Nome</label>
+                  <input type="text" class="form-control" name="nome" value="{{ object.nome|default:'' }}" required>
+                </div>
+                
+                <div class="col-md-3">
+                  <label class="form-label">
+                    Duração Padrão <span class="text-danger">*</span>
+                    <span class="tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Tempo estimado para realizar este tipo de atendimento. Será usado como padrão ao agendar.">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-info-circle" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path>
+                        <path d="M12 9h.01"></path>
+                        <path d="M11 12h1v4h1"></path>
+                      </svg>
+                    </span>
+                  </label>
+                  <select class="form-select" name="duracao_padrao" required>
+                    <option value="">Selecione a duração</option>
+                    {% for option in duration_options %}
+                    <option value="{{ option.value }}" {% if object and object.duracao_padrao == option.value %}selected{% endif %}>
+                      {{ option.label }}
+                    </option>
+                    {% endfor %}
+                  </select>
+                </div>
+                
+                <div class="col-md-3">
+                  <label class="form-label">
+                    Frequência Recomendada
+                    <span class="tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Indica com que frequência este atendimento deve ser repetido. Usado para gerar lembretes e sugestões de reagendamento.">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-info-circle" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path>
+                        <path d="M12 9h.01"></path>
+                        <path d="M11 12h1v4h1"></path>
+                      </svg>
+                    </span>
+                  </label>
+                  <select class="form-select" name="frequencia_recomendada">
+                    <option value="nao_recorrente" {% if object.frequencia_recomendada == 'nao_recorrente' or not object %}selected{% endif %}>Não é recorrente</option>
+                    <option value="semanal" {% if object.frequencia_recomendada == 'semanal' %}selected{% endif %}>Semanal</option>
+                    <option value="quinzenal" {% if object.frequencia_recomendada == 'quinzenal' %}selected{% endif %}>Quinzenal</option>
+                    <option value="mensal" {% if object.frequencia_recomendada == 'mensal' %}selected{% endif %}>Mensal</option>
+                    <option value="trimestral" {% if object.frequencia_recomendada == 'trimestral' %}selected{% endif %}>Trimestral</option>
+                    <option value="semestral" {% if object.frequencia_recomendada == 'semestral' %}selected{% endif %}>Semestral</option>
+                    <option value="anual" {% if object.frequencia_recomendada == 'anual' %}selected{% endif %}>Anual</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- Linha 2: Fluxo da Agenda (2 cols) -->
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label">Fluxo da Agenda</label>
+                  <select class="form-select" name="fluxo_agenda">
+                    <option value="clinico" {% if object.fluxo_agenda == 'clinico' or not object %}selected{% endif %}>Atendimento Clínico</option>
+                    <option value="banho_tosa" {% if object.fluxo_agenda == 'banho_tosa' %}selected{% endif %}>Atendimento Banho e Tosa</option>
+                    <option value="simplificado" {% if object.fluxo_agenda == 'simplificado' %}selected{% endif %}>Fluxo Simplificado</option>
+                  </select>
+                </div>
+              </div>
+              
+              <!-- Linha 3: Status (1 col), Mensagens Automáticas (1 col) -->
+              <div class="row g-3">
+                <div class="col-md-3">
+                  <label class="form-label">Status</label>
+                  <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="ativo" id="status-ativo" value="true" {% if object.ativo or not object %}checked{% endif %}>
+                    <label class="btn btn-outline-success" for="status-ativo">Ativo</label>
+                    
+                    <input type="radio" class="btn-check" name="ativo" id="status-inativo" value="false" {% if object and not object.ativo %}checked{% endif %}>
+                    <label class="btn btn-outline-danger" for="status-inativo">Inativo</label>
+                  </div>
+                </div>
+                
+                <div class="col-md-3">
+                  <label class="form-label">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-device-mobile-message me-1" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                      <path d="M11 3h10v8h-3l-4 2v-2h-3z"></path>
+                      <path d="M15 16v4a1 1 0 0 1 -1 1h-8a1 1 0 0 1 -1 -1v-14a1 1 0 0 1 1 -1h2"></path>
+                      <path d="M10 18v.01"></path>
+                    </svg>
+                    Envio de Mensagens Automáticas
+                    <span class="tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Quando ativado, envia mensagens automáticas de confirmação, lembrete e pós-atendimento para os clientes.">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-info-circle" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path>
+                        <path d="M12 9h.01"></path>
+                        <path d="M11 12h1v4h1"></path>
+                      </svg>
+                    </span>
+                  </label>
+                  <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="mensagens_automaticas" id="msg-sim" value="true" {% if not object or object.mensagens_automaticas %}checked{% endif %}>
+                    <label class="btn btn-outline-success" for="msg-sim">Sim</label>
+                    
+                    <input type="radio" class="btn-check" name="mensagens_automaticas" id="msg-nao" value="false" {% if object and not object.mensagens_automaticas %}checked{% endif %}>
+                    <label class="btn btn-outline-danger" for="msg-nao">Não</label>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Tab 2: Modelo de Atendimento -->
+            <div class="tab-pane" id="tabs-modelo" role="tabpanel">
+              <div class="row">
+                <!-- Editor HugeRTE (3 cols) -->
+                <div class="col-md-9">
+                  <label class="form-label">Modelo de Atendimento</label>
+                  <div id="loading-modelo-atendimento" class="hugerte-loading"></div>
+                  <textarea id="modelo-atendimento" name="modelo_atendimento">{{ object.modelo_atendimento|default:'' }}</textarea>
+                </div>
+                
+                <!-- Accordion de Etiquetas (1 col) -->
+                <div class="col-md-3">
+                  <label class="form-label">
+                    Etiquetas Disponíveis
+                    <span class="tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Clique na etiqueta desejada e ela será posicionada no texto">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-info-circle" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path>
+                        <path d="M12 9h.01"></path>
+                        <path d="M11 12h1v4h1"></path>
+                      </svg>
+                    </span>
+                  </label>
+                  <div class="accordion" id="accordionEtiquetas">
+                    <!-- Seção Cliente -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingCliente">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCliente">
+                          Cliente
+                        </button>
+                      </h2>
+                      <div id="collapseCliente" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                        <div class="accordion-body p-0">{% verbatim %}
+                          <div class="etiqueta-item" data-tag="{{cliente.nome_completo}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">Nome Completo</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.codigo}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">Código</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.endereco}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">Endereço</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.cidade}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">Cidade</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.estado}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">Estado</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.cep}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">CEP</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.rg}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">RG</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.cpf_cnpj}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">CPF/CNPJ</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.celular}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">Celular</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{cliente.email}}">
+                            <span class="etiqueta-secao">Cliente -</span>
+                            <span class="etiqueta-nome">E-mail</span>
+                          </div>{% endverbatim %}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Seção Animal -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingAnimal">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAnimal">
+                          Animal
+                        </button>
+                      </h2>
+                      <div id="collapseAnimal" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                        <div class="accordion-body p-0">
+                          <div class="text-center text-muted p-3">
+                            Em breve
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Seção Clínica -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingClinica">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseClinica">
+                          Clínica
+                        </button>
+                      </h2>
+                      <div id="collapseClinica" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                        <div class="accordion-body p-0">
+                          <div class="text-center text-muted p-3">
+                            Em breve
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Seção Geral -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingGeral">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGeral">
+                          Geral
+                        </button>
+                      </h2>
+                      <div id="collapseGeral" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                        <div class="accordion-body p-0">{% verbatim %}
+                          <div class="etiqueta-item" data-tag="{{geral.data_atual}}">
+                            <span class="etiqueta-secao">Geral -</span>
+                            <span class="etiqueta-nome">Data Atual</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{geral.data_extenso}}">
+                            <span class="etiqueta-secao">Geral -</span>
+                            <span class="etiqueta-nome">Data por Extenso</span>
+                          </div>{% endverbatim %}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Seção Usuários -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingUsuarios">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseUsuarios">
+                          Usuários
+                        </button>
+                      </h2>
+                      <div id="collapseUsuarios" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                        <div class="accordion-body p-0">{% verbatim %}
+                          <div class="etiqueta-item" data-tag="{{usuario.nome_completo}}">
+                            <span class="etiqueta-secao">Usuário -</span>
+                            <span class="etiqueta-nome">Nome Completo</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{usuario.cpf}}">
+                            <span class="etiqueta-secao">Usuário -</span>
+                            <span class="etiqueta-nome">CPF</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{usuario.celular}}">
+                            <span class="etiqueta-secao">Usuário -</span>
+                            <span class="etiqueta-nome">Celular</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{usuario.email}}">
+                            <span class="etiqueta-secao">Usuário -</span>
+                            <span class="etiqueta-nome">E-mail</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{usuario.crmv}}">
+                            <span class="etiqueta-secao">Usuário -</span>
+                            <span class="etiqueta-nome">CRMV</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{usuario.mapa}}">
+                            <span class="etiqueta-secao">Usuário -</span>
+                            <span class="etiqueta-nome">MAPA</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{usuario.cargo}}">
+                            <span class="etiqueta-secao">Usuário -</span>
+                            <span class="etiqueta-nome">Cargo</span>
+                          </div>{% endverbatim %}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Seção Alertas -->
+                    <div class="accordion-item">
+                      <h2 class="accordion-header" id="headingAlertas">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAlertas">
+                          Alertas
+                        </button>
+                      </h2>
+                      <div id="collapseAlertas" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                        <div class="accordion-body p-0">
+                          <div class="text-center text-muted p-3">
+                            Em breve
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="card-footer text-end">
+          <div class="d-flex justify-content-end gap-2">
+            {% if object %}
+            <button type="button" class="btn btn-outline-danger" onclick="confirmarExclusao({{ object.id }}, '{{ object.nome|escapejs }}')">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M4 7l16 0"></path>
+                <path d="M10 11l0 6"></path>
+                <path d="M14 11l0 6"></path>
+                <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"></path>
+                <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"></path>
+              </svg>
+              Excluir
+            </button>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">
+              {% if object %}Salvar Alterações{% else %}Adicionar{% endif %}
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Confirmação de Exclusão -->
+<div class="modal modal-blur fade" id="modal-confirm-delete" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Confirmar Exclusão</h3>
+        <div class="text-secondary" id="delete-confirm-message">Tem certeza que deseja excluir este registro?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" id="btn-confirm-delete">Excluir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+  
+  // Inicializar HugeRTE
+  HugeRTEEditor.init('#modelo-atendimento', {}, 'editorModelo')
+    .then(() => {
+      const loading = document.getElementById('loading-modelo-atendimento');
+      if (loading) loading.style.display = 'none';
+      console.log('📝 Editor de modelo pronto');
+      
+      // Configurar etiquetas clicáveis
+      document.querySelectorAll('.etiqueta-item').forEach(item => {
+        item.addEventListener('click', function() {
+          const tag = this.getAttribute('data-tag');
+          const editor = HugeRTEEditor.getEditor('editorModelo');
+          if (editor) {
+            editor.insertContent(' ' + tag + ' ');
+            
+            // Feedback visual
+            this.style.backgroundColor = '#d1e7dd';
+            setTimeout(() => {
+              this.style.backgroundColor = '';
+            }, 200);
+          }
+        });
+      });
+    })
+    .catch(err => console.error('Erro ao inicializar editor:', err));
+});
+
+// Variáveis para controle de exclusão
+let deleteItemId = null;
+let deleteItemName = '';
+
+// Função para confirmar exclusão
+function confirmarExclusao(id, nome) {
+  deleteItemId = id;
+  deleteItemName = nome;
+  
+  document.getElementById('delete-confirm-message').textContent = 
+    `Tem certeza que deseja excluir "${nome}"?`;
+  
+  const modalElement = document.getElementById('modal-confirm-delete');
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+}
+
+// Evento do botão de confirmar exclusão no modal
+document.getElementById('btn-confirm-delete').addEventListener('click', function() {
+  if (!deleteItemId) return;
+  
+  const formData = new FormData();
+  formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+  
+  fetch('{% url "cadastros:tipo_atendimento_delete" 0 %}'.replace('/0/', `/${deleteItemId}/`), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Fechar modal de confirmação
+    const confirmModal = bootstrap.Modal.getInstance(document.getElementById('modal-confirm-delete'));
+    confirmModal.hide();
+    
+    if (data.success) {
+      // Redirecionar para a lista
+      window.location.href = '{% url "cadastros:tipos_atendimento_list" %}';
+    } else {
+      alert(data.error || 'Erro ao excluir registro');
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    const confirmModal = bootstrap.Modal.getInstance(document.getElementById('modal-confirm-delete'));
+    confirmModal.hide();
+    alert('Erro ao excluir registro');
+  });
+});
+</script>
+{% endblock %}

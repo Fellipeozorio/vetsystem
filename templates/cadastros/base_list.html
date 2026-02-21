@@ -271,6 +271,7 @@
 </div>
 
 <!-- Offcanvas Filtros Avançados -->
+{% block offcanvas_filters %}
 <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filters" style="width: 600px;">
   <div class="offcanvas-header">
     <h2 class="offcanvas-title">Filtros Avançados</h2>
@@ -328,6 +329,7 @@
     </form>
   </div>
 </div>
+{% endblock %}
 
 <!-- Modal Confirmação de Exclusão -->
 <div class="modal modal-blur fade" id="modal-confirm-delete" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
@@ -608,5 +610,7 @@ document.getElementById('form-edit').addEventListener('submit', function(e) {
   });
 });
 </script>
+
+{% block extra_content %}{% endblock %}
 
 {% endblock %}
