@@ -77,7 +77,11 @@
           <td>
             {% if client.pets.exists %}
               {% for pet in client.pets.all %}
-                <a href="#" class="badge bg-azure-lt me-1 pet-link" data-pet-id="{{ pet.id }}" onclick="event.stopPropagation(); return false;">{{ pet.nome }}</a>
+                {% if pet.status == 'obito' %}
+                  <a href="#" class="badge text-white me-1 pet-link" data-pet-id="{{ pet.id }}" onclick="event.stopPropagation(); showPetDetail({{ pet.id }}); return false;" style="background-color: var(--tblr-gray-500);">{{ pet.nome }}</a>
+                {% else %}
+                  <a href="#" class="badge text-white me-1 pet-link" data-pet-id="{{ pet.id }}" onclick="event.stopPropagation(); showPetDetail({{ pet.id }}); return false;" style="background-color: #2fb344;">{{ pet.nome }}</a>
+                {% endif %}
               {% endfor %}
             {% else %}
               <span class="text-muted">-</span>
@@ -232,12 +236,9 @@
               <label class="form-label">Como nos conheceu?</label>
               <select class="form-select" name="como_conheceu">
                 <option value="">Selecione...</option>
-                <option value="rua">Passando na rua</option>
-                <option value="facebook">Facebook</option>
-                <option value="site">Site</option>
-                <option value="instagram">Instagram</option>
-                <option value="indicacao">Indicação</option>
-                <option value="outros">Outros</option>
+                {% for origem in origens_cliente %}
+                <option value="{{ origem.id }}">{{ origem.nome }}</option>
+                {% endfor %}
               </select>
             </div>
             
@@ -294,12 +295,9 @@
               <label class="form-label">Como nos conheceu?</label>
               <select class="form-select" name="como_conheceu_pj">
                 <option value="">Selecione...</option>
-                <option value="rua">Passando na rua</option>
-                <option value="facebook">Facebook</option>
-                <option value="site">Site</option>
-                <option value="instagram">Instagram</option>
-                <option value="indicacao">Indicação</option>
-                <option value="outros">Outros</option>
+                {% for origem in origens_cliente %}
+                <option value="{{ origem.id }}">{{ origem.nome }}</option>
+                {% endfor %}
               </select>
             </div>
 
@@ -491,15 +489,23 @@
         <div class="wizard-step" id="step-5" style="display: none;">
           <h4 class="mb-3 text-center">Animais</h4>
           
-          <div class="empty">
-            <div class="empty-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"/><path d="M9 10l.01 0"/><path d="M15 10l.01 0"/><path d="M9.5 15a3.5 3.5 0 0 0 5 0"/><path d="M12 3a2 2 0 0 0 0 4"/></svg>
-            </div>
-            <p class="empty-title">Adicione animais ao cadastro</p>
-            <p class="empty-subtitle text-secondary">Você poderá adicionar os animais deste cliente após criar o cadastro.</p>
+          <div id="step5-animals-list" class="mb-3">
+            <!-- Lista de animais adicionados será exibida aqui -->
           </div>
           
-          <button type="button" class="btn btn-outline-primary w-100" disabled>
+          <div class="alert alert-info" role="alert">
+            <div class="d-flex">
+              <div>
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M12 17l.01 0" /></svg>
+              </div>
+              <div>
+                <h4 class="alert-title">Adicionar Animais</h4>
+                <div class="text-secondary">O cadastro do cliente será salvo ao adicionar o primeiro animal. Você também poderá adicionar animais posteriormente.</div>
+              </div>
+            </div>
+          </div>
+          
+          <button type="button" class="btn btn-outline-primary w-100" id="btn-add-pet-wizard">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
             Adicionar Novo Animal
           </button>
@@ -1289,6 +1295,102 @@ document.addEventListener('DOMContentLoaded', function() {
     updateStepDisplay();
   }
   
+  // Variável para armazenar o ID do cliente criado
+  let createdClientId = null;
+  
+  // Botão de adicionar animal no wizard
+  document.getElementById('btn-add-pet-wizard')?.addEventListener('click', async function() {
+    // Se o cliente já foi criado, apenas abrir o modal
+    if (createdClientId) {
+      document.getElementById('edit-tutor-id').value = createdClientId;
+      document.querySelector('#form-add-pet input[name="tutor_id"]').value = createdClientId;
+      const offcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvas-add-pet'));
+      offcanvas.show();
+      return;
+    }
+    
+    // Caso contrário, criar o cliente primeiro
+    const btnAddPet = this;
+    btnAddPet.disabled = true;
+    btnAddPet.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Salvando cliente...';
+    
+    const form = document.getElementById('form-wizard-cliente');
+    const formData = new FormData(form);
+    const tipo = formData.get('tipo');
+    
+    // Consolidar campos baseado no tipo
+    if (tipo === 'PJ') {
+      formData.set('nome_completo', formData.get('nome_completo_pj'));
+      formData.set('nacionalidade', formData.get('nacionalidade_pj'));
+      formData.set('como_conheceu', formData.get('como_conheceu_pj'));
+      formData.set('inscricao_municipal', formData.get('inscricao_municipal_pj'));
+    }
+    
+    // Usar celular da etapa 2 como celular principal
+    const celular2 = formData.get('celular2');
+    if (celular2) {
+      formData.set('celular', celular2);
+    }
+    
+    // Usar celular_whatsapp da etapa 2
+    const whatsapp2 = formData.get('celular_whatsapp2');
+    if (whatsapp2) {
+      formData.set('celular_whatsapp', whatsapp2);
+    }
+    
+    // Adicionar tags como string separada por vírgulas
+    formData.set('tags', tagsArray.join(', '));
+    
+    // Converter checkboxes em valores booleanos
+    formData.set('aceita_email', formData.has('aceita_email') ? 'true' : 'false');
+    formData.set('aceita_sms', formData.has('aceita_sms') ? 'true' : 'false');
+    formData.set('aceita_whatsapp', formData.has('aceita_whatsapp') ? 'true' : 'false');
+    formData.set('aceita_campanha_sms', formData.has('aceita_campanha_sms') ? 'true' : 'false');
+    
+    try {
+      const response = await fetch('{% url "clients:create_ajax" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.client_id) {
+        createdClientId = data.client_id;
+        
+        // Atualizar botão
+        btnAddPet.disabled = false;
+        btnAddPet.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg> Adicionar Novo Animal';
+        
+        // Atualizar tutor_id no modal
+        document.querySelector('#form-add-pet input[name="tutor_id"]').value = createdClientId;
+        
+        // Abrir modal de adicionar animal
+        const offcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvas-add-pet'));
+        offcanvas.show();
+        
+        // Alterar comportamento do botão "Criar Cliente" para redirecionar
+        const btnSubmit = document.getElementById('btn-submit');
+        btnSubmit.textContent = 'Concluir Cadastro';
+        btnSubmit.onclick = function(e) {
+          e.preventDefault();
+          window.location.href = `/clientes/${createdClientId}/`;
+        };
+      } else {
+        alert('Erro ao criar cliente: ' + (data.error || 'Erro desconhecido'));
+        btnAddPet.disabled = false;
+        btnAddPet.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg> Adicionar Novo Animal';
+      }
+    } catch (error) {
+      alert('Erro ao criar cliente. Tente novamente.');
+      btnAddPet.disabled = false;
+      btnAddPet.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg> Adicionar Novo Animal';
+    }
+  });
+  
   // Exclusão de cliente
   window.confirmDelete = function(clientId, clientName) {
     deleteClientId = clientId;
@@ -1333,4 +1435,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 </script>
+
+<!-- Incluir modais de animais -->
+{% include 'patients/pet_modals.html' %}
+
 {% endblock %}

@@ -1,5 +1,6 @@
 from django.db import models
 from django.core.validators import RegexValidator
+from cadastros.models import OrigemCliente
 
 
 class Client(models.Model):
@@ -27,15 +28,6 @@ class Client(models.Model):
         ('contribuinte', 'Contribuinte de ICMS'),
         ('nao_contribuinte', 'Não contribuinte de ICMS'),
         ('isento', 'Isento de inscrição'),
-    ]
-    
-    CONHECEU_CHOICES = [
-        ('rua', 'Passando na rua'),
-        ('facebook', 'Facebook'),
-        ('site', 'Site'),
-        ('instagram', 'Instagram'),
-        ('indicacao', 'Indicação'),
-        ('outros', 'Outros'),
     ]
     
     ESTADO_CHOICES = [
@@ -78,7 +70,13 @@ class Client(models.Model):
     
     # Comum a ambos
     inscricao_municipal = models.CharField(max_length=50, blank=True, null=True)
-    como_conheceu = models.CharField(max_length=20, choices=CONHECEU_CHOICES, blank=True, null=True)
+    como_conheceu = models.ForeignKey(
+        OrigemCliente,
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        verbose_name='Como nos conheceu'
+    )
     
     # Contatos principais
     celular = models.CharField(max_length=20, default='')

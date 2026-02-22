@@ -1,0 +1,1394 @@
+<!-- Modais de Gerenciamento de Animais -->
+
+<!-- Modal Offcanvas para Detalhes do Animal -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-detail-pet" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Detalhes do Animal</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <div class="mb-3">
+      <!-- Badge de Status -->
+      <div class="mb-2" id="detail-pet-status">
+        <span class="badge bg-secondary">-</span>
+      </div>
+      
+      <!-- Nome do Animal -->
+      <h2 class="mb-2" id="detail-pet-nome" style="font-size: 1.75rem; font-weight: 600;">-</h2>
+      
+      <!-- Código -->
+      <div class="mb-2">
+        <div class="text-muted small" style="font-size: 0.75rem;">Código:</div>
+        <div class="fw-bold" style="font-size: 1rem;" id="detail-pet-codigo">-</div>
+      </div>
+      
+      <!-- Espécie -->
+      <div class="mb-2">
+        <div class="text-muted small" style="font-size: 0.75rem;">Espécie:</div>
+        <div class="fw-bold" style="font-size: 1rem;" id="detail-pet-especie">-</div>
+      </div>
+      
+      <!-- Raça -->
+      <div class="mb-2">
+        <div class="text-muted small" style="font-size: 0.75rem;">Raça:</div>
+        <div class="fw-bold" style="font-size: 1rem;" id="detail-pet-raca">-</div>
+      </div>
+      
+      <!-- Sexo -->
+      <div class="mb-2">
+        <div class="text-muted small" style="font-size: 0.75rem;">Sexo:</div>
+        <div class="fw-bold" style="font-size: 1rem;" id="detail-pet-sexo">-</div>
+      </div>
+      
+      <!-- Esterilização -->
+      <div class="mb-2">
+        <div class="text-muted small" style="font-size: 0.75rem;">Esterilização:</div>
+        <div class="fw-bold" style="font-size: 1rem;" id="detail-pet-esterilizacao">-</div>
+      </div>
+      
+      <!-- Nascimento -->
+      <div class="mb-2">
+        <div class="text-muted small" style="font-size: 0.75rem;">Nascimento:</div>
+        <div class="fw-bold" style="font-size: 1rem;" id="detail-pet-nascimento">-</div>
+      </div>
+      
+      <!-- Pelagem -->
+      <div class="mb-2">
+        <div class="text-muted small" style="font-size: 0.75rem;">Pelagem:</div>
+        <div class="fw-bold" style="font-size: 1rem;" id="detail-pet-pelagem">-</div>
+      </div>
+    </div>
+    
+    <div class="d-grid gap-2 mt-3">
+      <button type="button" class="btn btn-primary" id="btn-edit-pet-from-detail">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+        Editar Animal
+      </button>
+      <button type="button" class="btn btn-outline-primary" id="btn-transfer-pet">
+        <i class="ti ti-arrows-exchange-2 icon-lg me-2"></i>
+        Trocar Responsável
+      </button>
+      <button type="button" class="btn" data-bs-dismiss="offcanvas">Fechar</button>
+    </div>
+    
+    <!-- Alert informativo -->
+    <div class="alert alert-info mt-3" role="alert">
+      <div class="d-flex">
+        <div>
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+        </div>
+        <div>
+          <h4 class="alert-title">Ficha do Animal</h4>
+          <div class="text-muted">A ficha completa do animal pode ser visualizada acessando pelo menu de Atendimento Clínico.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Offcanvas para Adicionar Animal -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-add-pet" data-bs-backdrop="static" data-bs-keyboard="false" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Adicionar Animal</h2>
+    <button type="button" class="btn-close" id="btn-close-add-pet"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-add-pet" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="tutor_id" value="{{ client.id }}">
+      
+      <div class="row">
+        <!-- Linha 1: Nome -->
+        <div class="col-12 mb-3">
+          <label class="form-label required">Nome do Animal</label>
+          <input type="text" class="form-control" name="nome" required>
+        </div>
+        
+        <!-- Linha 2: Sexo e Esterilização -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label required">Sexo</label>
+          <select class="form-select" name="sexo" id="pet-sexo" required>
+            <option value="">Selecione...</option>
+            <option value="M">Macho</option>
+            <option value="F">Fêmea</option>
+            <option value="I">Indeterminado</option>
+          </select>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Esterilização</label>
+          <select class="form-select" name="esterilizacao" id="pet-esterilizacao">
+            <option value="">Selecione...</option>
+            <option value="fertil">Fértil</option>
+            <option value="castrado">Castrado</option>
+            <option value="vasectomizado">Vasectomizado</option>
+          </select>
+        </div>
+        
+        <!-- Linha 3: Data de Nascimento -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Data de Nascimento</label>
+          <input type="date" class="form-control" name="data_nascimento">
+        </div>
+        
+        <!-- Linha 4: Espécie e Raça -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label required">Espécie</label>
+          <select class="form-select" name="especie" id="pet-especie" required>
+            <option value="">Selecione...</option>
+            {% for especie in especies %}
+            <option value="{{ especie.id }}" data-nome="{{ especie.nome|lower }}">{{ especie.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label class="form-label required">Raça</label>
+          <select class="form-select" name="raca" id="pet-raca" required>
+            <option value="">Selecione...</option>
+            {% for raca in racas %}
+            <option value="{{ raca.id }}">{{ raca.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Linha 5: Pelagem -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Pelagem</label>
+          <select class="form-select" name="pelagem">
+            <option value="">Selecione...</option>
+            {% for pelagem in pelagens %}
+            <option value="{{ pelagem.id }}">{{ pelagem.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Linha 6: Microchip -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Microchip</label>
+          <input type="text" class="form-control" name="microchip">
+        </div>
+        
+        <!-- Linha 7: Pedigree e Nº Pedigree -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Pedigree</label>
+          <select class="form-select" name="pedigree" id="pet-pedigree">
+            <option value="" selected>Selecione...</option>
+            <option value="false">Não</option>
+            <option value="true">Sim</option>
+          </select>
+        </div>
+        
+        <div class="col-md-6 mb-3" id="numero-pedigree-group" style="display: none;">
+          <label class="form-label">Nº do Pedigree</label>
+          <input type="text" class="form-control" name="numero_pedigree" id="pet-numero-pedigree">
+        </div>
+        
+        <!-- Linha 8: Marcações -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Marcações</label>
+          <div class="input-group mb-2">
+            <input type="text" class="form-control" id="pet-marcacao-input" placeholder="Digite e pressione Enter">
+            <button type="button" class="btn btn-primary" id="pet-add-marcacao">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+            </button>
+          </div>
+          <div id="pet-marcacoes-container" class="mb-2"></div>
+          <input type="hidden" name="marcacoes" id="pet-marcacoes-hidden">
+          <small class="form-hint">Deixe fixado informações sobre este animal. As marcações serão exibidas na tela de Atendimento.</small>
+        </div>
+        
+        <!-- Linha 9: Foto do Animal -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Foto do Animal</label>
+          <div class="card" id="pet-dropzone" style="border: 2px dashed #d1d5db; cursor: pointer;">
+            <div class="card-body text-center py-4">
+              <div id="pet-foto-preview" style="display: none;">
+                <img id="pet-foto-img" src="" alt="Preview" class="avatar avatar-xl avatar-rounded mb-2" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%;">
+                <div>
+                  <button type="button" class="btn btn-sm btn-danger" id="pet-clear-foto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                    Limpar Foto
+                  </button>
+                </div>
+              </div>
+              <div id="pet-foto-placeholder">
+                <div class="avatar avatar-xl avatar-rounded bg-secondary-lt mb-2 d-flex align-items-center justify-content-center mx-auto" id="pet-default-avatar" style="width: 100px; height: 100px;">
+                  <i class="ti ti-camera" style="font-size: 48px;"></i>
+                </div>
+                <p class="mb-1 small"><strong>Arraste a foto ou clique</strong></p>
+                <p class="text-muted mb-0 small">JPG ou PNG (máx. 5MB)</p>
+              </div>
+            </div>
+          </div>
+          <input type="file" id="pet-foto" name="foto" accept="image/*" class="d-none">
+          <input type="hidden" name="remove_foto" id="pet-remove-foto-flag" value="false">
+        </div>
+      </div>
+      
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+          Salvar Animal
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal Offcanvas para Editar Animal -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-edit-pet" data-bs-backdrop="static" data-bs-keyboard="false" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Editar Animal</h2>
+    <button type="button" class="btn-close" id="btn-close-edit-pet"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-edit-pet" enctype="multipart/form-data">
+      {% csrf_token %}
+      <input type="hidden" name="pet_id" id="edit-pet-id">
+      <input type="hidden" name="tutor_id" id="edit-tutor-id">
+      
+      <!-- Status do Animal -->
+      <div class="mb-4">
+        <label class="form-label">Status do Animal</label>
+        <div class="btn-group w-100" role="group">
+          <input type="radio" class="btn-check" name="status" id="edit-status-vivo" value="vivo" checked>
+          <label class="btn btn-outline-primary" for="edit-status-vivo">
+            <div><strong>Vivo</strong></div>
+          </label>
+          <input type="radio" class="btn-check" name="status" id="edit-status-obito" value="obito">
+          <label class="btn btn-outline-primary" for="edit-status-obito">
+            <div><strong>Óbito</strong></div>
+          </label>
+        </div>
+      </div>
+      
+      <div class="row">
+        <!-- Linha 1: Nome -->
+        <div class="col-12 mb-3">
+          <label class="form-label required">Nome do Animal</label>
+          <input type="text" class="form-control" name="nome" id="edit-pet-nome" required>
+        </div>
+        
+        <!-- Linha 2: Sexo e Esterilização -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label required">Sexo</label>
+          <select class="form-select" name="sexo" id="edit-pet-sexo" required>
+            <option value="">Selecione...</option>
+            <option value="M">Macho</option>
+            <option value="F">Fêmea</option>
+            <option value="I">Indeterminado</option>
+          </select>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Esterilização</label>
+          <select class="form-select" name="esterilizacao" id="edit-pet-esterilizacao">
+            <option value="">Selecione...</option>
+            <option value="fertil">Fértil</option>
+            <option value="castrado">Castrado</option>
+            <option value="vasectomizado">Vasectomizado</option>
+          </select>
+        </div>
+        
+        <!-- Linha 3: Data de Nascimento -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Data de Nascimento</label>
+          <input type="date" class="form-control" name="data_nascimento" id="edit-pet-data-nascimento">
+        </div>
+        
+        <!-- Linha 4: Espécie e Raça -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label required">Espécie</label>
+          <select class="form-select" name="especie" id="edit-pet-especie" required>
+            <option value="">Selecione...</option>
+            {% for especie in especies %}
+            <option value="{{ especie.id }}" data-nome="{{ especie.nome|lower }}">{{ especie.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div class="col-md-6 mb-3">
+          <label class="form-label required">Raça</label>
+          <select class="form-select" name="raca" id="edit-pet-raca" required>
+            <option value="">Selecione...</option>
+            {% for raca in racas %}
+            <option value="{{ raca.id }}">{{ raca.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Linha 5: Pelagem -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Pelagem</label>
+          <select class="form-select" name="pelagem" id="edit-pet-pelagem">
+            <option value="">Selecione...</option>
+            {% for pelagem in pelagens %}
+            <option value="{{ pelagem.id }}">{{ pelagem.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <!-- Linha 6: Microchip -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Microchip</label>
+          <input type="text" class="form-control" name="microchip" id="edit-pet-microchip">
+        </div>
+        
+        <!-- Linha 7: Pedigree e Nº Pedigree -->
+        <div class="col-md-6 mb-3">
+          <label class="form-label">Pedigree</label>
+          <select class="form-select" name="pedigree" id="edit-pet-pedigree">
+            <option value="" selected>Selecione...</option>
+            <option value="false">Não</option>
+            <option value="true">Sim</option>
+          </select>
+        </div>
+        
+        <div class="col-md-6 mb-3" id="edit-numero-pedigree-group" style="display: none;">
+          <label class="form-label">Nº do Pedigree</label>
+          <input type="text" class="form-control" name="numero_pedigree" id="edit-pet-numero-pedigree">
+        </div>
+        
+        <!-- Linha 8: Marcações -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Marcações</label>
+          <div class="input-group mb-2">
+            <input type="text" class="form-control" id="edit-pet-marcacao-input" placeholder="Digite e pressione Enter">
+            <button type="button" class="btn btn-primary" id="edit-pet-add-marcacao">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+            </button>
+          </div>
+          <div id="edit-pet-marcacoes-container" class="mb-2"></div>
+          <input type="hidden" name="marcacoes" id="edit-pet-marcacoes-hidden">
+          <small class="form-hint">Deixe fixado informações sobre este animal. As marcações serão exibidas na tela de Atendimento.</small>
+        </div>
+        
+        <!-- Linha 9: Foto do Animal -->
+        <div class="col-12 mb-3">
+          <label class="form-label">Foto do Animal</label>
+          <div class="card" id="edit-pet-dropzone" style="border: 2px dashed #d1d5db; cursor: pointer;">
+            <div class="card-body text-center py-4" id="edit-pet-foto-preview">
+              <!-- Preview será carregado dinamicamente -->
+            </div>
+          </div>
+          <input type="file" id="edit-pet-foto" name="foto" accept="image/*" class="d-none">
+          <input type="hidden" name="remove_foto" id="edit-pet-remove-foto-flag" value="false">
+        </div>
+      </div>
+      
+      <div class="d-grid gap-2">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+          Salvar Alterações
+        </button>
+        <button type="button" class="btn btn-danger" id="btn-delete-pet">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+          Excluir Animal
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal de Confirmação para Descartar Alterações -->
+<div class="modal modal-blur fade" id="modal-discard-pet-confirm" tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/></svg>
+        <h3>Descartar alterações?</h3>
+        <div class="text-secondary">Você tem alterações não salvas. Deseja realmente descartar?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal" id="btn-continuar-editando-pet">Continuar editando</button></div>
+            <div class="col"><button type="button" class="btn btn-warning w-100" id="btn-descartar-pet">Descartar</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Sucesso (Tabler Style) -->
+<div class="modal modal-blur fade" id="modal-success" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-green icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></svg>
+        <h3 id="modal-success-title">Sucesso!</h3>
+        <div class="text-muted" id="modal-success-text"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Erro (Tabler Style) -->
+<div class="modal modal-blur fade" id="modal-danger" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3 id="modal-danger-title">Erro!</h3>
+        <div class="text-muted" id="modal-danger-text"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação (Tabler Style) -->
+<div class="modal modal-blur fade" id="modal-confirm-delete" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Confirmar exclusão?</h3>
+        <div class="text-muted">Tem certeza que deseja excluir este animal? Esta ação não pode ser desfeita.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-danger w-100" id="btn-confirm-delete">Sim, excluir</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Offcanvas para Trocar Responsável -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-transfer-pet" data-bs-backdrop="static" data-bs-keyboard="false" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Trocar Responsável</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-transfer-pet">
+      {% csrf_token %}
+      <input type="hidden" name="pet_id" id="transfer-pet-id">
+      
+      <div class="mb-3">
+        <label class="form-label required">Novo Responsável</label>
+        <select class="form-select" name="novo_responsavel" id="transfer-novo-responsavel" required>
+          <option value="">Selecione um cliente...</option>
+        </select>
+        <div class="form-text">Escolha o responsável para o qual o animal será transferido.</div>
+      </div>
+      
+      <!-- Alert de Aviso -->
+      <div class="alert alert-warning" role="alert">
+        <div class="d-flex">
+          <div>
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+          </div>
+          <div>
+            <h4 class="alert-title">Atenção</h4>
+            <div class="text-muted">Caso o animal tenha débitos pendentes, os mesmos permanecerão vinculados ao responsável anterior.</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
+          Confirmar Transferência
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// Variáveis globais
+let petMarcacoes = [];
+let editPetMarcacoes = [];
+let currentPetId = null;
+let addPetFormModified = false;
+let editPetFormModified = false;
+
+// Inicialização
+document.addEventListener('DOMContentLoaded', function() {
+  
+  // Detectar modificações
+  document.getElementById('form-add-pet')?.addEventListener('input', function() {
+    addPetFormModified = true;
+  });
+  document.getElementById('form-edit-pet')?.addEventListener('input', function() {
+    editPetFormModified = true;
+  });
+  
+  // Botões de fechar com verificação
+  document.getElementById('btn-close-add-pet')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (addPetFormModified) {
+      const modal = new bootstrap.Modal(document.getElementById('modal-discard-pet-confirm'));
+      modal.show();
+      document.getElementById('btn-descartar-pet').onclick = function() {
+        bootstrap.Modal.getInstance(document.getElementById('modal-discard-pet-confirm')).hide();
+        setTimeout(() => { 
+          const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-add-pet'));
+          if (offcanvas) {
+            offcanvas.hide(); 
+          }
+          addPetFormModified = false;
+          resetAddForm(); 
+        }, 300);
+      };
+    } else {
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-add-pet'));
+      if (offcanvas) {
+        offcanvas.hide();
+      }
+    }
+  });
+  
+  document.getElementById('btn-close-edit-pet')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    if (editPetFormModified) {
+      const modal = new bootstrap.Modal(document.getElementById('modal-discard-pet-confirm'));
+      modal.show();
+      document.getElementById('btn-descartar-pet').onclick = function() {
+        bootstrap.Modal.getInstance(document.getElementById('modal-discard-pet-confirm')).hide();
+        setTimeout(() => { 
+          const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit-pet'));
+          if (offcanvas) {
+            offcanvas.hide(); 
+          }
+          editPetFormModified = false; 
+        }, 300);
+      };
+    } else {
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit-pet'));
+      if (offcanvas) {
+        offcanvas.hide();
+      }
+    }
+  });
+  
+  // Reset flags quando abrir modais
+  document.getElementById('offcanvas-add-pet')?.addEventListener('shown.bs.offcanvas', function() {
+    addPetFormModified = false;
+  });
+  document.getElementById('offcanvas-edit-pet')?.addEventListener('shown.bs.offcanvas', function() {
+    editPetFormModified = false;
+  });
+});
+
+function resetAddForm() {
+  const form = document.getElementById('form-add-pet');
+  if (form) {
+    form.reset();
+    addPetFormModified = false;
+    const preview = document.getElementById('pet-foto-preview');
+    const placeholder = document.getElementById('pet-foto-placeholder');
+    const fileInput = document.getElementById('pet-foto');
+    preview.style.display = 'none';
+    placeholder.style.display = 'block';
+    fileInput.value = '';
+    document.getElementById('pet-remove-foto-flag').value = 'false';
+    updateDefaultAvatar();
+  }
+}
+
+// ===== FUNÇÕES DE MODAL (Tabler Style) =====
+
+function showSuccessModal(title, text, callback) {
+  document.getElementById('modal-success-title').textContent = title;
+  document.getElementById('modal-success-text').textContent = text;
+  const modal = new bootstrap.Modal(document.getElementById('modal-success'));
+  
+  document.getElementById('modal-success').addEventListener('hidden.bs.modal', function handler() {
+    this.removeEventListener('hidden.bs.modal', handler);
+    if (callback) callback();
+  });
+  
+  modal.show();
+}
+
+function showDangerModal(title, text) {
+  document.getElementById('modal-danger-title').textContent = title;
+  document.getElementById('modal-danger-text').textContent = text;
+  const modal = new bootstrap.Modal(document.getElementById('modal-danger'));
+  modal.show();
+}
+
+function showConfirmDeleteModal(callback) {
+  const modal = new bootstrap.Modal(document.getElementById('modal-confirm-delete'));
+  const confirmBtn = document.getElementById('btn-confirm-delete');
+  
+  const handler = function() {
+    confirmBtn.removeEventListener('click', handler);
+    modal.hide();
+    if (callback) setTimeout(callback, 300);
+  };
+  
+  confirmBtn.addEventListener('click', handler);
+  modal.show();
+}
+
+// ===== MODAL DE DETALHES =====
+
+function showPetDetail(petId) {
+  fetch(`/animais/${petId}/detalhes/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const pet = data.pet;
+        currentPetId = petId;
+        
+        // Status (primeiro)
+        const statusDiv = document.getElementById('detail-pet-status');
+        if (pet.status === 'obito') {
+          statusDiv.innerHTML = '<span class="badge text-white" style="background-color: var(--tblr-gray-500);">Óbito</span>';
+        } else {
+          statusDiv.innerHTML = '<span class="badge" style="background-color: #2fb344; color: white;">Vivo</span>';
+        }
+        
+        // Preencher campos
+        document.getElementById('detail-pet-nome').textContent = pet.nome;
+        document.getElementById('detail-pet-codigo').textContent = pet.codigo;
+        document.getElementById('detail-pet-especie').textContent = pet.especie || '-';
+        document.getElementById('detail-pet-raca').textContent = pet.raca || '-';
+        document.getElementById('detail-pet-sexo').textContent = pet.sexo_display || '-';
+        document.getElementById('detail-pet-esterilizacao').textContent = pet.esterilizacao_display || '-';
+        document.getElementById('detail-pet-nascimento').textContent = pet.data_nascimento || '-';
+        document.getElementById('detail-pet-pelagem').textContent = pet.pelagem || '-';
+        
+        // Configurar botão de editar
+        document.getElementById('btn-edit-pet-from-detail').onclick = function() {
+          bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-detail-pet')).hide();
+          setTimeout(() => showPetEdit(currentPetId), 300);
+        };
+        
+        // Configurar botão de trocar responsável
+        document.getElementById('btn-transfer-pet').onclick = function() {
+          const detailOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-detail-pet'));
+          if (detailOffcanvas) {
+            detailOffcanvas.hide();
+          }
+          // Aguardar o modal fechar completamente antes de abrir o novo
+          setTimeout(() => showTransferPet(currentPetId), 500);
+        };
+        
+        // Mostrar offcanvas
+        new bootstrap.Offcanvas(document.getElementById('offcanvas-detail-pet')).show();
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      alert('Erro ao carregar dados do animal');
+    });
+}
+
+// ===== MODAL DE TRANSFERIR RESPONSÁVEL =====
+
+function showTransferPet(petId) {
+  console.log('showTransferPet chamado com petId:', petId);
+  document.getElementById('transfer-pet-id').value = petId;
+  
+  // Carregar lista de clientes
+  fetch('/clientes/api/lista/')
+    .then(response => {
+      console.log('Response status:', response.status);
+      return response.json();
+    })
+    .then(data => {
+      console.log('Data recebida:', data);
+      if (data.success) {
+        const select = document.getElementById('transfer-novo-responsavel');
+        select.innerHTML = '<option value="">Selecione um cliente...</option>';
+        
+        data.clientes.forEach(cliente => {
+          const option = document.createElement('option');
+          option.value = cliente.id;
+          option.textContent = `${cliente.codigo} - ${cliente.nome}`;
+          option.setAttribute('data-nome', cliente.nome.toLowerCase());
+          option.setAttribute('data-codigo', String(cliente.codigo).toLowerCase());
+          select.appendChild(option);
+        });
+        
+        console.log('Abrindo modal de transferência...');
+        // Criar ou obter instância do offcanvas
+        const transferOffcanvasEl = document.getElementById('offcanvas-transfer-pet');
+        let transferOffcanvas = bootstrap.Offcanvas.getInstance(transferOffcanvasEl);
+        if (!transferOffcanvas) {
+          transferOffcanvas = new bootstrap.Offcanvas(transferOffcanvasEl);
+        }
+        transferOffcanvas.show();
+        console.log('Modal aberto');
+      } else {
+        console.error('API retornou success: false');
+        alert('Erro ao carregar lista de clientes');
+      }
+    })
+    .catch(error => {
+      console.error('Erro no fetch:', error);
+      alert('Erro ao carregar lista de clientes: ' + error.message);
+    });
+}
+
+// Implementar pesquisa no select de clientes
+document.getElementById('transfer-novo-responsavel')?.addEventListener('focus', function() {
+  // Transformar select em campo pesquisável usando Tabler
+  if (!this.hasAttribute('data-search-enabled')) {
+    this.setAttribute('data-search-enabled', 'true');
+    
+    // Adicionar funcionalidade de pesquisa
+    const select = this;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-2';
+    
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'form-control mb-2';
+    searchInput.placeholder = 'Pesquisar por nome ou código...';
+    
+    select.parentNode.insertBefore(wrapper, select);
+    wrapper.appendChild(searchInput);
+    wrapper.appendChild(select);
+    
+    searchInput.addEventListener('input', function() {
+      const searchTerm = this.value.toLowerCase();
+      const options = select.querySelectorAll('option');
+      
+      options.forEach(option => {
+        if (option.value === '') {
+          option.style.display = '';
+          return;
+        }
+        
+        const nome = option.getAttribute('data-nome') || '';
+        const codigo = option.getAttribute('data-codigo') || '';
+        
+        if (nome.includes(searchTerm) || codigo.includes(searchTerm)) {
+          option.style.display = '';
+        } else {
+          option.style.display = 'none';
+        }
+      });
+    });
+  }
+});
+
+// Submeter transferência
+document.getElementById('form-transfer-pet')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const petId = document.getElementById('transfer-pet-id').value;
+  
+  fetch(`/animais/${petId}/transferir/`, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-Requested-With': 'XMLHttpRequest'
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-transfer-pet'));
+      if (offcanvas) offcanvas.hide();
+      
+      showSuccessModal('Transferência realizada!', data.message, function() {
+        location.reload();
+      });
+    } else {
+      showDangerModal('Erro na transferência', data.message || 'Não foi possível transferir o animal.');
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    showDangerModal('Erro', 'Ocorreu um erro ao transferir o animal.');
+  });
+});
+
+// ===== MODAL DE ADICIONAR =====
+
+// Controle de esterilização baseado no sexo
+document.getElementById('pet-sexo')?.addEventListener('change', function() {
+  const esterilizacaoSelect = document.getElementById('pet-esterilizacao');
+  if (this.value === 'I') {
+    esterilizacaoSelect.disabled = true;
+    esterilizacaoSelect.value = '';
+  } else {
+    esterilizacaoSelect.disabled = false;
+  }
+});
+
+// Controle de número de pedigree
+document.getElementById('pet-pedigree')?.addEventListener('change', function() {
+  const numeroPedigreeGroup = document.getElementById('numero-pedigree-group');
+  if (this.value === 'true') {
+    numeroPedigreeGroup.style.display = 'block';
+  } else {
+    numeroPedigreeGroup.style.display = 'none';
+    document.getElementById('pet-numero-pedigree').value = '';
+  }
+});
+
+// Sistema de marcações (tags)
+function renderPetMarcacoes() {
+  const container = document.getElementById('pet-marcacoes-container');
+  const hidden = document.getElementById('pet-marcacoes-hidden');
+  
+  container.innerHTML = '';
+  petMarcacoes.forEach((tag, index) => {
+    const badge = document.createElement('span');
+    badge.className = 'badge bg-primary text-white me-1 mb-1';
+    badge.style.position = 'relative';
+    badge.style.paddingRight = '24px';
+    badge.innerHTML = `
+      ${tag}
+      <button type="button" class="btn-close btn-close-white" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 0.6em; opacity: 1;" onclick="removePetMarcacao(${index})"></button>
+    `;
+    container.appendChild(badge);
+  });
+  
+  hidden.value = petMarcacoes.join(',');
+}
+
+function addPetMarcacao() {
+  const input = document.getElementById('pet-marcacao-input');
+  const tag = input.value.trim();
+  
+  if (tag && !petMarcacoes.includes(tag)) {
+    petMarcacoes.push(tag);
+    renderPetMarcacoes();
+    input.value = '';
+  }
+}
+
+function removePetMarcacao(index) {
+  petMarcacoes.splice(index, 1);
+  renderPetMarcacoes();
+}
+
+document.getElementById('pet-add-marcacao')?.addEventListener('click', addPetMarcacao);
+
+document.getElementById('pet-marcacao-input')?.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addPetMarcacao();
+  }
+});
+
+// ===== FUNÇÕES DE AVATAR BASEADO NA ESPÉCIE =====
+
+function getAvatarByEspecie() {
+  const especieSelect = document.getElementById('pet-especie');
+  if (!especieSelect || especieSelect.selectedIndex === 0 || !especieSelect.value) {
+    return 'camera';
+  }
+  const selectedOption = especieSelect.options[especieSelect.selectedIndex];
+  const especieNome = selectedOption.getAttribute('data-nome') || '';
+  
+  if (especieNome.includes('felino') || especieNome.includes('gato')) {
+    return 'cat';
+  } else if (especieNome.includes('canino') || especieNome.includes('cão') || especieNome.includes('cachorro')) {
+    return 'dog';
+  } else {
+    return 'paw';
+  }
+}
+
+function getAvatarSvgLarge(type) {
+  const icons = {
+    'camera': '<i class="ti ti-camera" style="font-size: 48px;"></i>',
+    'cat': '<i class="ti ti-cat" style="font-size: 48px;"></i>',
+    'dog': '<i class="ti ti-dog" style="font-size: 48px;"></i>',
+    'paw': '<i class="ti ti-paw" style="font-size: 48px;"></i>'
+  };
+  return icons[type] || icons['camera'];
+}
+
+function updateDefaultAvatar() {
+  const avatarType = getAvatarByEspecie();
+  const avatarContainer = document.getElementById('pet-default-avatar');
+  if (avatarContainer) {
+    avatarContainer.innerHTML = getAvatarSvgLarge(avatarType);
+    avatarContainer.className = 'avatar avatar-xl avatar-rounded bg-secondary-lt mb-2 d-flex align-items-center justify-content-center mx-auto';
+    avatarContainer.style.width = '100px';
+    avatarContainer.style.height = '100px';
+  }
+}
+
+// Atualizar avatar quando mudar a espécie
+document.getElementById('pet-especie')?.addEventListener('change', updateDefaultAvatar);
+
+// ===== DROPZONE PARA FOTO (ADICIONAR) =====
+
+const petDropzone = document.getElementById('pet-dropzone');
+const petFotoInput = document.getElementById('pet-foto');
+
+if (petDropzone && petFotoInput) {
+  // Click para abrir seletor
+  petDropzone.addEventListener('click', function(e) {
+    if (!e.target.closest('#pet-clear-foto')) {
+      petFotoInput.click();
+    }
+  });
+  
+  // Drag and drop
+  petDropzone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#206bc4';
+    this.style.backgroundColor = 'rgba(32, 107, 196, 0.05)';
+  });
+  
+  petDropzone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#d1d5db';
+    this.style.backgroundColor = '';
+  });
+  
+  petDropzone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#d1d5db';
+    this.style.backgroundColor = '';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+      petFotoInput.files = files;
+      handlePetFotoChange(files[0]);
+    }
+  });
+}
+
+petFotoInput?.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    handlePetFotoChange(file);
+  }
+});
+
+function handlePetFotoChange(file) {
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const preview = document.getElementById('pet-foto-preview');
+    const img = document.getElementById('pet-foto-img');
+    const placeholder = document.getElementById('pet-foto-placeholder');
+    
+    img.src = event.target.result;
+    preview.style.display = 'block';
+    placeholder.style.display = 'none';
+    document.getElementById('pet-remove-foto-flag').value = 'false';
+  };
+  reader.readAsDataURL(file);
+}
+
+// Limpar foto (adicionar)
+document.getElementById('pet-clear-foto')?.addEventListener('click', function(e) {
+  e.stopPropagation();
+  const preview = document.getElementById('pet-foto-preview');
+  const placeholder = document.getElementById('pet-foto-placeholder');
+  const fileInput = document.getElementById('pet-foto');
+  
+  preview.style.display = 'none';
+  placeholder.style.display = 'block';
+  fileInput.value = '';
+  document.getElementById('pet-remove-foto-flag').value = 'true';
+  
+  // Atualizar avatar baseado na espécie
+  updateDefaultAvatar();
+});
+
+// Submeter formulário de adicionar
+document.getElementById('form-add-pet')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  
+  fetch('/animais/criar/', {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Fechar offcanvas
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-add-pet'));
+      if (offcanvas) {
+        offcanvas.hide();
+      }
+      
+      // Mostrar modal de sucesso (padrão Tabler)
+      setTimeout(() => {
+        showSuccessModal('Sucesso!', `Animal cadastrado com sucesso! Código: ${data.pet_codigo}`, () => {
+          location.reload();
+        });
+      }, 300);
+    } else {
+      showDangerModal('Erro!', data.error || 'Erro ao cadastrar animal');
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    showDangerModal('Erro!', 'Erro ao cadastrar animal');
+  });
+});
+
+// ===== MODAL DE EDITAR =====
+
+function showPetEdit(petId) {
+  fetch(`/animais/${petId}/detalhes/`)
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const pet = data.pet;
+        
+        // Preencher campos
+        document.getElementById('edit-pet-id').value = pet.id;
+        document.getElementById('edit-tutor-id').value = pet.tutor_id;
+        document.getElementById('edit-pet-nome').value = pet.nome;
+        document.getElementById('edit-pet-sexo').value = pet.sexo;
+        document.getElementById('edit-pet-esterilizacao').value = pet.esterilizacao || '';
+        document.getElementById('edit-pet-data-nascimento').value = pet.data_nascimento_raw || '';
+        document.getElementById('edit-pet-especie').value = pet.especie_id || '';
+        document.getElementById('edit-pet-raca').value = pet.raca_id || '';
+        document.getElementById('edit-pet-pelagem').value = pet.pelagem_id || '';
+        document.getElementById('edit-pet-microchip').value = pet.microchip || '';
+        document.getElementById('edit-pet-numero-pedigree').value = pet.numero_pedigree || '';
+        
+        // Status
+        if (pet.status === 'obito') {
+          document.getElementById('edit-status-obito').checked = true;
+        } else {
+          document.getElementById('edit-status-vivo').checked = true;
+        }
+        
+        // Pedigree
+        document.getElementById('edit-pet-pedigree').value = pet.pedigree ? 'true' : 'false';
+        if (pet.pedigree) {
+          document.getElementById('edit-numero-pedigree-group').style.display = 'block';
+        } else {
+          document.getElementById('edit-numero-pedigree-group').style.display = 'none';
+        }
+        
+        // Marcações
+        editPetMarcacoes = pet.marcacoes_list || [];
+        renderEditPetMarcacoes();
+        
+        // Foto
+        const preview = document.getElementById('edit-pet-foto-preview');
+        
+        if (pet.foto) {
+          // Tem foto - mostrar com botão de limpar
+          preview.innerHTML = `
+            <img src="${pet.foto}" alt="Foto do animal" class="avatar avatar-xl avatar-rounded mb-2" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%;">
+            <div>
+              <button type="button" class="btn btn-sm btn-danger" id="edit-pet-clear-foto">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                Limpar Foto
+              </button>
+            </div>
+          `;
+        } else {
+          // Sem foto - mostrar dropzone com avatar icon
+          const avatarIcon = getAvatarSvgLarge(pet.avatar_icon || 'paw');
+          preview.innerHTML = `
+            <div class="avatar avatar-xl avatar-rounded bg-secondary-lt mb-2 d-flex align-items-center justify-content-center mx-auto" style="width: 100px; height: 100px;">${avatarIcon}</div>
+            <p class="mb-1 small"><strong>Arraste a foto ou clique</strong></p>
+            <p class="text-muted mb-0 small">JPG ou PNG (máx. 5MB)</p>
+          `;
+        }
+        
+        document.getElementById('edit-pet-remove-foto-flag').value = 'false';
+        
+        // Abrir offcanvas
+        new bootstrap.Offcanvas(document.getElementById('offcanvas-edit-pet')).show();
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      alert('Erro ao carregar dados do animal');
+    });
+}
+
+// Controle de esterilização (editar)
+document.getElementById('edit-pet-sexo')?.addEventListener('change', function() {
+  const esterilizacaoSelect = document.getElementById('edit-pet-esterilizacao');
+  if (this.value === 'I') {
+    esterilizacaoSelect.disabled = true;
+    esterilizacaoSelect.value = '';
+  } else {
+    esterilizacaoSelect.disabled = false;
+  }
+});
+
+// Controle de pedigree (editar)
+document.getElementById('edit-pet-pedigree')?.addEventListener('change', function() {
+  const numeroPedigreeGroup = document.getElementById('edit-numero-pedigree-group');
+  if (this.value === 'true') {
+    numeroPedigreeGroup.style.display = 'block';
+  } else {
+    numeroPedigreeGroup.style.display = 'none';
+    document.getElementById('edit-pet-numero-pedigree').value = '';
+  }
+});
+
+// Sistema de marcações (editar)
+function renderEditPetMarcacoes() {
+  const container = document.getElementById('edit-pet-marcacoes-container');
+  const hidden = document.getElementById('edit-pet-marcacoes-hidden');
+  
+  container.innerHTML = '';
+  editPetMarcacoes.forEach((tag, index) => {
+    const badge = document.createElement('span');
+    badge.className = 'badge bg-primary text-white me-1 mb-1';
+    badge.style.position = 'relative';
+    badge.style.paddingRight = '24px';
+    badge.innerHTML = `
+      ${tag}
+      <button type="button" class="btn-close btn-close-white" style="position: absolute; right: 4px; top: 50%; transform: translateY(-50%); font-size: 0.6em; opacity: 1;" onclick="removeEditPetMarcacao(${index})"></button>
+    `;
+    container.appendChild(badge);
+  });
+  
+  hidden.value = editPetMarcacoes.join(',');
+}
+
+function addEditPetMarcacao() {
+  const input = document.getElementById('edit-pet-marcacao-input');
+  const tag = input.value.trim();
+  
+  if (tag && !editPetMarcacoes.includes(tag)) {
+    editPetMarcacoes.push(tag);
+    renderEditPetMarcacoes();
+    input.value = '';
+  }
+}
+
+function removeEditPetMarcacao(index) {
+  editPetMarcacoes.splice(index, 1);
+  renderEditPetMarcacoes();
+}
+
+document.getElementById('edit-pet-add-marcacao')?.addEventListener('click', addEditPetMarcacao);
+
+document.getElementById('edit-pet-marcacao-input')?.addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addEditPetMarcacao();
+  }
+});
+
+// ===== DROPZONE PARA FOTO (EDITAR) =====
+
+function getEditAvatarByEspecie() {
+  const especieSelect = document.getElementById('edit-pet-especie');
+  if (!especieSelect || especieSelect.selectedIndex === 0 || !especieSelect.value) {
+    return 'camera';
+  }
+  const selectedOption = especieSelect.options[especieSelect.selectedIndex];
+  const especieNome = selectedOption.getAttribute('data-nome') || '';
+  
+  if (especieNome.includes('felino') || especieNome.includes('gato')) {
+    return 'cat';
+  } else if (especieNome.includes('canino') || especieNome.includes('cão') || especieNome.includes('cachorro')) {
+    return 'dog';
+  } else {
+    return 'paw';
+  }
+}
+
+const editPetDropzone = document.getElementById('edit-pet-dropzone');
+const editPetFotoInput = document.getElementById('edit-pet-foto');
+
+if (editPetDropzone && editPetFotoInput) {
+  // Click para abrir seletor
+  editPetDropzone.addEventListener('click', function(e) {
+    if (!e.target.closest('#edit-pet-clear-foto')) {
+      editPetFotoInput.click();
+    }
+  });
+  
+  // Drag and drop
+  editPetDropzone.addEventListener('dragover', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#206bc4';
+    this.style.backgroundColor = 'rgba(32, 107, 196, 0.05)';
+  });
+  
+  editPetDropzone.addEventListener('dragleave', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#d1d5db';
+    this.style.backgroundColor = '';
+  });
+  
+  editPetDropzone.addEventListener('drop', function(e) {
+    e.preventDefault();
+    this.style.borderColor = '#d1d5db';
+    this.style.backgroundColor = '';
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith('image/')) {
+      editPetFotoInput.files = files;
+      handleEditPetFotoChange(files[0]);
+    }
+  });
+}
+
+editPetFotoInput?.addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (file) {
+    handleEditPetFotoChange(file);
+  }
+});
+
+function handleEditPetFotoChange(file) {
+  const reader = new FileReader();
+  reader.onload = function(event) {
+    const preview = document.getElementById('edit-pet-foto-preview');
+    preview.innerHTML = `
+      <img src="${event.target.result}" alt="Preview" class="avatar avatar-xl avatar-rounded mb-2" style="width: 100px; height: 100px; object-fit: cover; border-radius: 50%;">
+      <div>
+        <button type="button" class="btn btn-sm btn-danger" id="edit-pet-clear-foto">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+          Limpar Foto
+        </button>
+      </div>
+    `;
+    document.getElementById('edit-pet-remove-foto-flag').value = 'false';
+    
+    // Adicionar listener ao botão de limpar
+    document.getElementById('edit-pet-clear-foto')?.addEventListener('click', clearEditPetFoto);
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearEditPetFoto(e) {
+  if (e) e.stopPropagation();
+  
+  const preview = document.getElementById('edit-pet-foto-preview');
+  const fileInput = document.getElementById('edit-pet-foto');
+  const avatarType = getEditAvatarByEspecie();
+  const avatarIcon = getAvatarSvgLarge(avatarType);
+  
+  preview.innerHTML = `
+    <div class="avatar avatar-xl avatar-rounded bg-secondary-lt mb-2 d-flex align-items-center justify-content-center mx-auto" style="width: 100px; height: 100px;">${avatarIcon}</div>
+    <p class="mb-1 small"><strong>Arraste a foto ou clique</strong></p>
+    <p class="text-muted mb-0 small">JPG ou PNG (máx. 5MB)</p>
+  `;
+  
+  fileInput.value = '';
+  document.getElementById('edit-pet-remove-foto-flag').value = 'true';
+}
+
+// Listener global para o botão de limpar (quando vier do carregamento inicial)
+document.addEventListener('click', function(e) {
+  if (e.target && e.target.id === 'edit-pet-clear-foto') {
+    clearEditPetFoto(e);
+  }
+});
+
+// Submeter formulário de editar
+document.getElementById('form-edit-pet')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const petId = document.getElementById('edit-pet-id').value;
+  const formData = new FormData(this);
+  
+  fetch(`/animais/${petId}/editar/`, {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success) {
+      // Fechar offcanvas
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit-pet'));
+      if (offcanvas) {
+        offcanvas.hide();
+      }
+      
+      // Mostrar modal de sucesso
+      setTimeout(() => {
+        showSuccessModal('Sucesso!', 'Animal atualizado com sucesso!', () => {
+          location.reload();
+        });
+      }, 300);
+    } else {
+      showDangerModal('Erro!', data.error || 'Erro ao atualizar animal');
+    }
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    showDangerModal('Erro!', 'Erro ao atualizar animal');
+  });
+});
+
+// Botão de excluir
+document.getElementById('btn-delete-pet')?.addEventListener('click', function() {
+  const petId = document.getElementById('edit-pet-id').value;
+  
+  showConfirmDeleteModal(() => {
+    fetch(`/animais/${petId}/excluir/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        // Fechar offcanvas
+        const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit-pet'));
+        if (offcanvas) {
+          offcanvas.hide();
+        }
+        
+        // Recarregar a página
+        setTimeout(() => {
+          location.reload();
+        }, 300);
+      } else {
+        showDangerModal('Erro!', data.error || 'Erro ao excluir animal');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro!', 'Erro ao excluir animal');
+    });
+  });
+});
+</script>

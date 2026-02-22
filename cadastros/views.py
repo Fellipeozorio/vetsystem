@@ -41,7 +41,7 @@ MENU_LABELS = {
     'referencias-exames': 'Referências de Exames',
     'modelos-receita': 'Modelos de Receita',
     'modelos-documento': 'Modelos de Documento',
-    'origens-cliente': 'Origens dos Clientes',
+    'origens-cliente': 'Origem dos Clientes',
 }
 
 

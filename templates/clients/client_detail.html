@@ -126,7 +126,7 @@
           </div>
           <div class="col-md-6">
             <label class="form-label fw-bold">Como nos Conheceu?</label>
-            <div>{{ client.get_como_conheceu_display|default:"-" }}</div>
+            <div>{{ client.como_conheceu.nome|default:"-" }}</div>
           </div>
         </div>
         {% if client.tags %}
@@ -288,7 +288,7 @@
       <div class="card-header">
         <h3 class="card-title">Animais</h3>
         <div class="ms-auto">
-          <a href="#" class="btn btn-primary btn-sm">
+          <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-add-pet">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
             Adicionar
           </a>
@@ -298,16 +298,35 @@
         {% if pets %}
         <div class="list-group list-group-flush">
           {% for pet in pets %}
-          <div class="list-group-item">
+          <div class="list-group-item pet-card-hover" style="cursor: pointer;" onclick="showPetDetail({{ pet.id }})">
             <div class="row align-items-center">
               <div class="col-auto">
-                <span class="avatar">{{ pet.nome|slice:":2"|upper }}</span>
+                <span class="avatar avatar-rounded" style="overflow: hidden;">
+                  {% if pet.foto %}
+                    <img src="{{ pet.foto.url }}" alt="{{ pet.nome }}" style="width: 100%; height: 100%; object-fit: cover;">
+                  {% else %}
+                    {% if 'felino' in pet.especie.nome|lower or 'gato' in pet.especie.nome|lower %}
+                      <i class="ti ti-cat"></i>
+                    {% elif 'canino' in pet.especie.nome|lower or 'cão' in pet.especie.nome|lower or 'cachorro' in pet.especie.nome|lower %}
+                      <i class="ti ti-dog"></i>
+                    {% else %}
+                      <i class="ti ti-paw"></i>
+                    {% endif %}
+                  {% endif %}
+                </span>
               </div>
               <div class="col">
                 <div class="fw-bold">{{ pet.nome }}</div>
                 <div class="text-secondary small">
-                  {{ pet.especie.nome }} - {{ pet.raca.nome }}
+                  {{ pet.especie.nome }} - {{ pet.raca.nome|default:"Sem raça definida" }}
                 </div>
+              </div>
+              <div class="col-auto">
+                {% if pet.status == 'obito' %}
+                  <span class="badge text-white" style="background-color: var(--tblr-gray-500);">Óbito</span>
+                {% else %}
+                  <span class="badge text-white" style="background-color: #2fb344;">Vivo</span>
+                {% endif %}
               </div>
             </div>
           </div>
@@ -463,12 +482,9 @@
         <label class="form-label">Como nos Conheceu?</label>
         <select class="form-select" name="como_conheceu">
           <option value="">Selecione...</option>
-          <option value="rua" {% if client.como_conheceu == 'rua' %}selected{% endif %}>Passando na rua</option>
-          <option value="facebook" {% if client.como_conheceu == 'facebook' %}selected{% endif %}>Facebook</option>
-          <option value="site" {% if client.como_conheceu == 'site' %}selected{% endif %}>Site</option>
-          <option value="instagram" {% if client.como_conheceu == 'instagram' %}selected{% endif %}>Instagram</option>
-          <option value="indicacao" {% if client.como_conheceu == 'indicacao' %}selected{% endif %}>Indicação</option>
-          <option value="outros" {% if client.como_conheceu == 'outros' %}selected{% endif %}>Outros</option>
+          {% for origem in origens_cliente %}
+          <option value="{{ origem.id }}" {% if client.como_conheceu and client.como_conheceu.id == origem.id %}selected{% endif %}>{{ origem.nome }}</option>
+          {% endfor %}
         </select>
       </div>
 
@@ -829,6 +845,15 @@
 .form-check-input:focus {
   border-color: #2fb344;
   box-shadow: 0 0 0 0.25rem rgba(47, 179, 68, 0.25);
+}
+
+/* Hover nos cards de animais */
+.pet-card-hover {
+  transition: background-color 0.2s ease;
+}
+
+.pet-card-hover:hover {
+  background-color: rgba(0, 0, 0, 0.03);
 }
 </style>
 
@@ -1419,5 +1444,8 @@ document.getElementById('form-edit-privacy').addEventListener('submit', function
   });
 });
 </script>
+
+<!-- Incluir modais de animais -->
+{% include 'patients/pet_modals.html' %}
 
 {% endblock %}

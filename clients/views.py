@@ -7,6 +7,7 @@ from django.views.decorators.http import require_http_methods
 import json
 
 from .models import Client, ContatoAdicional
+from cadastros.models import OrigemCliente, Especie, Raca, Pelagem
 
 
 @login_required
@@ -41,10 +42,22 @@ def client_list(request):
     page_number = request.GET.get('page', 1)
     page_obj = paginator.get_page(page_number)
     
+    # Buscar origens ativas
+    origens_cliente = OrigemCliente.objects.filter(ativo=True).order_by('nome')
+    
+    # Buscar dados para cadastro de animais
+    especies = Especie.objects.filter(ativo=True).order_by('nome')
+    racas = Raca.objects.filter(ativo=True).order_by('nome')
+    pelagens = Pelagem.objects.filter(ativo=True).order_by('nome')
+    
     context = {
         'clients': page_obj,
         'search': search,
         'tipo_filter': tipo_filter,
+        'origens_cliente': origens_cliente,
+        'especies': especies,
+        'racas': racas,
+        'pelagens': pelagens,
     }
     
     return render(request, 'clients/client_list.html', context)
@@ -145,7 +158,8 @@ def client_create_ajax(request):
         
         # Campos comuns
         client.inscricao_municipal = request.POST.get('inscricao_municipal', '')
-        client.como_conheceu = request.POST.get('como_conheceu', '')
+        como_conheceu_id = request.POST.get('como_conheceu', '')
+        client.como_conheceu_id = como_conheceu_id if como_conheceu_id else None
         
         # Contatos
         client.celular = request.POST.get('celular')
@@ -220,10 +234,22 @@ def client_detail(request, pk):
     pets = client.pets.all()
     contatos_adicionais = client.contatos_adicionais.all()
     
+    # Buscar origens ativas
+    origens_cliente = OrigemCliente.objects.filter(ativo=True).order_by('nome')
+    
+    # Buscar dados para cadastro de animais
+    especies = Especie.objects.filter(ativo=True).order_by('nome')
+    racas = Raca.objects.filter(ativo=True).order_by('nome')
+    pelagens = Pelagem.objects.filter(ativo=True).order_by('nome')
+    
     context = {
         'client': client,
         'pets': pets,
         'contatos_adicionais': contatos_adicionais,
+        'origens_cliente': origens_cliente,
+        'especies': especies,
+        'racas': racas,
+        'pelagens': pelagens,
     }
     
     return render(request, 'clients/client_detail.html', context)
@@ -332,7 +358,8 @@ def client_update_ajax(request, pk):
             if 'inscricao_municipal' in request.POST:
                 client.inscricao_municipal = request.POST.get('inscricao_municipal', '')
             if 'como_conheceu' in request.POST:
-                client.como_conheceu = request.POST.get('como_conheceu', '')
+                como_conheceu_id = request.POST.get('como_conheceu', '')
+                client.como_conheceu_id = como_conheceu_id if como_conheceu_id else None
         
         # Contatos (se fornecidos)
         if 'celular' in request.POST:
@@ -418,4 +445,27 @@ def client_update_ajax(request, pk):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def client_list_api(request):
+    """Retorna lista de clientes para select (API)."""
+    try:
+        clients = Client.objects.all().order_by('nome_completo')
+        
+        clientes_data = [{
+            'id': client.id,
+            'nome': client.nome_completo,
+            'codigo': client.codigo
+        } for client in clients]
+        
+        return JsonResponse({
+            'success': True,
+            'clientes': clientes_data
+        })
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
 
