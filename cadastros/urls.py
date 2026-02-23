@@ -10,6 +10,12 @@ urlpatterns = [
     path('tipos-atendimento/<int:pk>/editar/', views.tipo_atendimento_edit, name='tipo_atendimento_edit'),
     path('tipos-atendimento/<int:pk>/excluir/', views.tipo_atendimento_delete, name='tipo_atendimento_delete'),
     
+    # URLs específicas para exames
+    path('exames/', views.exames_list, name='exames_list'),
+    path('exames/criar/', views.exame_create, name='exame_create'),
+    path('exames/<int:pk>/editar/', views.exame_edit, name='exame_edit'),
+    path('exames/<int:pk>/excluir/', views.exame_delete, name='exame_delete'),
+    
     # URLs para protocolos de vacinas
     path('vacinas/<int:vacina_id>/protocolos/', views.vacina_protocolos_list, name='vacina_protocolos_list'),
     path('protocolos/create/', views.protocolo_create, name='protocolo_create'),

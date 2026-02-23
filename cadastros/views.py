@@ -733,3 +733,151 @@ def dados_unidade_view(request):
     }
     
     return render(request, 'cadastros/dados_unidade.html', context)
+
+
+# ==================== Views específicas para Exames ====================
+
+@login_required
+def exames_list(request):
+    """Listar exames com busca e filtros"""
+    query = request.GET.get('q', '')
+    
+    # Buscar exames
+    if query:
+        items = Exame.objects.filter(nome__icontains=query)
+    else:
+        items = Exame.objects.all()
+    
+    # Filtros avançados
+    active_filters = {}
+    
+    # Filtro por status
+    if request.GET.get('filter_ativo'):
+        value = request.GET.get('filter_ativo')
+        if value.lower() in ['true', '1', 'sim']:
+            items = items.filter(ativo=True)
+            active_filters['ativo'] = 'True'
+        elif value.lower() in ['false', '0', 'não', 'nao']:
+            items = items.filter(ativo=False)
+            active_filters['ativo'] = 'False'
+    
+    # Ordenar por nome
+    items = items.order_by('nome')
+    
+    # Paginação
+    paginator = Paginator(items, 20)  # 20 itens por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tipo': 'exames',
+        'label': 'Exames',
+        'page_obj': page_obj,
+        'query': query,
+        'active_filters': active_filters,
+    }
+    
+    return render(request, 'cadastros/exames_list.html', context)
+
+
+@login_required
+def exame_create(request):
+    """Criar novo exame"""
+    if request.method == 'POST':
+        try:
+            # Processar dados do formulário
+            data = {
+                'nome': request.POST.get('nome'),
+                'descricao': request.POST.get('descricao', ''),
+                'modelo_cabecalho': int(request.POST.get('modelo_cabecalho', 1)),
+                'modelo_info_paciente': int(request.POST.get('modelo_info_paciente', 1)),
+                'conteudo_apresentacao': request.POST.get('conteudo_apresentacao', ''),
+                'conteudo_encerramento': request.POST.get('conteudo_encerramento', ''),
+                'modelo_rodape': int(request.POST.get('modelo_rodape', 1)),
+            }
+            
+            # Processar campo booleano ativo
+            data['ativo'] = request.POST.get('ativo', 'false') == 'true'
+            
+            # Criar objeto
+            Exame.objects.create(**data)
+            
+            messages.success(request, 'Exame criado com sucesso!')
+            return redirect('cadastros:exames_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao criar exame: {str(e)}')
+    
+    # Buscar dados da unidade para preview
+    dados_unidade = DadosUnidade.objects.first()
+    
+    context = {
+        'dados_unidade': dados_unidade,
+    }
+    
+    return render(request, 'cadastros/exame_form.html', context)
+
+
+@login_required
+def exame_edit(request, pk):
+    """Editar exame existente"""
+    obj = get_object_or_404(Exame, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Atualizar dados
+            obj.nome = request.POST.get('nome')
+            obj.descricao = request.POST.get('descricao', '')
+            obj.modelo_cabecalho = int(request.POST.get('modelo_cabecalho', 1))
+            obj.modelo_info_paciente = int(request.POST.get('modelo_info_paciente', 1))
+            obj.conteudo_apresentacao = request.POST.get('conteudo_apresentacao', '')
+            obj.conteudo_encerramento = request.POST.get('conteudo_encerramento', '')
+            obj.modelo_rodape = int(request.POST.get('modelo_rodape', 1))
+            
+            # Processar campo booleano
+            obj.ativo = request.POST.get('ativo', 'false') == 'true'
+            
+            obj.save()
+            
+            messages.success(request, 'Exame atualizado com sucesso!')
+            return redirect('cadastros:exames_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao atualizar exame: {str(e)}')
+    
+    # Buscar dados da unidade para preview
+    dados_unidade = DadosUnidade.objects.first()
+    
+    context = {
+        'object': obj,
+        'dados_unidade': dados_unidade,
+    }
+    
+    return render(request, 'cadastros/exame_form.html', context)
+
+
+@login_required
+def exame_delete(request, pk):
+    """Excluir exame"""
+    obj = get_object_or_404(Exame, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            obj.delete()
+            # Se for AJAX, retornar JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Exame excluído com sucesso!'
+                })
+            # Se for POST normal, redirecionar
+            messages.success(request, f'Exame "{obj.nome}" excluído com sucesso!')
+            return redirect('cadastros:exames_list')
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e)})
+            messages.error(request, f'Erro ao excluir exame: {str(e)}')
+            return redirect('cadastros:exames_list')
+    
+    # GET não é mais suportado - redirecionar para a lista
+    return redirect('cadastros:exames_list')

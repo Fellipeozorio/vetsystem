@@ -1,0 +1,657 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Editar{% else %}Adicionar{% endif %} Exame - VetSystem{% endblock %}
+
+{% block extra_head %}
+<!-- Carregar HugeRTE (MIT License) - CDN oficial -->
+<script src="https://cdn.jsdelivr.net/npm/hugerte@1/hugerte.min.js" referrerpolicy="origin"></script>
+<!-- Carregar idioma português -->
+<script src="{% static 'js/hugerte-pt_BR.js' %}"></script>
+
+<style>
+  .a4-preview {
+    background: white;
+    width: 21cm;
+    min-height: 29.7cm;
+    padding: 2cm;
+    margin: 20px auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    position: relative;
+  }
+  
+  .bloco-container {
+    border: 2px dashed #e9ecef;
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    background: #f8f9fa;
+  }
+  
+  .bloco-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #666;
+    margin-bottom: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .model-selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    margin-bottom: 15px;
+  }
+  
+  .model-preview {
+    border: 1px solid #dee2e6;
+    padding: 15px;
+    background: white;
+    border-radius: 6px;
+    min-height: 100px;
+  }
+  
+  .arrow-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid #206bc4;
+    background: white;
+    color: #206bc4;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+  }
+  
+  .arrow-btn:hover {
+    background: #206bc4;
+    color: white;
+  }
+  
+  .arrow-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+  
+  .model-indicator {
+    font-size: 0.75rem;
+    color: #666;
+    text-align: center;
+  }
+  
+  /* Header styles */
+  .cabecalho-preview {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #333;
+  }
+  
+  .cabecalho-preview .logo {
+    max-width: 120px;
+    max-height: 80px;
+    object-fit: contain;
+  }
+  
+  .cabecalho-preview .info {
+    flex: 1;
+  }
+  
+  .cabecalho-preview h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.2rem;
+    color: #333;
+  }
+  
+  .cabecalho-preview p {
+    margin: 2px 0;
+    font-size: 0.85rem;
+    color: #666;
+  }
+  
+  /* Título do exame */
+  .exam-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin: 30px 0;
+    text-transform: uppercase;
+    color: #333;
+  }
+  
+  /* Info paciente */
+  .info-paciente {
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin: 20px 0;
+    background: #fafafa;
+  }
+  
+  .info-paciente h4 {
+    font-size: 1rem;
+    margin: 0 0 10px 0;
+    color: #333;
+    font-weight: 600;
+  }
+  
+  .info-paciente p {
+    margin: 3px 0;
+    font-size: 0.85rem;
+    color: #555;
+  }
+  
+  .info-paciente .row {
+    margin-top: 15px;
+  }
+  
+  /* Sections */
+  .section-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 25px 0 15px 0;
+    color: #333;
+    border-bottom: 2px solid #206bc4;
+    padding-bottom: 5px;
+  }
+  
+  .section-content {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #444;
+  }
+  
+  /* Rodapé */
+  .rodape-preview {
+    position: absolute;
+    bottom: 2cm;
+    left: 2cm;
+    right: 2cm;
+    border-top: 1px solid #ddd;
+    padding-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #666;
+  }
+  
+  .hugerte-container {
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    background: white;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          {% if object %}Editar{% else %}Adicionar{% endif %} Exame
+        </h2>
+      </div>
+      <div class="col-auto ms-auto">
+        <a href="{% url 'cadastros:exames_list' %}" class="btn btn-outline-secondary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M15 6l-6 6l6 6"></path>
+          </svg>
+          Voltar
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <form method="post" id="exam-form">
+      {% csrf_token %}
+      
+      <!-- Campo obrigatório: Nome do Exame -->
+      <div class="card mb-3">
+        <div class="card-header">
+          <h3 class="card-title">Informações Básicas</h3>
+        </div>
+        <div class="card-body">
+          <div class="mb-3">
+            <label class="form-label required">Nome do Exame</label>
+            <input type="text" class="form-control" name="nome" value="{{ object.nome|default:'' }}" required autofocus>
+            <small class="form-hint">Este nome aparecerá no título do exame</small>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Seção de Personalização -->
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Personalização do Exame</h3>
+        </div>
+        <div class="card-body">
+          
+          <!-- Preview A4 -->
+          <div class="a4-preview" id="a4-preview">
+            
+            <!-- BLOCO 1: Cabeçalho -->
+            <div class="bloco-container">
+              <div class="bloco-title">Bloco 1: Cabeçalho</div>
+              <div class="model-selector">
+                <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <div style="flex: 1;">
+                  <div class="model-indicator" id="cabecalho-indicator">Modelo 1 de 4</div>
+                </div>
+                <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="model-preview" id="cabecalho-preview">
+                <!-- Conteúdo dinâmico via JS -->
+              </div>
+              <input type="hidden" name="modelo_cabecalho" id="modelo_cabecalho" value="{{ object.modelo_cabecalho|default:1 }}">
+            </div>
+            
+            <!-- BLOCO 2: Nome do Exame -->
+            <div class="exam-title" id="exam-title-preview">
+              {{ object.nome|default:"NOME DO EXAME" }}
+            </div>
+            
+            <!-- BLOCO 3: Informações do Paciente -->
+            <div class="bloco-container">
+              <div class="bloco-title">Bloco 3: Informações do Paciente e Responsável</div>
+              <div class="model-selector">
+                <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <div style="flex: 1;">
+                  <div class="model-indicator" id="info_paciente-indicator">Modelo 1 de 3</div>
+                </div>
+                <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="model-preview" id="info_paciente-preview">
+                <!-- Conteúdo dinâmico via JS -->
+              </div>
+              <input type="hidden" name="modelo_info_paciente" id="modelo_info_paciente" value="{{ object.modelo_info_paciente|default:1 }}">
+            </div>
+            
+            <!-- BLOCO 4: Apresentação -->
+            <div class="bloco-container">
+              <div class="bloco-title">Bloco 4: Apresentação</div>
+              <textarea id="conteudo_apresentacao" name="conteudo_apresentacao">{{ object.conteudo_apresentacao|default:'' }}</textarea>
+            </div>
+            
+            <!-- BLOCO 5: Resultados -->
+            <div class="bloco-container">
+              <div class="bloco-title">Bloco 5: Resultados do Exame</div>
+              <div class="model-preview" style="text-align: center; color: #999; padding: 40px;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clipboard-data mb-2" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
+                  <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
+                  <path d="M9 17v-4" />
+                  <path d="M12 17v-1" />
+                  <path d="M15 17v-2" />
+                  <path d="M12 17v-1" />
+                </svg>
+                <p><strong>Nesse espaço serão exibidos os resultados do exame.</strong></p>
+                <small>Os resultados serão preenchidos automaticamente quando o exame for utilizado no atendimento clínico.</small>
+              </div>
+            </div>
+            
+            <!-- BLOCO 6: Encerramento -->
+            <div class="bloco-container">
+              <div class="bloco-title">Bloco 6: Encerramento</div>
+              <textarea id="conteudo_encerramento" name="conteudo_encerramento">{{ object.conteudo_encerramento|default:'' }}</textarea>
+            </div>
+            
+            <!-- BLOCO 7: Rodapé -->
+            <div class="bloco-container">
+              <div class="bloco-title">Bloco 7: Rodapé</div>
+              <div class="model-selector">
+                <button type="button" class="arrow-btn" onclick="changeModel('rodape', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <div style="flex: 1;">
+                  <div class="model-indicator" id="rodape-indicator">Modelo 1 de 2</div>
+                </div>
+                <button type="button" class="arrow-btn" onclick="changeModel('rodape', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="model-preview" id="rodape-preview">
+                <!-- Conteúdo dinâmico via JS -->
+              </div>
+              <input type="hidden" name="modelo_rodape" id="modelo_rodape" value="{{ object.modelo_rodape|default:1 }}">
+            </div>
+            
+          </div>
+          
+        </div>
+      </div>
+      
+      <!-- Status do Exame -->
+      <div class="card mt-3">
+        <div class="card-body">
+          <div class="row align-items-center">
+            <div class="col">
+              <h3 class="card-title mb-1">Status do Exame</h3>
+              <div class="text-muted">Define se o exame está disponível para uso</div>
+            </div>
+            <div class="col-auto">
+              <label class="form-check form-check-single form-switch">
+                <input class="form-check-input" type="checkbox" name="ativo" id="ativo" {% if not object or object.ativo %}checked{% endif %} onchange="updateStatusLabel()">
+              </label>
+            </div>
+          </div>
+          <div class="mt-2">
+            <span class="badge {% if not object or object.ativo %}bg-success{% else %}bg-danger{% endif %}" id="status-badge">
+              {% if not object or object.ativo %}Ativo{% else %}Inativo{% endif %}
+            </span>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Botões de ação -->
+      <div class="card mt-3">
+        <div class="card-body">
+          <div class="btn-list justify-content-end">
+            <a href="{% url 'cadastros:exames_list' %}" class="btn">
+              Cancelar
+            </a>
+            <button type="submit" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"></path>
+                <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                <path d="M14 4l0 4l-6 0l0 -4"></path>
+              </svg>
+              Salvar Exame
+            </button>
+          </div>
+        </div>
+      </div>
+      
+    </form>
+  </div>
+</div>
+
+<script>
+// Dados da unidade (do backend)
+const dadosUnidade = {
+  nome: "{{ dados_unidade.nome_empreendimento|default:'Nome da Clínica' }}",
+  endereco: "{{ dados_unidade.endereco|default:'Rua Exemplo' }}, {{ dados_unidade.numero|default:'123' }}",
+  bairro: "{{ dados_unidade.bairro|default:'Bairro' }}",
+  cidade: "{{ dados_unidade.cidade|default:'Cidade' }}",
+  estado: "{{ dados_unidade.estado|default:'UF' }}",
+  cep: "{{ dados_unidade.cep|default:'00000-000' }}",
+  telefone: "{{ dados_unidade.telefone_comercial|default:'' }}",
+  celular: "{{ dados_unidade.celular|default:'(00) 00000-0000' }}",
+  email: "{{ dados_unidade.email|default:'contato@clinica.com' }}",
+  cnpj: "{{ dados_unidade.cnpj|default:'00.000.000/0000-00' }}",
+  crmv: "{{ dados_unidade.registro_crmv|default:'' }}",
+  logo: "{% if dados_unidade.logomarca %}{{ dados_unidade.logomarca.url }}{% else %}{% endif %}"
+};
+
+// Dados fictícios de paciente para preview
+const dadosPaciente = {
+  animal: {
+    nome: "Rex",
+    especie: "Canino",
+    raca: "Labrador",
+    sexo: "Macho",
+    idade: "5 anos",
+    pelagem: "Amarelo",
+    porte: "Grande"
+  },
+  responsavel: {
+    nome: "João Silva",
+    codigo: "CLI001",
+    cpf: "123.456.789-00",
+    telefone: "(11) 98765-4321",
+    endereco: "Rua das Flores, 456",
+    bairro: "Centro",
+    cidade: "São Paulo",
+    estado: "SP",
+    cep: "01234-567"
+  }
+};
+
+// Estado atual dos modelos
+let modelStates = {
+  cabecalho: {{ object.modelo_cabecalho|default:1 }},
+  info_paciente: {{ object.modelo_info_paciente|default:1 }},
+  rodape: {{ object.modelo_rodape|default:1 }}
+};
+
+// Mudar modelo
+function changeModel(tipo, direction) {
+  const maxModels = {
+    cabecalho: 4,
+    info_paciente: 3,
+    rodape: 2
+  };
+  
+  const newValue = modelStates[tipo] + direction;
+  if (newValue < 1 || newValue > maxModels[tipo]) return;
+  
+  modelStates[tipo] = newValue;
+  document.getElementById(`modelo_${tipo}`).value = newValue;
+  document.getElementById(`${tipo}-indicator`).textContent = `Modelo ${newValue} de ${maxModels[tipo]}`;
+  
+  updatePreview(tipo);
+}
+
+// Atualizar preview do cabeçalho
+function updatePreview(tipo) {
+  const preview = document.getElementById(`${tipo}-preview`);
+  
+  if (tipo === 'cabecalho') {
+    const model = modelStates.cabecalho;
+    let html = '';
+    
+    if (model === 1) {
+      // Modelo 1: Logo + Básico
+      html = `
+        <div class="cabecalho-preview">
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:120px;height:80px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
+          <div class="info" style="text-align: right;">
+            <h3>${dadosUnidade.nome}</h3>
+            <p><strong>Endereço:</strong> ${dadosUnidade.endereco}, ${dadosUnidade.bairro} - ${dadosUnidade.cidade}/${dadosUnidade.estado}</p>
+            <p><strong>Telefone:</strong> ${dadosUnidade.telefone || dadosUnidade.celular}</p>
+          </div>
+        </div>
+      `;
+    } else if (model === 2) {
+      // Modelo 2: Logo + Completo
+      html = `
+        <div class="cabecalho-preview">
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:120px;height:80px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
+          <div class="info" style="text-align: right;">
+            <h3>${dadosUnidade.nome}</h3>
+            <p><strong>CNPJ:</strong> ${dadosUnidade.cnpj}</p>
+            ${dadosUnidade.crmv ? `<p><strong>CRMV:</strong> ${dadosUnidade.crmv}</p>` : ''}
+            <p><strong>Endereço:</strong> ${dadosUnidade.endereco}, ${dadosUnidade.bairro}</p>
+            <p>${dadosUnidade.cidade}/${dadosUnidade.estado} - CEP: ${dadosUnidade.cep}</p>
+            ${dadosUnidade.telefone ? `<p><strong>Tel:</strong> ${dadosUnidade.telefone}</p>` : ''}
+            <p><strong>Cel:</strong> ${dadosUnidade.celular}</p>
+            <p><strong>Email:</strong> ${dadosUnidade.email}</p>
+          </div>
+        </div>
+      `;
+    } else if (model === 3) {
+      // Modelo 3: Apenas Logo
+      html = `
+        <div style="text-align: center; padding: 20px;">
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" style="max-width: 200px; max-height: 120px;" alt="Logo">` : '<div style="width:200px;height:120px;border:1px solid #ddd;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#999;">Logo</div>'}
+        </div>
+      `;
+    } else {
+      // Modelo 4: Sem cabeçalho
+      html = '<div style="text-align: center; padding: 40px; color: #999;"><em>Sem cabeçalho</em></div>';
+    }
+    
+    preview.innerHTML = html;
+  } else if (tipo === 'info_paciente') {
+    const model = modelStates.info_paciente;
+    let html = '';
+    
+    if (model === 1) {
+      // Modelo 1: Animal + Responsável Resumido
+      html = `
+        <div class="info-paciente">
+          <div class="row">
+            <div class="col-md-6">
+              <h4>Dados do Animal</h4>
+              <p><strong>Nome:</strong> ${dadosPaciente.animal.nome}</p>
+              <p><strong>Espécie:</strong> ${dadosPaciente.animal.especie}</p>
+              <p><strong>Raça:</strong> ${dadosPaciente.animal.raca}</p>
+              <p><strong>Sexo:</strong> ${dadosPaciente.animal.sexo}</p>
+              <p><strong>Idade:</strong> ${dadosPaciente.animal.idade}</p>
+            </div>
+            <div class="col-md-6">
+              <h4>Responsável</h4>
+              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome}</p>
+              <p><strong>Código:</strong> ${dadosPaciente.responsavel.codigo}</p>
+              <p><strong>CPF:</strong> ${dadosPaciente.responsavel.cpf}</p>
+              <p><strong>Endereço:</strong> ${dadosPaciente.responsavel.endereco}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (model === 2) {
+      // Modelo 2: Animal + Responsável Completo
+      html = `
+        <div class="info-paciente">
+          <h4>Dados do Animal</h4>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Nome:</strong> ${dadosPaciente.animal.nome}</p>
+              <p><strong>Espécie:</strong> ${dadosPaciente.animal.especie}</p>
+              <p><strong>Raça:</strong> ${dadosPaciente.animal.raca}</p>
+              <p><strong>Sexo:</strong> ${dadosPaciente.animal.sexo}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Idade:</strong> ${dadosPaciente.animal.idade}</p>
+              <p><strong>Pelagem:</strong> ${dadosPaciente.animal.pelagem}</p>
+              <p><strong>Porte:</strong> ${dadosPaciente.animal.porte}</p>
+            </div>
+          </div>
+          <h4 class="mt-3">Dados do Responsável</h4>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome}</p>
+              <p><strong>Código:</strong> ${dadosPaciente.responsavel.codigo}</p>
+              <p><strong>CPF:</strong> ${dadosPaciente.responsavel.cpf}</p>
+              <p><strong>Telefone:</strong> ${dadosPaciente.responsavel.telefone}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Endereço:</strong> ${dadosPaciente.responsavel.endereco}</p>
+              <p><strong>Bairro:</strong> ${dadosPaciente.responsavel.bairro}</p>
+              <p><strong>Cidade/UF:</strong> ${dadosPaciente.responsavel.cidade}/${dadosPaciente.responsavel.estado}</p>
+              <p><strong>CEP:</strong> ${dadosPaciente.responsavel.cep}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      // Modelo 3: Sem informações
+      html = '<div style="text-align: center; padding: 40px; color: #999;"><em>Sem informações de paciente</em></div>';
+    }
+    
+    preview.innerHTML = html;
+  } else if (tipo === 'rodape') {
+    const model = modelStates.rodape;
+    let html = '';
+    
+    if (model === 1) {
+      // Modelo 1: Completo
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR');
+      const timeStr = now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+      html = `
+        <div class="rodape-preview">
+          <div>Impresso em: ${dateStr} às ${timeStr}</div>
+          <div>Por: {{ user.get_full_name|default:user.username }}</div>
+          <div>Página 1 de 1</div>
+        </div>
+      `;
+    } else {
+      // Modelo 2: Sem rodapé
+      html = '<div style="text-align: center; padding: 20px; color: #999;"><em>Sem rodapé</em></div>';
+    }
+    
+    preview.innerHTML = html;
+  }
+}
+
+// Atualizar label de status
+function updateStatusLabel() {
+  const checkbox = document.getElementById('ativo');
+  const badge = document.getElementById('status-badge');
+  
+  if (checkbox.checked) {
+    badge.textContent = 'Ativo';
+    badge.className = 'badge bg-success';
+  } else {
+    badge.textContent = 'Inativo';
+    badge.className = 'badge bg-danger';
+  }
+}
+
+// Atualizar título do exame no preview
+document.querySelector('input[name="nome"]').addEventListener('input', function() {
+  document.getElementById('exam-title-preview').textContent = this.value.toUpperCase() || 'NOME DO EXAME';
+});
+
+// Inicializar previews
+document.addEventListener('DOMContentLoaded', function() {
+  updatePreview('cabecalho');
+  updatePreview('info_paciente');
+  updatePreview('rodape');
+  
+  // Inicializar HugeRTE para os editores
+  if (typeof hugerte !== 'undefined') {
+    hugerte.init({
+      selector: '#conteudo_apresentacao',
+      language: 'pt_BR',
+      height: 300,
+      menubar: false,
+      plugins: 'lists link code',
+      toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link | code',
+      content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; }'
+    });
+    
+    hugerte.init({
+      selector: '#conteudo_encerramento',
+      language: 'pt_BR',
+      height: 300,
+      menubar: false,
+      plugins: 'lists link code',
+      toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | link | code',
+      content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; font-size: 14px; }'
+    });
+  }
+});
+</script>
+{% endblock %}

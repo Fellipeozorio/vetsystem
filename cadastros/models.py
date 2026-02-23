@@ -270,6 +270,41 @@ class ProtocoloVacina(models.Model):
 
 class Exame(BaseCadastro):
     descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
+    
+    # Bloco 1: Cabeçalho (4 modelos)
+    modelo_cabecalho = models.IntegerField(
+        default=1,
+        choices=[(1, 'Logo + Básico'), (2, 'Logo + Completo'), (3, 'Apenas Logo'), (4, 'Sem Cabeçalho')],
+        verbose_name='Modelo do Cabeçalho'
+    )
+    
+    # Bloco 3: Informações do Paciente (3 modelos)
+    modelo_info_paciente = models.IntegerField(
+        default=1,
+        choices=[(1, 'Animal + Responsável Resumido'), (2, 'Animal + Responsável Completo'), (3, 'Sem Informações')],
+        verbose_name='Modelo de Info do Paciente'
+    )
+    
+    # Bloco 4: Apresentação (editor rico)
+    conteudo_apresentacao = models.TextField(
+        blank=True,
+        verbose_name='Apresentação',
+        help_text='Conteúdo da seção de apresentação'
+    )
+    
+    # Bloco 6: Encerramento (editor rico)
+    conteudo_encerramento = models.TextField(
+        blank=True,
+        verbose_name='Encerramento',
+        help_text='Conteúdo da seção de encerramento'
+    )
+    
+    # Bloco 7: Rodapé (2 modelos)
+    modelo_rodape = models.IntegerField(
+        default=1,
+        choices=[(1, 'Completo'), (2, 'Sem Rodapé')],
+        verbose_name='Modelo do Rodapé'
+    )
 
 
 class AtributoExame(models.Model):
