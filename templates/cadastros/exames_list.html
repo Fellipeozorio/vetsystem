@@ -29,24 +29,18 @@
 
 {% block extra_js %}
 <script>
-// Redirecionar para página de criação em vez de abrir modal
-document.addEventListener('DOMContentLoaded', function() {
-  const addButton = document.querySelector('[data-bs-target="#modal-create"]');
-  if (addButton) {
-    addButton.removeAttribute('data-bs-toggle');
-    addButton.removeAttribute('data-bs-target');
-    addButton.href = "{% url 'cadastros:exame_create' %}";
-  }
-  
-  // Redirecionar ao clicar nas linhas da tabela
-  const tableRows = document.querySelectorAll('.clickable-row');
-  tableRows.forEach(row => {
-    row.addEventListener('click', function() {
-      const itemId = this.dataset.id;
-      window.location.href = `/cadastros/exames/${itemId}/editar/`;
-    });
-  });
-});
+// Sobrescrever funções globais do base_list.html para redirecionar para páginas completas
+function openAddOffcanvas() {
+  window.location.href = "{% url 'cadastros:exame_create' %}";
+}
+
+function viewItem(id) {
+  window.location.href = `/cadastros/exames/${id}/editar/`;
+}
+
+function editItem(id) {
+  window.location.href = `/cadastros/exames/${id}/editar/`;
+}
 
 // Função de deletar via AJAX
 function deleteItem(id, nome) {

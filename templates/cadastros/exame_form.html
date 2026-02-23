@@ -44,21 +44,22 @@
     position: relative;
   }
   
-  /* Blocos com moldura simples */
+  /* Container para setas fora da folha */
+  .block-container {
+    position: relative;
+    margin: 0 80px 20px 80px;
+  }
+  
+  /* Blocos com moldura fina e cinza, altura fixa A4 */
   .exam-block {
-    border: 2px solid #333;
+    border: 1px solid #ccc;
     padding: 20px;
-    margin-bottom: 20px;
     position: relative;
     background: white;
+    min-height: 200px;
   }
   
-  /* Navegação de modelos nas laterais */
-  .block-with-nav {
-    position: relative;
-    margin: 0 60px 20px 60px;
-  }
-  
+  /* Navegação de modelos fora da folha */
   .model-navigation {
     position: absolute;
     top: 50%;
@@ -67,11 +68,11 @@
   }
   
   .model-navigation.left {
-    left: -60px;
+    left: -70px;
   }
   
   .model-navigation.right {
-    right: -60px;
+    right: -70px;
   }
   
   .arrow-btn {
@@ -95,31 +96,16 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   
-  /* Label aparece apenas no hover */
+  /* Label interno no topo do bloco */
   .block-label {
     position: absolute;
-    top: -35px;
-    left: 0;
-    font-size: 0.85rem;
+    top: 10px;
+    left: 10px;
+    font-size: 0.75rem;
     font-weight: 600;
-    color: #206bc4;
+    color: #999;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    opacity: 0;
-    transition: opacity 0.2s;
-    pointer-events: none;
-    background: white;
-    padding: 4px 8px;
-    border-radius: 4px;
-  }
-  
-  .block-with-nav:hover .block-label,
-  .arrow-btn:hover ~ .exam-block .block-label {
-    opacity: 1;
-  }
-  
-  .exam-block:hover .block-label {
-    opacity: 1;
   }
   
   /* Cabeçalho */
@@ -152,12 +138,6 @@
   }
   
   /* Título do exame */
-  .exam-title-block {
-    border: 2px solid #333;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-  
   .exam-title {
     text-align: center;
     font-size: 1.5rem;
@@ -165,6 +145,7 @@
     text-transform: uppercase;
     color: #333;
     margin: 0;
+    padding-top: 15px;
   }
   
   /* Info paciente */
@@ -199,59 +180,19 @@
     padding: 40px;
   }
   
-  /* Form dirty tracking */
-  .form-dirty-indicator {
-    display: none;
-    position: fixed;
-    top: 70px;
-    right: 20px;
-    padding: 10px 20px;
-    background: #ffc107;
-    color: #000;
-    border-radius: 6px;
-    font-size: 0.9rem;
-    z-index: 9999;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  /* Editores sem moldura */
+  .editor-block {
+    border: none;
+    padding: 0;
+  }
+  
+  .editor-label {
+    font-size: 0.85rem;
     font-weight: 600;
-  }
-  
-  /* Accordion para tags (igual ao tipo atendimento) */
-  .accordion-button {
-    padding: 0.5rem 0.75rem;
-    background-color: #f8f9fa;
-    font-size: 0.875rem;
-  }
-  
-  .accordion-button:not(.collapsed) {
-    background-color: #e9ecef;
-  }
-  
-  .etiqueta-item {
-    cursor: pointer;
-    padding: 6px 10px;
-    border-bottom: 1px solid #e9ecef;
-    transition: background-color 0.2s;
-    display: block;
-    background-color: transparent;
-  }
-  
-  .etiqueta-item:hover {
-    background-color: #f8f9fa;
-  }
-  
-  .etiqueta-item:last-child {
-    border-bottom: none;
-  }
-  
-  .etiqueta-secao {
-    font-weight: 600;
-    color: #495057;
-    font-size: 0.7rem;
-  }
-  
-  .etiqueta-nome {
-    color: #6c757d;
-    font-size: 0.75rem;
+    color: #666;
+    margin-bottom: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
 </style>
 {% endblock %}
@@ -278,11 +219,6 @@
   </div>
 </div>
 
-<!-- Indicador de alterações não salvas -->
-<div class="form-dirty-indicator" id="dirty-indicator">
-  ⚠️ Você tem alterações não salvas
-</div>
-
 <div class="page-body">
   <div class="container-xl">
     <form method="post" id="exam-form">
@@ -291,149 +227,134 @@
       <!-- Card único - Form Elements do Tabler -->
       <div class="card">
         <div class="card-header">
-          <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs" role="tablist">
-            <li class="nav-item" role="presentation">
-              <a href="#tabs-config" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                  <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"></path>
-                  <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"></path>
-                </svg>
-                Configuração do Exame
-              </a>
-            </li>
-          </ul>
+          <h3 class="card-title">Configuração do Exame</h3>
         </div>
         
         <div class="card-body">
-          <div class="tab-content">
-            <div class="tab-pane active show" id="tabs-config" role="tabpanel">
-              
-              <!-- Nome do Exame -->
-              <div class="mb-4">
-                <label class="form-label required">Nome do Exame</label>
-                <input type="text" class="form-control" name="nome" id="nome" value="{{ object.nome|default:'' }}" required autofocus>
-                <small class="form-hint">Este nome aparecerá no título do exame</small>
-              </div>
-              
-              <hr class="my-4">
-              
-              <h3 class="mb-3">Personalização do Exame (Blocos)</h3>
-              
-              <!-- Preview A4 -->
-              <div class="a4-preview">
-                
-                <!-- BLOCO 1: Cabeçalho com navegação -->
-                <div class="block-with-nav">
-                  <span class="block-label">Cabeçalho</span>
-                  <div class="model-navigation left">
-                    <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', -1)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="exam-block" id="cabecalho-preview">
-                    <!-- Conteúdo dinâmico -->
-                  </div>
-                  <div class="model-navigation right">
-                    <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', 1)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                  <input type="hidden" name="modelo_cabecalho" id="modelo_cabecalho" value="{{ object.modelo_cabecalho|default:1 }}">
-                </div>
-                
-                <!-- BLOCO 2: Título do Exame com moldura -->
-                <div class="exam-block">
-                  <span class="block-label">Título do Exame</span>
-                  <div class="exam-title" id="exam-title-preview">
-                    {{ object.nome|default:"NOME DO EXAME" }}
-                  </div>
-                </div>
-                
-                <!-- BLOCO 3: Informações do Paciente com navegação -->
-                <div class="block-with-nav">
-                  <span class="block-label">Informações do Paciente e Responsável</span>
-                  <div class="model-navigation left">
-                    <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', -1)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="exam-block" id="info_paciente-preview">
-                    <!-- Conteúdo dinâmico -->
-                  </div>
-                  <div class="model-navigation right">
-                    <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', 1)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                  <input type="hidden" name="modelo_info_paciente" id="modelo_info_paciente" value="{{ object.modelo_info_paciente|default:1 }}">
-                </div>
-                
-                <!-- BLOCO 4: Apresentação -->
-                <div class="exam-block">
-                  <span class="block-label">Apresentação</span>
-                  <div id="loading-apresentacao" class="hugerte-loading"></div>
-                  <textarea id="conteudo_apresentacao" name="conteudo_apresentacao">{{ object.conteudo_apresentacao|default:'' }}</textarea>
-                </div>
-                
-                <!-- BLOCO 5: Resultados (placeholder) -->
-                <div class="exam-block">
-                  <span class="block-label">Resultados do Exame</span>
-                  <div class="results-placeholder">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clipboard-data mb-2" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
-                      <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
-                      <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
-                      <path d="M9 17v-4" />
-                      <path d="M12 17v-1" />
-                      <path d="M15 17v-2" />
-                    </svg>
-                    <p><strong>Nesse espaço serão exibidos os resultados do exame.</strong></p>
-                    <small>Os resultados serão preenchidos automaticamente quando o exame for utilizado no atendimento clínico.</small>
-                  </div>
-                </div>
-                
-                <!-- BLOCO 6: Encerramento -->
-                <div class="exam-block">
-                  <span class="block-label">Encerramento</span>
-                  <div id="loading-encerramento" class="hugerte-loading"></div>
-                  <textarea id="conteudo_encerramento" name="conteudo_encerramento">{{ object.conteudo_encerramento|default:'' }}</textarea>
-                </div>
-                
-                <!-- BLOCO 7: Rodapé com navegação -->
-                <div class="block-with-nav">
-                  <span class="block-label">Rodapé</span>
-                  <div class="model-navigation left">
-                    <button type="button" class="arrow-btn" onclick="changeModel('rodape', -1)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="15 18 9 12 15 6"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="exam-block" id="rodape-preview">
-                    <!-- Conteúdo dinâmico -->
-                  </div>
-                  <div class="model-navigation right">
-                    <button type="button" class="arrow-btn" onclick="changeModel('rodape', 1)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polyline points="9 18 15 12 9 6"></polyline>
-                      </svg>
-                    </button>
-                  </div>
-                  <input type="hidden" name="modelo_rodape" id="modelo_rodape" value="{{ object.modelo_rodape|default:1 }}">
-                </div>
-                
-              </div>
-              
+          <!-- Nome do Exame -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <label class="form-label required">Nome do Exame</label>
+              <input type="text" class="form-control" name="nome" id="nome" value="{{ object.nome|default:'' }}" required autofocus>
+              <small class="form-hint">Este nome aparecerá no título do exame</small>
             </div>
+          </div>
+              
+          <hr class="my-4">
+          
+          <h3 class="mb-3">Personalização do Exame (Blocos)</h3>
+          
+          <!-- Preview A4 -->
+          <div class="a4-preview">
+            
+            <!-- BLOCO 1: Cabeçalho com navegação -->
+            <div class="block-container">
+              <div class="model-navigation left">
+                <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="exam-block" id="cabecalho-preview">
+                <span class="block-label" id="label-cabecalho">Cabeçalho - Modelo 1</span>
+                <!-- Conteúdo dinâmico -->
+              </div>
+              <div class="model-navigation right">
+                <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" name="modelo_cabecalho" id="modelo_cabecalho" value="{{ object.modelo_cabecalho|default:1 }}">
+            </div>
+            
+            <!-- BLOCO 2: Título do Exame -->
+            <div class="exam-block" style="margin: 0 0 20px 0;">
+              <span class="block-label">Título do Exame</span>
+              <div class="exam-title" id="exam-title-preview">
+                {{ object.nome|default:"NOME DO EXAME" }}
+              </div>
+            </div>
+            
+            <!-- BLOCO 3: Informações do Paciente com navegação -->
+            <div class="block-container">
+              <div class="model-navigation left">
+                <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="exam-block" id="info_paciente-preview">
+                <span class="block-label" id="label-info_paciente">Informações do Paciente - Modelo 1</span>
+                <!-- Conteúdo dinâmico -->
+              </div>
+              <div class="model-navigation right">
+                <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" name="modelo_info_paciente" id="modelo_info_paciente" value="{{ object.modelo_info_paciente|default:1 }}">
+            </div>
+            
+            <!-- BLOCO 4: Apresentação -->
+            <div style="margin: 0 0 20px 0;">
+              <div class="editor-label">Apresentação</div>
+              <div id="loading-apresentacao" class="hugerte-loading"></div>
+              <textarea id="conteudo_apresentacao" name="conteudo_apresentacao">{{ object.conteudo_apresentacao|default:'' }}</textarea>
+            </div>
+            
+            <!-- BLOCO 5: Resultados (placeholder) -->
+            <div class="exam-block" style="margin: 0 0 20px 0;">
+              <span class="block-label">Resultados do Exame</span>
+              <div class="results-placeholder">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clipboard-data mb-2" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                  <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
+                  <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
+                  <path d="M9 17v-4" />
+                  <path d="M12 17v-1" />
+                  <path d="M15 17v-2" />
+                </svg>
+                <p><strong>Nesse espaço serão exibidos os resultados do exame.</strong></p>
+                <small>Os resultados serão preenchidos automaticamente quando o exame for utilizado no atendimento clínico.</small>
+              </div>
+            </div>
+            
+            <!-- BLOCO 6: Encerramento -->
+            <div style="margin: 0 0 20px 0;">
+              <div class="editor-label">Encerramento</div>
+              <div id="loading-encerramento" class="hugerte-loading"></div>
+              <textarea id="conteudo_encerramento" name="conteudo_encerramento">{{ object.conteudo_encerramento|default:'' }}</textarea>
+            </div>
+            
+            <!-- BLOCO 7: Rodapé com navegação -->
+            <div class="block-container">
+              <div class="model-navigation left">
+                <button type="button" class="arrow-btn" onclick="changeModel('rodape', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="exam-block" id="rodape-preview">
+                <span class="block-label" id="label-rodape">Rodapé - Modelo 1</span>
+                <!-- Conteúdo dinâmico -->
+              </div>
+              <div class="model-navigation right">
+                <button type="button" class="arrow-btn" onclick="changeModel('rodape', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" name="modelo_rodape" id="modelo_rodape" value="{{ object.modelo_rodape|default:1 }}">
+            </div>
+            
           </div>
         </div>
         
@@ -619,7 +540,6 @@ let leavingDestination = null;
 
 function markFormDirty() {
   formDirty = true;
-  document.getElementById('dirty-indicator').style.display = 'block';
 }
 
 // Navegação circular de modelos
@@ -637,6 +557,18 @@ function changeModel(tipo, direction) {
   
   modelStates[tipo] = newValue;
   document.getElementById(`modelo_${tipo}`).value = newValue;
+  
+  // Atualizar label com número do modelo
+  const labelMap = {
+    'cabecalho': 'Cabeçalho',
+    'info_paciente': 'Informações do Paciente',
+    'rodape': 'Rodapé'
+  };
+  const label = document.getElementById(`label-${tipo}`);
+  if (label) {
+    label.textContent = `${labelMap[tipo]} - Modelo ${newValue}`;
+  }
+  
   updatePreview(tipo);
   markFormDirty();
 }
