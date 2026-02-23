@@ -27,6 +27,35 @@
 </td>
 {% endblock %}
 
+{% block extra_content %}
+<!-- Modal Danger - Confirmar Exclusão -->
+<div class="modal modal-blur fade" id="modal-danger-exame" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Confirmar Exclusão</h3>
+        <div class="text-secondary" id="delete-message-exame">Tem certeza que deseja excluir este exame?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+            </div>
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" id="btn-confirm-delete-exame">Excluir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
 {% block extra_js %}
 <script>
 // Sobrescrever funções globais do base_list.html para redirecionar para páginas completas
@@ -42,30 +71,57 @@ function editItem(id) {
   window.location.href = `/cadastros/exames/${id}/editar/`;
 }
 
-// Função de deletar via AJAX
+// Variáveis para controle de exclusão
+let deleteExameId = null;
+let deleteExameNome = null;
+
+// Função de deletar - exibe modal danger
 function deleteItem(id, nome) {
-  if (!confirm(`Tem certeza que deseja excluir o exame "${nome}"?`)) {
-    return;
-  }
+  deleteExameId = id;
+  deleteExameNome = nome;
   
-  fetch(`/cadastros/exames/${id}/excluir/`, {
-    method: 'POST',
-    headers: {
-      'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
-      'X-Requested-With': 'XMLHttpRequest'
-    }
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      location.reload();
-    } else {
-      alert('Erro ao excluir: ' + (data.error || 'Erro desconhecido'));
-    }
-  })
-  .catch(error => {
-    alert('Erro ao excluir: ' + error);
-  });
+  document.getElementById('delete-message-exame').textContent = `Tem certeza que deseja excluir o exame "${nome}"?`;
+  
+  const modal = new bootstrap.Modal(document.getElementById('modal-danger-exame'));
+  modal.show();
 }
+
+// Confirmar exclusão ao clicar no botão do modal
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('btn-confirm-delete-exame').addEventListener('click', function() {
+    if (!deleteExameId) return;
+    
+    fetch(`/cadastros/exames/${deleteExameId}/excluir/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modal-danger-exame'));
+      modal.hide();
+      
+      if (data.success) {
+        location.reload();
+      } else {
+        alert('Erro ao excluir: ' + (data.error || 'Erro desconhecido'));
+      }
+      
+      deleteExameId = null;
+      deleteExameNome = null;
+    })
+    .catch(error => {
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modal-danger-exame'));
+      if (modal) modal.hide();
+      
+      alert('Erro ao excluir: ' + error);
+      
+      deleteExameId = null;
+      deleteExameNome = null;
+    });
+  });
+});
 </script>
 {% endblock %}

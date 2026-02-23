@@ -17,7 +17,7 @@
   }
   
   .hugerte-loading {
-    height: 400px;
+    height: 200px;
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     display: flex;
@@ -28,6 +28,11 @@
     font-size: 14px;
   }
   
+  /* HugeRTE com altura fixa */
+  .tox-tinymce {
+    height: 200px !important;
+  }
+  
   .hugerte-loading::after {
     content: 'Carregando editor...';
   }
@@ -36,9 +41,9 @@
   .a4-preview {
     background: white;
     width: 100%;
-    max-width: 21cm;
+    max-width: 24cm;
     min-height: 29.7cm;
-    padding: 2cm;
+    padding: 1.5cm;
     margin: 20px auto;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     position: relative;
@@ -47,16 +52,16 @@
   /* Container para setas fora da folha */
   .block-container {
     position: relative;
-    margin: 0 80px 20px 80px;
+    margin: 0 80px 10px 80px;
   }
   
-  /* Blocos com moldura fina e cinza, altura fixa A4 */
+  /* Blocos com moldura fina e cinza */
   .exam-block {
     border: 1px solid #ccc;
-    padding: 20px;
+    padding: 15px;
+    padding-top: 35px;
     position: relative;
     background: white;
-    min-height: 200px;
   }
   
   /* Navegação de modelos fora da folha */
@@ -96,11 +101,13 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   
-  /* Label interno no topo do bloco */
+  /* Label interno no topo do bloco, centralizado */
   .block-label {
     position: absolute;
     top: 10px;
-    left: 10px;
+    left: 0;
+    right: 0;
+    text-align: center;
     font-size: 0.75rem;
     font-weight: 600;
     color: #999;
@@ -145,7 +152,6 @@
     text-transform: uppercase;
     color: #333;
     margin: 0;
-    padding-top: 15px;
   }
   
   /* Info paciente */
@@ -226,10 +232,6 @@
       
       <!-- Card único - Form Elements do Tabler -->
       <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Configuração do Exame</h3>
-        </div>
-        
         <div class="card-body">
           <!-- Nome do Exame -->
           <div class="row mb-4">
@@ -257,7 +259,7 @@
                 </button>
               </div>
               <div class="exam-block" id="cabecalho-preview">
-                <span class="block-label" id="label-cabecalho">Cabeçalho - Modelo 1</span>
+                <span class="block-label" id="label-cabecalho">Cabeçalho - Modelo 1 de 4</span>
                 <!-- Conteúdo dinâmico -->
               </div>
               <div class="model-navigation right">
@@ -271,7 +273,7 @@
             </div>
             
             <!-- BLOCO 2: Título do Exame -->
-            <div class="exam-block" style="margin: 0 0 20px 0;">
+            <div class="exam-block" style="margin: 0 0 10px 0;">
               <span class="block-label">Título do Exame</span>
               <div class="exam-title" id="exam-title-preview">
                 {{ object.nome|default:"NOME DO EXAME" }}
@@ -288,7 +290,7 @@
                 </button>
               </div>
               <div class="exam-block" id="info_paciente-preview">
-                <span class="block-label" id="label-info_paciente">Informações do Paciente - Modelo 1</span>
+                <span class="block-label" id="label-info_paciente">Informações do Paciente - Modelo 1 de 3</span>
                 <!-- Conteúdo dinâmico -->
               </div>
               <div class="model-navigation right">
@@ -302,14 +304,14 @@
             </div>
             
             <!-- BLOCO 4: Apresentação -->
-            <div style="margin: 0 0 20px 0;">
+            <div style="margin: 0 0 10px 0;">
               <div class="editor-label">Apresentação</div>
               <div id="loading-apresentacao" class="hugerte-loading"></div>
               <textarea id="conteudo_apresentacao" name="conteudo_apresentacao">{{ object.conteudo_apresentacao|default:'' }}</textarea>
             </div>
             
             <!-- BLOCO 5: Resultados (placeholder) -->
-            <div class="exam-block" style="margin: 0 0 20px 0;">
+            <div class="exam-block" style="margin: 0 0 10px 0;">
               <span class="block-label">Resultados do Exame</span>
               <div class="results-placeholder">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clipboard-data mb-2" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -326,7 +328,7 @@
             </div>
             
             <!-- BLOCO 6: Encerramento -->
-            <div style="margin: 0 0 20px 0;">
+            <div style="margin: 0 0 10px 0;">
               <div class="editor-label">Encerramento</div>
               <div id="loading-encerramento" class="hugerte-loading"></div>
               <textarea id="conteudo_encerramento" name="conteudo_encerramento">{{ object.conteudo_encerramento|default:'' }}</textarea>
@@ -342,7 +344,7 @@
                 </button>
               </div>
               <div class="exam-block" id="rodape-preview">
-                <span class="block-label" id="label-rodape">Rodapé - Modelo 1</span>
+                <span class="block-label" id="label-rodape">Rodapé - Modelo 1 de 2</span>
                 <!-- Conteúdo dinâmico -->
               </div>
               <div class="model-navigation right">
@@ -366,15 +368,14 @@
               <div class="text-muted">Define se o exame está disponível para uso</div>
             </div>
             <div class="col-auto">
-              <label class="form-check form-check-single form-switch">
-                <input class="form-check-input" type="checkbox" name="ativo" id="ativo" {% if not object or object.ativo %}checked{% endif %} onchange="updateStatusLabel();markFormDirty();">
-              </label>
+              <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="ativo" id="ativo-true" value="true" {% if not object or object.ativo %}checked{% endif %} onchange="markFormDirty();">
+                <label class="btn btn-outline-success" for="ativo-true">Ativo</label>
+                
+                <input type="radio" class="btn-check" name="ativo" id="ativo-false" value="false" {% if object and not object.ativo %}checked{% endif %} onchange="markFormDirty();">
+                <label class="btn btn-outline-danger" for="ativo-false">Inativo</label>
+              </div>
             </div>
-          </div>
-          <div class="mt-2">
-            <span class="badge {% if not object or object.ativo %}bg-success{% else %}bg-danger{% endif %}" id="status-badge">
-              {% if not object or object.ativo %}Ativo{% else %}Inativo{% endif %}
-            </span>
           </div>
         </div>
         
@@ -560,13 +561,13 @@ function changeModel(tipo, direction) {
   
   // Atualizar label com número do modelo
   const labelMap = {
-    'cabecalho': 'Cabeçalho',
-    'info_paciente': 'Informações do Paciente',
-    'rodape': 'Rodapé'
+    'cabecalho': { nome: 'Cabeçalho', max: 4 },
+    'info_paciente': { nome: 'Informações do Paciente', max: 3 },
+    'rodape': { nome: 'Rodapé', max: 2 }
   };
   const label = document.getElementById(`label-${tipo}`);
-  if (label) {
-    label.textContent = `${labelMap[tipo]} - Modelo ${newValue}`;
+  if (label && labelMap[tipo]) {
+    label.textContent = `${labelMap[tipo].nome} - Modelo ${newValue} de ${labelMap[tipo].max}`;
   }
   
   updatePreview(tipo);
@@ -707,19 +708,7 @@ function updatePreview(tipo) {
   }
 }
 
-// Atualizar status
-function updateStatusLabel() {
-  const checkbox = document.getElementById('ativo');
-  const badge = document.getElementById('status-badge');
-  
-  if (checkbox.checked) {
-    badge.textContent = 'Ativo';
-    badge.className = 'badge bg-success';
-  } else {
-    badge.textContent = 'Inativo';
-    badge.className = 'badge bg-danger';
-  }
-}
+
 
 // Atualizar título
 document.getElementById('nome').addEventListener('input', function() {
@@ -812,7 +801,6 @@ document.getElementById('exam-form').addEventListener('submit', function(e) {
 
 // Track mudanças no formulário
 document.querySelector('#exam-form input[name="nome"]').addEventListener('change', markFormDirty);
-document.querySelector('#exam-form input[name="ativo"]').addEventListener('change', markFormDirty);
 
 // Inicialização
 document.addEventListener('DOMContentLoaded', function() {
@@ -821,7 +809,7 @@ document.addEventListener('DOMContentLoaded', function() {
   updatePreview('rodape');
   
   // Inicializar HugeRTE idêntico ao Modelo de Atendimento
-  HugeRTEEditor.init('#conteudo_apresentacao', {}, 'editorApresentacao')
+  HugeRTEEditor.init('#conteudo_apresentacao', { height: 200 }, 'editorApresentacao')
     .then(() => {
       const loading = document.getElementById('loading-apresentacao');
       if (loading) loading.style.display = 'none';
@@ -829,7 +817,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(err => console.error('Erro ao inicializar editor apresentação:', err));
   
-  HugeRTEEditor.init('#conteudo_encerramento', {}, 'editorEncerramento')
+  HugeRTEEditor.init('#conteudo_encerramento', { height: 200 }, 'editorEncerramento')
     .then(() => {
       const loading = document.getElementById('loading-encerramento');
       if (loading) loading.style.display = 'none';
