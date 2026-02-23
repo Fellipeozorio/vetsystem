@@ -349,10 +349,71 @@
                         </button>
                       </h2>
                       <div id="collapseAnimal" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
-                        <div class="accordion-body p-0">
-                          <div class="text-center text-muted p-3">
-                            Em breve
+                        <div class="accordion-body p-0">{% verbatim %}
+                          <div class="etiqueta-item" data-tag="{{animal.codigo}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Código</span>
                           </div>
+                          <div class="etiqueta-item" data-tag="{{animal.nome}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Nome</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.especie}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Espécie</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.raca}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Raça</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.pelagem}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Pelagem</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.sexo}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Sexo</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.idade}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Idade</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.peso}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Peso</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.microchip}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Microchip</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.esterilizacao}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Esterilização</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.status}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Status</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.caracteristicas}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Características</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.temperamento}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Temperamento</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.marcacoes}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Marcações</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.pedigree}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Pedigree</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{animal.numero_pedigree}}">
+                            <span class="etiqueta-secao">Animal -</span>
+                            <span class="etiqueta-nome">Número Pedigree</span>
+                          </div>{% endverbatim %}
                         </div>
                       </div>
                     </div>
@@ -365,10 +426,59 @@
                         </button>
                       </h2>
                       <div id="collapseClinica" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
-                        <div class="accordion-body p-0">
-                          <div class="text-center text-muted p-3">
-                            Em breve
+                        <div class="accordion-body p-0">{% verbatim %}
+                          <div class="etiqueta-item" data-tag="{{clinica.nome_empreendimento}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Nome do Empreendimento</span>
                           </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.cnpj}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">CNPJ</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.inscricao_estadual}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Inscrição Estadual</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.registro_crmv}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Registro CRMV</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.endereco}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Endereço</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.numero}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Número</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.bairro}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Bairro</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.cidade}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Cidade</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.estado}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Estado</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.cep}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">CEP</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.telefone_comercial}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Telefone Comercial</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.celular}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">Celular</span>
+                          </div>
+                          <div class="etiqueta-item" data-tag="{{clinica.email}}">
+                            <span class="etiqueta-secao">Clínica -</span>
+                            <span class="etiqueta-nome">E-mail</span>
+                          </div>{% endverbatim %}
                         </div>
                       </div>
                     </div>
