@@ -95,7 +95,7 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   
-  /* Badge visível apenas no hover - controlado por JavaScript */
+  /* Badge visível apenas no hover do bloco */
   .block-badge {
     position: absolute;
     top: -12px;
@@ -116,8 +116,7 @@
     z-index: 20;
   }
   
-  /* Mostrar badge quando classe show-badge estiver ativa */
-  .block-container.show-badge .block-badge,
+  /* Mostrar badge quando hover no bloco */
   .exam-block:hover .block-badge {
     opacity: 1;
   }
@@ -879,32 +878,6 @@ document.addEventListener('DOMContentLoaded', function() {
   updatePreview('cabecalho');
   updatePreview('info_paciente');
   updatePreview('rodape');
-  
-  // Controlar hover nas setas para mostrar badges
-  document.querySelectorAll('.block-container').forEach(container => {
-    const arrows = container.querySelectorAll('.arrow-btn');
-    const examBlock = container.querySelector('.exam-block');
-    
-    // Quando hover em qualquer seta, mostrar badge
-    arrows.forEach(arrow => {
-      arrow.addEventListener('mouseenter', () => {
-        container.classList.add('show-badge');
-      });
-      
-      arrow.addEventListener('mouseleave', () => {
-        container.classList.remove('show-badge');
-      });
-    });
-    
-    // Também mostrar quando hover no próprio container (exceto setas)
-    container.addEventListener('mouseenter', () => {
-      container.classList.add('show-badge');
-    });
-    
-    container.addEventListener('mouseleave', () => {
-      container.classList.remove('show-badge');
-    });
-  });
   
   // Inicializar HugeRTE com altura de 200px e redimensionamento habilitado
   HugeRTEEditor.init('#conteudo_apresentacao', { 
