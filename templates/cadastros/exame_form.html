@@ -608,17 +608,6 @@ function changeModel(tipo, direction) {
   modelStates[tipo] = newValue;
   document.getElementById(`modelo_${tipo}`).value = newValue;
   
-  // Atualizar label com número do modelo
-  const labelMap = {
-    'cabecalho': { nome: 'Cabeçalho', max: 4 },
-    'info_paciente': { nome: 'Informações do Paciente', max: 3 },
-    'rodape': { nome: 'Rodapé', max: 2 }
-  };
-  const label = document.getElementById(`label-${tipo}`);
-  if (label && labelMap[tipo]) {
-    label.textContent = `${labelMap[tipo].nome} - Modelo ${newValue} de ${labelMap[tipo].max}`;
-  }
-  
   updatePreview(tipo);
   markFormDirty();
 }
@@ -634,6 +623,7 @@ function updatePreview(tipo) {
     if (model === 1) {
       const telefones = [dadosUnidade.telefone, dadosUnidade.celular].filter(Boolean).join(' / ');
       html = `
+        <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span>
         <div class="cabecalho-preview">
           ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:100px;height:60px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
           <div class="info" style="text-align: right;">
@@ -646,6 +636,7 @@ function updatePreview(tipo) {
     } else if (model === 2) {
       const telefones = [dadosUnidade.telefone, dadosUnidade.celular].filter(Boolean).join(' / ');
       html = `
+        <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span>
         <div class="cabecalho-preview">
           ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:100px;height:60px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
           <div class="info" style="text-align: right;">
@@ -661,12 +652,13 @@ function updatePreview(tipo) {
       `;
     } else if (model === 3) {
       html = `
+        <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span>
         <div style="text-align: center; padding: 10px;">
           ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" style="max-width: 150px; max-height: 80px;" alt="Logo">` : '<div style="width:150px;height:80px;border:1px solid #ddd;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#999;">Logo</div>'}
         </div>
       `;
     } else {
-      html = '<div style="text-align: center; padding: 20px; color: #999;"><em>Sem cabeçalho</em></div>';
+      html = `<span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span><div style="text-align: center; padding: 20px; color: #999;"><em>Sem cabeçalho</em></div>`;
     }
     
     preview.innerHTML = html;
@@ -677,6 +669,7 @@ function updatePreview(tipo) {
     if (model === 1) {
       const idade = calcularIdade(dadosPaciente.animal.data_nascimento);
       html = `
+        <span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo ${model} de 3</span>
         <div class="info-paciente">
           <div class="row">
             <div class="col-md-6">
@@ -700,6 +693,7 @@ function updatePreview(tipo) {
     } else if (model === 2) {
       const idade = calcularIdade(dadosPaciente.animal.data_nascimento);
       html = `
+        <span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo ${model} de 3</span>
         <div class="info-paciente">
           <h4>Dados do Animal</h4>
           <div class="row">
@@ -736,7 +730,7 @@ function updatePreview(tipo) {
         </div>
       `;
     } else {
-      html = '<div style="text-align: center; padding: 40px; color: #999;"><em>Sem informações de paciente</em></div>';
+      html = `<span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo ${model} de 3</span><div style="text-align: center; padding: 40px; color: #999;"><em>Sem informações de paciente</em></div>`;
     }
     
     preview.innerHTML = html;
@@ -749,6 +743,7 @@ function updatePreview(tipo) {
       const dateStr = now.toLocaleDateString('pt-BR');
       const timeStr = now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
       html = `
+        <span class="block-badge" id="label-rodape">Rodapé - Modelo ${model} de 2</span>
         <div class="rodape-content">
           <div>Impresso em: ${dateStr} às ${timeStr}</div>
           <div>Por: {{ user.get_full_name|default:user.username }}</div>
@@ -756,7 +751,7 @@ function updatePreview(tipo) {
         </div>
       `;
     } else {
-      html = '<div style="text-align: center; padding: 20px; color: #999;"><em>Sem rodapé</em></div>';
+      html = `<span class="block-badge" id="label-rodape">Rodapé - Modelo ${model} de 2</span><div style="text-align: center; padding: 20px; color: #999;"><em>Sem rodapé</em></div>`;
     }
     
     preview.innerHTML = html;
