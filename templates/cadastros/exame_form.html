@@ -28,11 +28,6 @@
     font-size: 14px;
   }
   
-  /* HugeRTE com altura fixa */
-  .tox-tinymce {
-    height: 200px !important;
-  }
-  
   .hugerte-loading::after {
     content: 'Carregando editor...';
   }
@@ -49,22 +44,22 @@
     position: relative;
   }
   
-  /* Container para setas fora da folha */
+  /* Container para blocos com navegação */
   .block-container {
     position: relative;
-    margin: 0 80px 10px 80px;
+    margin: 0 0 10px 0;
   }
   
-  /* Blocos com moldura fina e cinza */
+  /* Blocos com moldura fina e cinza, padding compacto */
   .exam-block {
     border: 1px solid #ccc;
-    padding: 15px;
-    padding-top: 35px;
+    padding: 8px 10px;
+    padding-top: 28px;
     position: relative;
     background: white;
   }
   
-  /* Navegação de modelos fora da folha */
+  /* Navegação de modelos com position absolute */
   .model-navigation {
     position: absolute;
     top: 50%;
@@ -73,11 +68,11 @@
   }
   
   .model-navigation.left {
-    left: -70px;
+    left: 5px;
   }
   
   .model-navigation.right {
-    right: -70px;
+    right: 5px;
   }
   
   .arrow-btn {
@@ -101,18 +96,27 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   
-  /* Label interno no topo do bloco, centralizado */
+  /* Label interno no topo do bloco, centralizado, visível apenas no hover */
   .block-label {
     position: absolute;
-    top: 10px;
+    top: 8px;
     left: 0;
     right: 0;
     text-align: center;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: #999;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+  
+  /* Mostrar label no hover do bloco ou das setas */
+  .block-container:hover .block-label,
+  .exam-block:hover .block-label {
+    opacity: 1;
   }
   
   /* Cabeçalho */
@@ -139,9 +143,10 @@
   }
   
   .cabecalho-preview p {
-    margin: 2px 0;
-    font-size: 0.85rem;
+    margin: 1px 0;
+    font-size: 0.8rem;
     color: #666;
+    line-height: 1.4;
   }
   
   /* Título do exame */
@@ -234,17 +239,32 @@
       <div class="card">
         <div class="card-body">
           <!-- Nome do Exame -->
-          <div class="row mb-4">
+          <div class="row mb-3">
             <div class="col-md-6">
               <label class="form-label required">Nome do Exame</label>
               <input type="text" class="form-control" name="nome" id="nome" value="{{ object.nome|default:'' }}" required autofocus>
               <small class="form-hint">Este nome aparecerá no título do exame</small>
             </div>
           </div>
+          
+          <!-- Status do Exame -->
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <label class="form-label">Status do Exame</label>
+              <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="ativo" id="ativo-true" value="true" {% if not object or object.ativo %}checked{% endif %} onchange="markFormDirty();">
+                <label class="btn btn-outline-success" for="ativo-true">Ativo</label>
+                
+                <input type="radio" class="btn-check" name="ativo" id="ativo-false" value="false" {% if object and not object.ativo %}checked{% endif %} onchange="markFormDirty();">
+                <label class="btn btn-outline-danger" for="ativo-false">Inativo</label>
+              </div>
+              <small class="form-hint">Define se o exame está disponível para uso</small>
+            </div>
+          </div>
               
           <hr class="my-4">
           
-          <h3 class="mb-3">Personalização do Exame (Blocos)</h3>
+          <h3 class="mb-3">Personalização do Exame</h3>
           
           <!-- Preview A4 -->
           <div class="a4-preview">
@@ -357,25 +377,6 @@
               <input type="hidden" name="modelo_rodape" id="modelo_rodape" value="{{ object.modelo_rodape|default:1 }}">
             </div>
             
-          </div>
-        </div>
-        
-        <!-- Status do Exame -->
-        <div class="card-body border-top">
-          <div class="row align-items-center">
-            <div class="col">
-              <h3 class="mb-1">Status do Exame</h3>
-              <div class="text-muted">Define se o exame está disponível para uso</div>
-            </div>
-            <div class="col-auto">
-              <div class="btn-group" role="group">
-                <input type="radio" class="btn-check" name="ativo" id="ativo-true" value="true" {% if not object or object.ativo %}checked{% endif %} onchange="markFormDirty();">
-                <label class="btn btn-outline-success" for="ativo-true">Ativo</label>
-                
-                <input type="radio" class="btn-check" name="ativo" id="ativo-false" value="false" {% if object and not object.ativo %}checked{% endif %} onchange="markFormDirty();">
-                <label class="btn btn-outline-danger" for="ativo-false">Inativo</label>
-              </div>
-            </div>
           </div>
         </div>
         
@@ -583,40 +584,41 @@ function updatePreview(tipo) {
     let html = '';
     
     if (model === 1) {
+      const telefones = [dadosUnidade.telefone, dadosUnidade.celular].filter(Boolean).join(' / ');
       html = `
         <div class="cabecalho-preview">
-          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:120px;height:80px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:100px;height:60px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
           <div class="info" style="text-align: right;">
             <h3>${dadosUnidade.nome}</h3>
-            <p><strong>Endereço:</strong> ${dadosUnidade.endereco}, ${dadosUnidade.bairro} - ${dadosUnidade.cidade}/${dadosUnidade.estado}</p>
-            <p><strong>Telefone:</strong> ${dadosUnidade.telefone || dadosUnidade.celular}</p>
+            <p>${dadosUnidade.endereco}, ${dadosUnidade.bairro} - ${dadosUnidade.cidade}/${dadosUnidade.estado}</p>
+            ${telefones ? `<p>${telefones}</p>` : ''}
           </div>
         </div>
       `;
     } else if (model === 2) {
+      const telefones = [dadosUnidade.telefone, dadosUnidade.celular].filter(Boolean).join(' / ');
       html = `
         <div class="cabecalho-preview">
-          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:120px;height:80px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:100px;height:60px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
           <div class="info" style="text-align: right;">
             <h3>${dadosUnidade.nome}</h3>
-            <p><strong>CNPJ:</strong> ${dadosUnidade.cnpj}</p>
-            ${dadosUnidade.crmv ? `<p><strong>CRMV:</strong> ${dadosUnidade.crmv}</p>` : ''}
-            <p><strong>Endereço:</strong> ${dadosUnidade.endereco}, ${dadosUnidade.bairro}</p>
-            <p>${dadosUnidade.cidade}/${dadosUnidade.estado} - CEP: ${dadosUnidade.cep}</p>
-            ${dadosUnidade.telefone ? `<p><strong>Tel:</strong> ${dadosUnidade.telefone}</p>` : ''}
-            <p><strong>Cel:</strong> ${dadosUnidade.celular}</p>
-            <p><strong>Email:</strong> ${dadosUnidade.email}</p>
+            <p>${dadosUnidade.cnpj}</p>
+            ${dadosUnidade.crmv ? `<p>${dadosUnidade.crmv}</p>` : ''}
+            <p>${dadosUnidade.endereco}, ${dadosUnidade.bairro}</p>
+            <p>${dadosUnidade.cidade}/${dadosUnidade.estado} - ${dadosUnidade.cep}</p>
+            ${telefones ? `<p>${telefones}</p>` : ''}
+            <p>${dadosUnidade.email}</p>
           </div>
         </div>
       `;
     } else if (model === 3) {
       html = `
-        <div style="text-align: center; padding: 20px;">
-          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" style="max-width: 200px; max-height: 120px;" alt="Logo">` : '<div style="width:200px;height:120px;border:1px solid #ddd;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#999;">Logo</div>'}
+        <div style="text-align: center; padding: 10px;">
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" style="max-width: 150px; max-height: 80px;" alt="Logo">` : '<div style="width:150px;height:80px;border:1px solid #ddd;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#999;">Logo</div>'}
         </div>
       `;
     } else {
-      html = '<div style="text-align: center; padding: 40px; color: #999;"><em>Sem cabeçalho</em></div>';
+      html = '<div style="text-align: center; padding: 20px; color: #999;"><em>Sem cabeçalho</em></div>';
     }
     
     preview.innerHTML = html;
@@ -808,8 +810,12 @@ document.addEventListener('DOMContentLoaded', function() {
   updatePreview('info_paciente');
   updatePreview('rodape');
   
-  // Inicializar HugeRTE idêntico ao Modelo de Atendimento
-  HugeRTEEditor.init('#conteudo_apresentacao', { height: 200 }, 'editorApresentacao')
+  // Inicializar HugeRTE com altura de 200px
+  HugeRTEEditor.init('#conteudo_apresentacao', { 
+    height: 200,
+    min_height: 200,
+    max_height: 200
+  }, 'editorApresentacao')
     .then(() => {
       const loading = document.getElementById('loading-apresentacao');
       if (loading) loading.style.display = 'none';
@@ -817,7 +823,11 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .catch(err => console.error('Erro ao inicializar editor apresentação:', err));
   
-  HugeRTEEditor.init('#conteudo_encerramento', { height: 200 }, 'editorEncerramento')
+  HugeRTEEditor.init('#conteudo_encerramento', { 
+    height: 200,
+    min_height: 200,
+    max_height: 200
+  }, 'editorEncerramento')
     .then(() => {
       const loading = document.getElementById('loading-encerramento');
       if (loading) loading.style.display = 'none';
