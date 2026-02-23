@@ -152,6 +152,7 @@ def cadastro_list(request, tipo):
         'exames': 'cadastros/exames_list.html',
         'patologias': 'cadastros/patologias_list.html',
         'tipos-atendimento': 'cadastros/tipos-atendimento_list.html',
+        'modelos-receita': 'cadastros/receitas_list.html',
     }
     
     template = template_map.get(tipo, 'cadastros/base_list.html')
@@ -881,3 +882,170 @@ def exame_delete(request, pk):
     
     # GET não é mais suportado - redirecionar para a lista
     return redirect('cadastros:exames_list')
+
+
+# ============================================================================
+# VIEWS DE RECEITAS
+# ============================================================================
+
+@login_required
+def receitas_list(request):
+    '''Listar receitas com busca e filtros'''
+    query = request.GET.get('q', '')
+    
+    # Buscar receitas
+    if query:
+        items = ModeloReceita.objects.filter(nome__icontains=query)
+    else:
+        items = ModeloReceita.objects.all()
+    
+    # Filtros avan�ados
+    active_filters = {}
+    
+    # Filtro por nome
+    if request.GET.get('filter_nome'):
+        nome = request.GET.get('filter_nome')
+        items = items.filter(nome__icontains=nome)
+        active_filters['nome'] = nome
+    
+    # Filtro por c�digo
+    if request.GET.get('filter_codigo'):
+        codigo = request.GET.get('filter_codigo')
+        items = items.filter(codigo__icontains=codigo)
+        active_filters['codigo'] = codigo
+    
+    # Filtro por autor
+    if request.GET.get('filter_autor__username'):
+        autor = request.GET.get('filter_autor__username')
+        items = items.filter(autor__username__icontains=autor)
+        active_filters['autor__username'] = autor
+    
+    # Filtro por status
+    if request.GET.get('filter_ativo'):
+        value = request.GET.get('filter_ativo')
+        if value.lower() in ['true', '1', 'sim']:
+            items = items.filter(ativo=True)
+            active_filters['ativo'] = 'True'
+        elif value.lower() in ['false', '0', 'n�o', 'nao']:
+            items = items.filter(ativo=False)
+            active_filters['ativo'] = 'False'
+    
+    # Ordenar por nome
+    items = items.order_by('nome')
+    
+    # Pagina��o
+    paginator = Paginator(items, 20)  # 20 itens por p�gina
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tipo': 'modelos-receita',
+        'label': 'Modelos de Receita',
+        'page_obj': page_obj,
+        'query': query,
+        'active_filters': active_filters,
+    }
+    
+    return render(request, 'cadastros/receitas_list.html', context)
+
+
+@login_required
+def receita_create(request):
+    '''Criar nova receita'''
+    if request.method == 'POST':
+        try:
+            # Processar dados do formul�rio
+            data = {
+                'nome': request.POST.get('nome'),
+                'modelo_cabecalho': int(request.POST.get('modelo_cabecalho', 1)),
+                'modelo_titulo': int(request.POST.get('modelo_titulo', 1)),
+                'modelo_info_paciente': int(request.POST.get('modelo_info_paciente', 1)),
+                'conteudo_apresentacao': request.POST.get('conteudo_apresentacao', ''),
+                'modelo_rodape': int(request.POST.get('modelo_rodape', 1)),
+                'autor': request.user,  # Atribuir usu�rio logado como autor
+            }
+            
+            # Processar campo booleano ativo
+            data['ativo'] = request.POST.get('ativo', 'false') == 'true'
+            
+            # Criar objeto
+            ModeloReceita.objects.create(**data)
+            
+            messages.success(request, 'Receita criada com sucesso!')
+            return redirect('cadastros:modelos-receita_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao criar receita: {str(e)}')
+    
+    # Buscar dados da unidade para preview
+    dados_unidade = DadosUnidade.objects.first()
+    
+    context = {
+        'dados_unidade': dados_unidade,
+    }
+    
+    return render(request, 'cadastros/receita_form.html', context)
+
+
+@login_required
+def receita_edit(request, pk):
+    '''Editar receita existente'''
+    obj = get_object_or_404(ModeloReceita, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Atualizar dados
+            obj.nome = request.POST.get('nome')
+            obj.modelo_cabecalho = int(request.POST.get('modelo_cabecalho', 1))
+            obj.modelo_titulo = int(request.POST.get('modelo_titulo', 1))
+            obj.modelo_info_paciente = int(request.POST.get('modelo_info_paciente', 1))
+            obj.conteudo_apresentacao = request.POST.get('conteudo_apresentacao', '')
+            obj.modelo_rodape = int(request.POST.get('modelo_rodape', 1))
+            
+            # Processar campo booleano
+            obj.ativo = request.POST.get('ativo', 'false') == 'true'
+            
+            obj.save()
+            
+            messages.success(request, 'Receita atualizada com sucesso!')
+            return redirect('cadastros:modelos-receita_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao atualizar receita: {str(e)}')
+    
+    # Buscar dados da unidade para preview
+    dados_unidade = DadosUnidade.objects.first()
+    
+    context = {
+        'object': obj,
+        'dados_unidade': dados_unidade,
+    }
+    
+    return render(request, 'cadastros/receita_form.html', context)
+
+
+@login_required
+def receita_delete(request, pk):
+    '''Excluir receita'''
+    obj = get_object_or_404(ModeloReceita, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            obj.delete()
+            # Se for AJAX, retornar JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Receita exclu�da com sucesso!'
+                })
+            # Se for POST normal, redirecionar
+            messages.success(request, f'Receita "{obj.nome}" exclu�da com sucesso!')
+            return redirect('cadastros:modelos-receita_list')
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e)})
+            messages.error(request, f'Erro ao excluir receita: {str(e)}')
+            return redirect('cadastros:modelos-receita_list')
+    
+    # GET n�o � mais suportado - redirecionar para a lista
+    return redirect('cadastros:modelos-receita_list')

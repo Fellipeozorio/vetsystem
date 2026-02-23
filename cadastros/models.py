@@ -1,4 +1,5 @@
 from django.db import models
+from django.contrib.auth.models import User
 
 
 class BaseCadastro(models.Model):
@@ -336,11 +337,83 @@ class ReferenciaExame(models.Model):
 
 
 class ModeloReceita(models.Model):
-    nome = models.CharField(max_length=150)
-    conteudo = models.TextField()
+    nome = models.CharField(max_length=150, verbose_name='Nome')
+    codigo = models.CharField(
+        max_length=10, 
+        unique=True, 
+        editable=False, 
+        default='000', 
+        verbose_name='Código'
+    )
+    ativo = models.BooleanField(default=True, verbose_name='Ativo')
+    autor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='receitas_criadas',
+        verbose_name='Autor'
+    )
+    
+    # Bloco 1: Cabeçalho (4 modelos)
+    modelo_cabecalho = models.IntegerField(
+        default=1,
+        choices=[(1, 'Logo + Básico'), (2, 'Logo + Completo'), (3, 'Apenas Logo'), (4, 'Sem Cabeçalho')],
+        verbose_name='Modelo do Cabeçalho'
+    )
+    
+    # Bloco 2: Título (2 modelos)
+    modelo_titulo = models.IntegerField(
+        default=1,
+        choices=[(1, 'Com Título'), (2, 'Sem Título')],
+        verbose_name='Modelo do Título'
+    )
+    
+    # Bloco 3: Informações do Paciente (3 modelos)
+    modelo_info_paciente = models.IntegerField(
+        default=1,
+        choices=[(1, 'Animal + Responsável Resumido'), (2, 'Animal + Responsável Completo'), (3, 'Sem Informações')],
+        verbose_name='Modelo de Info do Paciente'
+    )
+    
+    # Bloco 4: Apresentação/Conteúdo (editor rico)
+    conteudo_apresentacao = models.TextField(
+        blank=True,
+        verbose_name='Conteúdo da Receita',
+        help_text='Conteúdo principal da receita'
+    )
+    
+    # Bloco 5: Rodapé (2 modelos)
+    modelo_rodape = models.IntegerField(
+        default=1,
+        choices=[(1, 'Completo'), (2, 'Sem Rodapé')],
+        verbose_name='Modelo do Rodapé'
+    )
+    
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
+    
+    class Meta:
+        ordering = ['nome']
+        verbose_name = 'Modelo de Receita'
+        verbose_name_plural = 'Modelos de Receita'
 
     def __str__(self):
-        return self.nome
+        return f"{self.nome} ({self.codigo})"
+    
+    def save(self, *args, **kwargs):
+        # Gerar código sequencial se não existir ou for o padrão
+        if not self.codigo or self.codigo == '000':
+            last_receita = ModeloReceita.objects.order_by('-id').first()
+            if last_receita and last_receita.codigo and last_receita.codigo != '000':
+                try:
+                    last_number = int(last_receita.codigo)
+                    self.codigo = str(last_number + 1).zfill(3)
+                except ValueError:
+                    self.codigo = '001'
+            else:
+                self.codigo = '001'
+        super().save(*args, **kwargs)
 
 
 class ModeloDocumento(models.Model):

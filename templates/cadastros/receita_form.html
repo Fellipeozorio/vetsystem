@@ -1,0 +1,830 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Editar{% else %}Adicionar{% endif %} Receita - VetSystem{% endblock %}
+
+{% block extra_head %}
+<!-- CDN do HugeRTE -->
+<script src="https://cdn.jsdelivr.net/npm/hugerte@1/hugerte.min.js" referrerpolicy="origin"></script>
+<script src="{% static 'js/hugerte-pt_BR.js' %}"></script>
+<script src="{% static 'js/hugerte-init.js' %}"></script>
+
+<style>
+  /* Esconder textarea */
+  textarea#conteudo_apresentacao {
+    display: none;
+  }
+  
+  .hugerte-loading {
+    height: 200px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f8fafc;
+    color: #64748b;
+    font-size: 14px;
+  }
+  
+  .hugerte-loading::after {
+    content: 'Carregando editor...';
+  }
+  
+  /* A4 Preview com padding lateral para as setas */
+  .a4-preview {
+    background: white;
+    width: 100%;
+    max-width: 24cm;
+    min-height: 29.7cm;
+    padding: 1.5cm 3cm;
+    margin: 20px auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    position: relative;
+  }
+  
+  /* Container para blocos com navegação */
+  .block-container {
+    position: relative;
+    margin: 0 0 10px 0;
+  }
+  
+  /* Blocos com moldura fina e cinza, padding compacto */
+  .exam-block {
+    border: 1px solid #ccc;
+    padding: 8px 10px;
+    position: relative;
+    background: white;
+  }
+  
+  /* Navegação de modelos com position absolute */
+  .model-navigation {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 10;
+  }
+  
+  .model-navigation.left {
+    left: -55px;
+  }
+  
+  .model-navigation.right {
+    right: -55px;
+  }
+  
+  .arrow-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: 2px solid #206bc4;
+    background: white;
+    color: #206bc4;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  }
+  
+  .arrow-btn:hover {
+    background: #206bc4;
+    color: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  }
+  
+  /* Badge visível apenas no hover do bloco */
+  .block-badge {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #206bc4;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 20;
+  }
+  
+  /* Mostrar badge quando hover no bloco ou no container (incluindo setas) */
+  .block-container:hover .block-badge,
+  .exam-block:hover .block-badge {
+    opacity: 1;
+  }
+  
+  /* Cabeçalho */
+  .cabecalho-preview {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+  
+  .cabecalho-preview .logo {
+    max-width: 120px;
+    max-height: 80px;
+    object-fit: contain;
+  }
+  
+  .cabecalho-preview .info {
+    flex: 1;
+  }
+  
+  .cabecalho-preview h3 {
+    margin: 0 0 5px 0;
+    font-size: 1.2rem;
+    color: #333;
+  }
+  
+  .cabecalho-preview p {
+    margin: 1px 0;
+    font-size: 0.8rem;
+    color: #666;
+    line-height: 1.4;
+  }
+  
+  /* Título do receita */
+  .exam-title {
+    text-align: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    color: #333;
+    margin: 0;
+  }
+  
+  /* Info paciente */
+  .info-paciente h4 {
+    font-size: 1rem;
+    margin: 0 0 10px 0;
+    color: #333;
+    font-weight: 600;
+  }
+  
+  .info-paciente p {
+    margin: 3px 0;
+    font-size: 0.85rem;
+    color: #555;
+  }
+  
+  /* Rodapé dentro da moldura */
+  .rodape-content {
+    margin-top: 40px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #666;
+  }
+  
+  /* Editores sem moldura */
+  .editor-block {
+    border: none;
+    padding: 0;
+  }
+  
+  /* Accordion de Etiquetas */
+  .etiqueta-item {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 0.85rem;
+  }
+  
+  .etiqueta-item:hover {
+    background: #f8f9fa;
+  }
+  
+  .etiqueta-item:last-child {
+    border-bottom: none;
+  }
+  
+  .etiqueta-secao {
+    color: #666;
+    font-size: 0.75rem;
+  }
+  
+  .etiqueta-nome {
+    color: #333;
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  
+  .accordion-body {
+    max-height: 400px;
+    overflow-y: auto;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-xl">
+  <div class="page-header d-print-none">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          {% if object %}Editar{% else %}Adicionar{% endif %} Receita
+        </h2>
+      </div>
+      <div class="col-auto ms-auto">
+        <a href="{% url 'cadastros:modelos-receita_list' %}" class="btn btn-outline-secondary" id="btn-voltar">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+            <path d="M15 6l-6 6l6 6"></path>
+          </svg>
+          Voltar
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="page-body">
+  <div class="container-xl">
+    <form method="post" id="receita-form">
+      {% csrf_token %}
+      
+      <!-- Card único - Form Elements do Tabler -->
+      <div class="card">
+        <div class="card-body">
+          <!-- Nome da Receita -->
+          <div class="row mb-3">
+            <div class="col-md-9">
+              <label class="form-label required">Nome da Receita</label>
+              <input type="text" name="nome" class="form-control" placeholder="Ex: Receita Padrão Antibiótico" value="{{ object.nome|default:'' }}" required>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label">Status</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="ativo" id="ativo-sim" value="true" {% if not object or object.ativo %}checked{% endif %}>
+                <label class="btn btn-outline-success" for="ativo-sim">Ativo</label>
+                
+                <input type="radio" class="btn-check" name="ativo" id="ativo-nao" value="false" {% if object and not object.ativo %}checked{% endif %}>
+                <label class="btn btn-outline-danger" for="ativo-nao">Inativo</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Preview A4 -->
+      <div class="card mt-3">
+        <div class="card-body">
+          <h3 class="card-title mb-3">Visualização da Receita</h3>
+          
+          <div class="a4-preview">
+            <!-- BLOCO 1: Cabeçalho com navegação -->
+            <div class="block-container">
+              <div class="model-navigation left">
+                <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="exam-block" id="cabecalho-preview">
+                <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo 1 de 4</span>
+                <!-- Conteúdo dinâmico -->
+              </div>
+              <div class="model-navigation right">
+                <button type="button" class="arrow-btn" onclick="changeModel('cabecalho', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" name="modelo_cabecalho" id="modelo_cabecalho" value="{{ object.modelo_cabecalho|default:1 }}">
+            </div>
+            
+            <!-- BLOCO 2: Título com navegação -->
+            <div class="block-container">
+              <div class="model-navigation left">
+                <button type="button" class="arrow-btn" onclick="changeModel('titulo', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="exam-block" id="titulo-preview">
+                <span class="block-badge" id="label-titulo">Título - Modelo 1 de 2</span>
+                <!-- Conteúdo dinâmico -->
+              </div>
+              <div class="model-navigation right">
+                <button type="button" class="arrow-btn" onclick="changeModel('titulo', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" name="modelo_titulo" id="modelo_titulo" value="{{ object.modelo_titulo|default:1 }}">
+            </div>
+            
+            <!-- BLOCO 3: Informações do Paciente com navegação -->
+            <div class="block-container">
+              <div class="model-navigation left">
+                <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="exam-block" id="info_paciente-preview">
+                <span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo 1 de 3</span>
+                <!-- Conteúdo dinâmico -->
+              </div>
+              <div class="model-navigation right">
+                <button type="button" class="arrow-btn" onclick="changeModel('info_paciente', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" name="modelo_info_paciente" id="modelo_info_paciente" value="{{ object.modelo_info_paciente|default:1 }}">
+            </div>
+            
+            <!-- BLOCO 4: Conteúdo da Receita -->
+            <div class="row" style="margin: 0 0 10px 0;">
+              <div class="col-md-9">
+                <div id="loading-apresentacao" class="hugerte-loading"></div>
+                <textarea id="conteudo_apresentacao" name="conteudo_apresentacao">{{ object.conteudo_apresentacao|default:'' }}</textarea>
+              </div>
+              
+              <!-- Accordion de Etiquetas -->
+              <div class="col-md-3">
+                <label class="form-label">
+                  Etiquetas Disponíveis
+                  <span class="tooltip-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Clique na etiqueta desejada e ela será inserida no texto">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-info-circle" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                      <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                      <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"></path>
+                      <path d="M12 9h.01"></path>
+                      <path d="M11 12h1v4h1"></path>
+                    </svg>
+                  </span>
+                </label>
+                <div class="accordion" id="accordionEtiquetas">
+                  <!-- Seção Cliente -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingCliente">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseCliente">
+                        Cliente
+                      </button>
+                    </h2>
+                    <div id="collapseCliente" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                      <div class="accordion-body p-0">{% verbatim %}
+                        <div class="etiqueta-item" data-tag="{{cliente.nome_completo}}">
+                          <span class="etiqueta-secao">Cliente -</span>
+                          <span class="etiqueta-nome">Nome Completo</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{cliente.codigo}}">
+                          <span class="etiqueta-secao">Cliente -</span>
+                          <span class="etiqueta-nome">Código</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{cliente.endereco}}">
+                          <span class="etiqueta-secao">Cliente -</span>
+                          <span class="etiqueta-nome">Endereço</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{cliente.celular}}">
+                          <span class="etiqueta-secao">Cliente -</span>
+                          <span class="etiqueta-nome">Celular</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{cliente.email}}">
+                          <span class="etiqueta-secao">Cliente -</span>
+                          <span class="etiqueta-nome">E-mail</span>
+                        </div>{% endverbatim %}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seção Animal -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingAnimal">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAnimal">
+                        Animal
+                      </button>
+                    </h2>
+                    <div id="collapseAnimal" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                      <div class="accordion-body p-0">{% verbatim %}
+                        <div class="etiqueta-item" data-tag="{{animal.codigo}}">
+                          <span class="etiqueta-secao">Animal -</span>
+                          <span class="etiqueta-nome">Código</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{animal.nome}}">
+                          <span class="etiqueta-secao">Animal -</span>
+                          <span class="etiqueta-nome">Nome</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{animal.especie}}">
+                          <span class="etiqueta-secao">Animal -</span>
+                          <span class="etiqueta-nome">Espécie</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{animal.raca}}">
+                          <span class="etiqueta-secao">Animal -</span>
+                          <span class="etiqueta-nome">Raça</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{animal.sexo}}">
+                          <span class="etiqueta-secao">Animal -</span>
+                          <span class="etiqueta-nome">Sexo</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{animal.idade}}">
+                          <span class="etiqueta-secao">Animal -</span>
+                          <span class="etiqueta-nome">Idade</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{animal.peso}}">
+                          <span class="etiqueta-secao">Animal -</span>
+                          <span class="etiqueta-nome">Peso</span>
+                        </div>{% endverbatim %}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seção Clínica -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingClinica">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseClinica">
+                        Clínica
+                      </button>
+                    </h2>
+                    <div id="collapseClinica" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                      <div class="accordion-body p-0">{% verbatim %}
+                        <div class="etiqueta-item" data-tag="{{clinica.nome_empreendimento}}">
+                          <span class="etiqueta-secao">Clínica -</span>
+                          <span class="etiqueta-nome">Nome do Empreendimento</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{clinica.cnpj}}">
+                          <span class="etiqueta-secao">Clínica -</span>
+                          <span class="etiqueta-nome">CNPJ</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{clinica.registro_crmv}}">
+                          <span class="etiqueta-secao">Clínica -</span>
+                          <span class="etiqueta-nome">Registro CRMV</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{clinica.endereco_completo}}">
+                          <span class="etiqueta-secao">Cl
+
+ínica -</span>
+                          <span class="etiqueta-nome">Endereço Completo</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{clinica.telefone_comercial}}">
+                          <span class="etiqueta-secao">Clínica -</span>
+                          <span class="etiqueta-nome">Telefone Comercial</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{clinica.email}}">
+                          <span class="etiqueta-secao">Clínica -</span>
+                          <span class="etiqueta-nome">E-mail</span>
+                        </div>{% endverbatim %}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seção Geral -->
+                  <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingGeral">
+                      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseGeral">
+                        Geral
+                      </button>
+                    </h2>
+                    <div id="collapseGeral" class="accordion-collapse collapse" data-bs-parent="#accordionEtiquetas">
+                      <div class="accordion-body p-0">{% verbatim %}
+                        <div class="etiqueta-item" data-tag="{{geral.data_atual}}">
+                          <span class="etiqueta-secao">Geral -</span>
+                          <span class="etiqueta-nome">Data Atual</span>
+                        </div>
+                        <div class="etiqueta-item" data-tag="{{geral.hora_atual}}">
+                          <span class="etiqueta-secao">Geral -</span>
+                          <span class="etiqueta-nome">Hora Atual</span>
+                        </div>{% endverbatim %}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- BLOCO 5: Rodapé com navegação -->
+            <div class="block-container">
+              <div class="model-navigation left">
+                <button type="button" class="arrow-btn" onclick="changeModel('rodape', -1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <div class="exam-block" id="rodape-preview">
+                <span class="block-badge" id="label-rodape">Rodapé - Modelo 1 de 2</span>
+                <!-- Conteúdo dinâmico -->
+              </div>
+              <div class="model-navigation right">
+                <button type="button" class="arrow-btn" onclick="changeModel('rodape', 1)">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+              <input type="hidden" name="modelo_rodape" id="modelo_rodape" value="{{ object.modelo_rodape|default:1 }}">
+            </div>
+          </div>
+          
+          <!-- Botões -->
+          <div class="d-flex justify-content-end gap-2 mt-3">
+            <a href="{% url 'cadastros:modelos-receita_list' %}" class="btn">Cancelar</a>
+            <button type="submit" class="btn btn-primary">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"></path>
+                <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                <path d="M14 4l0 4l-6 0l0 -4"></path>
+              </svg>
+              Salvar Receita
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Dados fictícios da clínica
+const dadosUnidade = {
+  nome: 'VetClinic - Clínica Veterinária',
+  cnpj: '12.345.678/0001-90',
+  crmv: 'CRMV-SP 12345',
+  endereco: 'Rua dos Animais, 123',
+  bairro: 'Centro',
+  cidade: 'São Paulo',
+  estado: 'SP',
+  cep: '01234-567',
+  telefone: '(11) 3456-7890',
+  email: 'contato@vetclinic.com.br',
+  logo: null
+};
+
+// Dados fictícios do paciente
+const dadosPaciente = {
+  animal: {
+    codigo: 'A001',
+    nome: 'Rex',
+    especie: 'Canina',
+    raca: 'Labrador',
+    pelagem: 'Amarela',
+    sexo: 'Macho',
+    data_nascimento: '2020-01-15',
+    peso: '30 kg',
+    microchip: '123456789012345',
+    esterilizacao: 'Sim'
+  },
+  responsavel: {
+    codigo: 'C001',
+    nome: 'João Silva',
+    endereco: 'Rua das Flores, 456',
+    bairro: 'Jardim Europa',
+    cidade: 'São Paulo',
+    estado: 'SP',
+    cep: '01234-567',
+    telefone: '(11) 98765-4321',
+    email: 'joao.silva@email.com',
+    rg: '12.345.678-9',
+    cpf: '123.456.789-00'
+  }
+};
+
+// Função para calcular idade
+function calcularIdade(dataNascimento) {
+  const hoje = new Date();
+  const nascimento = new Date(dataNascimento);
+  let anos = hoje.getFullYear() - nascimento.getFullYear();
+  let meses = hoje.getMonth() - nascimento.getMonth();
+  
+  if (meses < 0 || (meses === 0 && hoje.getDate() < nascimento.getDate())) {
+    anos--;
+    meses += 12;
+  }
+  
+  if (anos > 0) {
+    return `${anos} ${anos === 1 ? 'ano' : 'anos'}`;
+  } else {
+    return `${meses} ${meses === 1 ? 'mês' : 'meses'}`;
+  }
+}
+
+// Função para trocar modelo
+function changeModel(tipo, direction) {
+  const input = document.getElementById(`modelo_${tipo}`);
+  let currentModel = parseInt(input.value);
+  
+  let maxModel;
+  if (tipo === 'cabecalho') maxModel = 4;
+  else if (tipo === 'titulo') maxModel = 2;
+  else if (tipo === 'info_paciente') maxModel = 3;
+  else if (tipo === 'rodape') maxModel = 2;
+  
+  currentModel += direction;
+  
+  if (currentModel < 1) currentModel = maxModel;
+  if (currentModel > maxModel) currentModel = 1;
+  
+  input.value = currentModel;
+  updatePreview(tipo);
+}
+
+// Função para atualizar preview
+function updatePreview(tipo) {
+  const preview = document.getElementById(`${tipo}-preview`);
+  const model = parseInt(document.getElementById(`modelo_${tipo}`).value);
+  let html = '';
+  
+  if (tipo === 'cabecalho') {
+    if (model === 1) {
+      html = `
+        <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span>
+        <div class="cabecalho-preview">
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:100px;height:60px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
+          <div class="info">
+            <h3>${dadosUnidade.nome}</h3>
+            <p><strong>CRMV:</strong> ${dadosUnidade.crmv}</p>
+            <p><strong>Telefone:</strong> ${dadosUnidade.telefone}</p>
+          </div>
+        </div>
+      `;
+    } else if (model === 2) {
+      html = `
+        <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span>
+        <div class="cabecalho-preview">
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" class="logo" alt="Logo">` : '<div style="width:100px;height:60px;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:#999;">Logo</div>'}
+          <div class="info" style="text-align: right;">
+            <h3>${dadosUnidade.nome}</h3>
+            <p><strong>CNPJ:</strong> ${dadosUnidade.cnpj} | <strong>CRMV:</strong> ${dadosUnidade.crmv}</p>
+            <p>${dadosUnidade.endereco}, ${dadosUnidade.bairro} - ${dadosUnidade.cidade}/${dadosUnidade.estado} - CEP ${dadosUnidade.cep}</p>
+            <p><strong>Tel:</strong> ${dadosUnidade.telefone} | <strong>E-mail:</strong> ${dadosUnidade.email}</p>
+          </div>
+        </div>
+      `;
+    } else if (model === 3) {
+      html = `
+        <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span>
+        <div style="text-align: center; padding: 10px;">
+          ${dadosUnidade.logo ? `<img src="${dadosUnidade.logo}" style="max-width: 150px; max-height: 80px;" alt="Logo">` : '<div style="width:150px;height:80px;border:1px solid #ddd;margin:0 auto;display:flex;align-items:center;justify-content:center;font-size:0.8rem;color:#999;">Logo</div>'}
+        </div>
+      `;
+    } else {
+      html = `<span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo ${model} de 4</span><div style="text-align: center; padding: 20px; color: #999;"><em>Sem cabeçalho</em></div>`;
+    }
+  } else if (tipo === 'titulo') {
+    if (model === 1) {
+      html = `
+        <span class="block-badge" id="label-titulo">Título - Modelo ${model} de 2</span>
+        <h2 class="exam-title">RECEITUÁRIO MÉDICO VETERINÁRIO</h2>
+      `;
+    } else {
+      html = `<span class="block-badge" id="label-titulo">Título - Modelo ${model} de 2</span><div style="text-align: center; padding: 10px; color: #999;"><em>Sem título</em></div>`;
+    }
+  } else if (tipo === 'info_paciente') {
+    if (model === 1) {
+      const idade = calcularIdade(dadosPaciente.animal.data_nascimento);
+      html = `
+        <span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo ${model} de 3</span>
+        <div class="info-paciente">
+          <div class="row">
+            <div class="col-md-6">
+              <h4>Animal</h4>
+              <p><strong>Nome:</strong> ${dadosPaciente.animal.nome} | <strong>Código:</strong> ${dadosPaciente.animal.codigo}</p>
+              <p><strong>Espécie:</strong> ${dadosPaciente.animal.especie} | <strong>Raça:</strong> ${dadosPaciente.animal.raca}</p>
+              <p><strong>Sexo:</strong> ${dadosPaciente.animal.sexo} | <strong>Idade:</strong> ${idade}</p>
+            </div>
+            <div class="col-md-6">
+              <h4>Responsável</h4>
+              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome}</p>
+              <p><strong>Telefone:</strong> ${dadosPaciente.responsavel.telefone}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    } else if (model === 2) {
+      const idade = calcularIdade(dadosPaciente.animal.data_nascimento);
+      html = `
+        <span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo ${model} de 3</span>
+        <div class="info-paciente">
+          <h4>Dados do Animal</h4>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Código:</strong> ${dadosPaciente.animal.codigo}</p>
+              <p><strong>Nome:</strong> ${dadosPaciente.animal.nome}</p>
+              <p><strong>Espécie:</strong> ${dadosPaciente.animal.especie}</p>
+              <p><strong>Raça:</strong> ${dadosPaciente.animal.raca}</p>
+              <p><strong>Pelagem:</strong> ${dadosPaciente.animal.pelagem}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Sexo:</strong> ${dadosPaciente.animal.sexo}</p>
+              <p><strong>Idade:</strong> ${idade}</p>
+              <p><strong>Peso:</strong> ${dadosPaciente.animal.peso}</p>
+              <p><strong>Microchip:</strong> ${dadosPaciente.animal.microchip}</p>
+              <p><strong>Esterilização:</strong> ${dadosPaciente.animal.esterilizacao}</p>
+            </div>
+          </div>
+          <h4>Dados do Responsável</h4>
+          <div class="row">
+            <div class="col-md-6">
+              <p><strong>Código:</strong> ${dadosPaciente.responsavel.codigo}</p>
+              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome}</p>
+              <p><strong>RG:</strong> ${dadosPaciente.responsavel.rg}</p>
+              <p><strong>CPF:</strong> ${dadosPaciente.responsavel.cpf}</p>
+            </div>
+            <div class="col-md-6">
+              <p><strong>Endereço:</strong> ${dadosPaciente.responsavel.endereco}</p>
+              <p><strong>Bairro:</strong> ${dadosPaciente.responsavel.bairro} | <strong>Cidade:</strong> ${dadosPaciente.responsavel.cidade}/${dadosPaciente.responsavel.estado}</p>
+              <p><strong>Telefone:</strong> ${dadosPaciente.responsavel.telefone}</p>
+              <p><strong>E-mail:</strong> ${dadosPaciente.responsavel.email}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    } else {
+      html = `<span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo ${model} de 3</span><div style="text-align: center; padding: 40px; color: #999;"><em>Sem informações de paciente</em></div>`;
+    }
+  } else if (tipo === 'rodape') {
+    if (model === 1) {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('pt-BR');
+      const timeStr = now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+      html = `
+        <span class="block-badge" id="label-rodape">Rodapé - Modelo ${model} de 2</span>
+        <div class="rodape-content">
+          <div>Impresso em: ${dateStr} às ${timeStr}</div>
+          <div>Por: {{ user.get_full_name|default:user.username }}</div>
+          <div>Clínica: ${dadosUnidade.nome}</div>
+        </div>
+      `;
+    } else {
+      html = `<span class="block-badge" id="label-rodape">Rodapé - Modelo ${model} de 2</span><div style="text-align: center; padding: 20px; color: #999;"><em>Sem rodapé</em></div>`;
+    }
+  }
+  
+  preview.innerHTML = html;
+}
+
+// Inicializar previews
+document.addEventListener('DOMContentLoaded', function() {
+  updatePreview('cabecalho');
+  updatePreview('titulo');
+  updatePreview('info_paciente');
+  updatePreview('rodape');
+  
+  // Inicializar tooltips
+  const tooltips = document.querySelectorAll('[data-bs-toggle="tooltip"]');
+  tooltips.forEach(el => new bootstrap.Tooltip(el));
+  
+  // Sincronizar conteúdo do editor antes de enviar o formulário
+  document.getElementById('receita-form').addEventListener('submit', function(e) {
+    const editorApresentacao = HugeRTEEditor.getEditor('editorApresentacao');
+    
+    if (editorApresentacao) {
+      const conteudo = editorApresentacao.getContent();
+      document.getElementById('conteudo_apresentacao').value = conteudo;
+      console.log('✅ Conteúdo apresentação sincronizado:', conteudo.substring(0, 50));
+    }
+  });
+  
+  // Função para inserir etiqueta no editor
+  document.querySelectorAll('.etiqueta-item').forEach(item => {
+    item.addEventListener('click', function() {
+      const tag = this.getAttribute('data-tag');
+      const editor = HugeRTEEditor.getEditor('editorApresentacao');
+      
+      if (editor) {
+        editor.insertContent(' ' + tag + ' ');
+        console.log('Etiqueta inserida:', tag);
+      }
+    });
+  });
+});
+
+// Inicializar editores HugeRTE
+window.addEventListener('load', function() {
+  // Editor de apresentação  
+  HugeRTEEditor.init('#conteudo_apresentacao', { 
+    placehold: 'Digite o conteúdo da receita aqui...',
+    height: 400
+  }, 'editorApresentacao')
+  .then(() => {
+    const loading = document.getElementById('loading-apresentacao');
+    if (loading) loading.style.display = 'none';
+    console.log('✅ Editor de apresentação carregado');
+  })
+  .catch(err => {
+    console.error('❌ Erro ao carregar editor:', err);
+  });
+});
+</script>
+{% endblock %}
