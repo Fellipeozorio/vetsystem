@@ -116,8 +116,9 @@
     z-index: 20;
   }
   
-  /* Mostrar badge quando hover nas setas ou no bloco */
+  /* Mostrar badge quando hover no container, nas setas ou no bloco */
   .block-container:hover .block-badge,
+  .model-navigation:hover + .exam-block .block-badge,
   .exam-block:hover .block-badge {
     opacity: 1;
   }
@@ -831,6 +832,22 @@ document.getElementById('btn-confirm-leave').addEventListener('click', function(
 document.getElementById('exam-form').addEventListener('submit', function(e) {
   e.preventDefault();
   formDirty = false;
+  
+  // Sincronizar conteúdo dos editores HugeRTE com os textareas
+  const editorApresentacao = HugeRTEEditor.getEditor('editorApresentacao');
+  const editorEncerramento = HugeRTEEditor.getEditor('editorEncerramento');
+  
+  if (editorApresentacao) {
+    const conteudo = editorApresentacao.getContent();
+    document.getElementById('conteudo_apresentacao').value = conteudo;
+    console.log('✅ Conteúdo apresentação sincronizado:', conteudo.substring(0, 50));
+  }
+  
+  if (editorEncerramento) {
+    const conteudo = editorEncerramento.getContent();
+    document.getElementById('conteudo_encerramento').value = conteudo;
+    console.log('✅ Conteúdo encerramento sincronizado:', conteudo.substring(0, 50));
+  }
   
   const formData = new FormData(this);
   
