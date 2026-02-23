@@ -440,6 +440,38 @@ class DadosUnidade(models.Model):
     def __str__(self):
         return self.nome_empreendimento
     
+    @property
+    def endereco_completo(self):
+        """
+        Retorna o endereço completo formatado.
+        Exemplo: Rua das Flores, 123 - Centro - São Paulo/SP - CEP 01234-567
+        """
+        partes = []
+        
+        # Endereço e número
+        if self.endereco:
+            endereco_num = self.endereco
+            if self.numero:
+                endereco_num += f", {self.numero}"
+            partes.append(endereco_num)
+        
+        # Bairro
+        if self.bairro:
+            partes.append(self.bairro)
+        
+        # Cidade e Estado
+        if self.cidade:
+            cidade_estado = self.cidade
+            if self.estado:
+                cidade_estado += f"/{self.estado}"
+            partes.append(cidade_estado)
+        
+        # CEP
+        if self.cep:
+            partes.append(f"CEP {self.cep}")
+        
+        return " - ".join(partes) if partes else ""
+    
     def save(self, *args, **kwargs):
         # Garantir que existe apenas um registro
         if not self.pk and DadosUnidade.objects.exists():
