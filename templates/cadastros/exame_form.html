@@ -95,7 +95,7 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   
-  /* Badge sempre visível, igual ao bloco de resultados */
+  /* Badge visível apenas no hover das setas ou do bloco */
   .block-badge {
     position: absolute;
     top: -12px;
@@ -109,9 +109,17 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    opacity: 0;
+    transition: opacity 0.2s;
     pointer-events: none;
     white-space: nowrap;
     z-index: 20;
+  }
+  
+  /* Mostrar badge quando hover nas setas ou no bloco */
+  .block-container:hover .block-badge,
+  .exam-block:hover .block-badge {
+    opacity: 1;
   }
   
   /* Cabeçalho */
