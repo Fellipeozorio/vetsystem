@@ -16,15 +16,6 @@
     display: none;
   }
   
-  /* Bloquear redimensionamento dos editores */
-  .tox-tinymce {
-    resize: none !important;
-  }
-  
-  .tox-statusbar__resize-handle {
-    display: none !important;
-  }
-  
   .hugerte-loading {
     height: 200px;
     border: 1px solid #e2e8f0;
@@ -125,9 +116,11 @@
     z-index: 20;
   }
   
-  /* Mostrar badge no hover do container ou das setas */
+  /* Mostrar badge no hover do container, do bloco ou das setas */
   .block-container:hover .block-badge,
-  .exam-block:hover .block-badge {
+  .exam-block:hover .block-badge,
+  .arrow-btn:hover ~ * .block-badge,
+  .model-navigation:hover ~ .exam-block .block-badge {
     opacity: 1;
   }
   
@@ -515,23 +508,31 @@ const dadosUnidade = {
   logo: "{% if dados_unidade.logomarca %}{{ dados_unidade.logomarca.url }}{% endif %}"
 };
 
-// Dados fictícios de paciente
+// Dados fictícios de paciente (alinhados com modelos Client e Pet)
 const dadosPaciente = {
   animal: {
+    codigo: "PET001",
     nome: "Rex",
     especie: "Canino",
     raca: "Labrador",
-    sexo: "Macho",
-    idade: "5 anos",
     pelagem: "Amarelo",
-    porte: "Grande"
+    sexo: "Macho",
+    data_nascimento: "15/03/2019",
+    idade: "5 anos",
+    peso: "32.5 kg",
+    porte: "Grande",
+    microchip: "985112345678901",
+    esterilizacao: "Castrado"
   },
   responsavel: {
-    nome: "João Silva",
     codigo: "CLI001",
+    nome_completo: "João Silva",
     cpf: "123.456.789-00",
-    telefone: "(11) 98765-4321",
-    endereco: "Rua das Flores, 456",
+    celular: "(11) 98765-4321",
+    email: "joao.silva@email.com",
+    endereco: "Rua das Flores",
+    numero: "456",
+    complemento: "Apto 101",
     bairro: "Centro",
     cidade: "São Paulo",
     estado: "SP",
@@ -649,18 +650,19 @@ function updatePreview(tipo) {
           <div class="row">
             <div class="col-md-6">
               <h4>Dados do Animal</h4>
+              <p><strong>Código:</strong> ${dadosPaciente.animal.codigo}</p>
               <p><strong>Nome:</strong> ${dadosPaciente.animal.nome}</p>
               <p><strong>Espécie:</strong> ${dadosPaciente.animal.especie}</p>
               <p><strong>Raça:</strong> ${dadosPaciente.animal.raca}</p>
               <p><strong>Sexo:</strong> ${dadosPaciente.animal.sexo}</p>
-              <p><strong>Idade:</strong> ${dadosPaciente.animal.idade}</p>
+              <p><strong>Data Nascimento:</strong> ${dadosPaciente.animal.data_nascimento}</p>
             </div>
             <div class="col-md-6">
               <h4>Responsável</h4>
-              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome}</p>
-              <p><strong>Código:</strong> ${dadosPaciente.responsavel.codigo}</p>
+              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome_completo} (${dadosPaciente.responsavel.codigo})</p>
               <p><strong>CPF:</strong> ${dadosPaciente.responsavel.cpf}</p>
-              <p><strong>Endereço:</strong> ${dadosPaciente.responsavel.endereco}</p>
+              <p><strong>Celular:</strong> ${dadosPaciente.responsavel.celular}</p>
+              <p><strong>E-mail:</strong> ${dadosPaciente.responsavel.email}</p>
             </div>
           </div>
         </div>
@@ -671,27 +673,31 @@ function updatePreview(tipo) {
           <h4>Dados do Animal</h4>
           <div class="row">
             <div class="col-md-6">
+              <p><strong>Código:</strong> ${dadosPaciente.animal.codigo}</p>
               <p><strong>Nome:</strong> ${dadosPaciente.animal.nome}</p>
               <p><strong>Espécie:</strong> ${dadosPaciente.animal.especie}</p>
               <p><strong>Raça:</strong> ${dadosPaciente.animal.raca}</p>
-              <p><strong>Sexo:</strong> ${dadosPaciente.animal.sexo}</p>
+              <p><strong>Pelagem:</strong> ${dadosPaciente.animal.pelagem}</p>
             </div>
             <div class="col-md-6">
+              <p><strong>Sexo:</strong> ${dadosPaciente.animal.sexo}</p>
+              <p><strong>Data Nasc.:</strong> ${dadosPaciente.animal.data_nascimento}</p>
               <p><strong>Idade:</strong> ${dadosPaciente.animal.idade}</p>
-              <p><strong>Pelagem:</strong> ${dadosPaciente.animal.pelagem}</p>
+              <p><strong>Peso:</strong> ${dadosPaciente.animal.peso}</p>
               <p><strong>Porte:</strong> ${dadosPaciente.animal.porte}</p>
             </div>
           </div>
           <h4 class="mt-3">Dados do Responsável</h4>
           <div class="row">
             <div class="col-md-6">
-              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome}</p>
-              <p><strong>Código:</strong> ${dadosPaciente.responsavel.codigo}</p>
+              <p><strong>Nome:</strong> ${dadosPaciente.responsavel.nome_completo} (${dadosPaciente.responsavel.codigo})</p>
               <p><strong>CPF:</strong> ${dadosPaciente.responsavel.cpf}</p>
-              <p><strong>Telefone:</strong> ${dadosPaciente.responsavel.telefone}</p>
+              <p><strong>Celular:</strong> ${dadosPaciente.responsavel.celular}</p>
+              <p><strong>E-mail:</strong> ${dadosPaciente.responsavel.email}</p>
             </div>
             <div class="col-md-6">
-              <p><strong>Endereço:</strong> ${dadosPaciente.responsavel.endereco}</p>
+              <p><strong>Endereço:</strong> ${dadosPaciente.responsavel.endereco}, ${dadosPaciente.responsavel.numero}</p>
+              <p><strong>Complemento:</strong> ${dadosPaciente.responsavel.complemento}</p>
               <p><strong>Bairro:</strong> ${dadosPaciente.responsavel.bairro}</p>
               <p><strong>Cidade/UF:</strong> ${dadosPaciente.responsavel.cidade}/${dadosPaciente.responsavel.estado}</p>
               <p><strong>CEP:</strong> ${dadosPaciente.responsavel.cep}</p>
@@ -827,12 +833,10 @@ document.addEventListener('DOMContentLoaded', function() {
   updatePreview('info_paciente');
   updatePreview('rodape');
   
-  // Inicializar HugeRTE com altura de 200px e sem redimensionamento
+  // Inicializar HugeRTE com altura de 200px e redimensionamento habilitado
   HugeRTEEditor.init('#conteudo_apresentacao', { 
     height: 200,
-    min_height: 200,
-    max_height: 200,
-    resize: false
+    min_height: 200
   }, 'editorApresentacao')
     .then(() => {
       const loading = document.getElementById('loading-apresentacao');
@@ -843,9 +847,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   HugeRTEEditor.init('#conteudo_encerramento', { 
     height: 200,
-    min_height: 200,
-    max_height: 200,
-    resize: false
+    min_height: 200
   }, 'editorEncerramento')
     .then(() => {
       const loading = document.getElementById('loading-encerramento');
