@@ -336,37 +336,22 @@ class ReferenciaExame(models.Model):
         return f"Referência - {self.exame.nome}"
 
 
-class ModeloReceita(models.Model):
-    nome = models.CharField(max_length=150, verbose_name='Nome')
-    codigo = models.CharField(
-        max_length=10, 
-        unique=True, 
-        editable=False, 
-        default='000', 
-        verbose_name='Código'
-    )
-    ativo = models.BooleanField(default=True, verbose_name='Ativo')
+class ModeloReceita(BaseCadastro):
+    codigo = models.CharField(max_length=10, unique=True, editable=False, default='000', verbose_name='Código')
     autor = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='receitas_criadas',
         verbose_name='Autor'
     )
+    descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
     
     # Bloco 1: Cabeçalho (4 modelos)
     modelo_cabecalho = models.IntegerField(
         default=1,
         choices=[(1, 'Logo + Básico'), (2, 'Logo + Completo'), (3, 'Apenas Logo'), (4, 'Sem Cabeçalho')],
         verbose_name='Modelo do Cabeçalho'
-    )
-    
-    # Bloco 2: Título (2 modelos)
-    modelo_titulo = models.IntegerField(
-        default=1,
-        choices=[(1, 'Com Título'), (2, 'Sem Título')],
-        verbose_name='Modelo do Título'
     )
     
     # Bloco 3: Informações do Paciente (3 modelos)
@@ -376,30 +361,26 @@ class ModeloReceita(models.Model):
         verbose_name='Modelo de Info do Paciente'
     )
     
-    # Bloco 4: Apresentação/Conteúdo (editor rico)
+    # Bloco 4: Apresentação (editor rico)
     conteudo_apresentacao = models.TextField(
         blank=True,
-        verbose_name='Conteúdo da Receita',
-        help_text='Conteúdo principal da receita'
+        verbose_name='Apresentação',
+        help_text='Conteúdo da seção de apresentação'
     )
     
-    # Bloco 5: Rodapé (2 modelos)
+    # Bloco 6: Encerramento (editor rico)
+    conteudo_encerramento = models.TextField(
+        blank=True,
+        verbose_name='Encerramento',
+        help_text='Conteúdo da seção de encerramento'
+    )
+    
+    # Bloco 7: Rodapé (2 modelos)
     modelo_rodape = models.IntegerField(
         default=1,
         choices=[(1, 'Completo'), (2, 'Sem Rodapé')],
         verbose_name='Modelo do Rodapé'
     )
-    
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
-    updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
-    
-    class Meta:
-        ordering = ['nome']
-        verbose_name = 'Modelo de Receita'
-        verbose_name_plural = 'Modelos de Receita'
-
-    def __str__(self):
-        return f"{self.nome} ({self.codigo})"
     
     def save(self, *args, **kwargs):
         # Gerar código sequencial se não existir ou for o padrão
@@ -414,14 +395,73 @@ class ModeloReceita(models.Model):
             else:
                 self.codigo = '001'
         super().save(*args, **kwargs)
-
-
-class ModeloDocumento(models.Model):
-    nome = models.CharField(max_length=150)
-    conteudo = models.TextField()
-
+    
     def __str__(self):
-        return self.nome
+        return f"{self.nome} ({self.codigo})"
+
+
+class ModeloDocumento(BaseCadastro):
+    codigo = models.CharField(max_length=10, unique=True, editable=False, default='000', verbose_name='Código')
+    autor = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name='Autor'
+    )
+    descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
+    
+    # Bloco 1: Cabeçalho (4 modelos)
+    modelo_cabecalho = models.IntegerField(
+        default=1,
+        choices=[(1, 'Logo + Básico'), (2, 'Logo + Completo'), (3, 'Apenas Logo'), (4, 'Sem Cabeçalho')],
+        verbose_name='Modelo do Cabeçalho'
+    )
+    
+    # Bloco 3: Informações do Paciente (3 modelos)
+    modelo_info_paciente = models.IntegerField(
+        default=1,
+        choices=[(1, 'Animal + Responsável Resumido'), (2, 'Animal + Responsável Completo'), (3, 'Sem Informações')],
+        verbose_name='Modelo de Info do Paciente'
+    )
+    
+    # Bloco 4: Apresentação (editor rico)
+    conteudo_apresentacao = models.TextField(
+        blank=True,
+        verbose_name='Apresentação',
+        help_text='Conteúdo da seção de apresentação'
+    )
+    
+    # Bloco 6: Encerramento (editor rico)
+    conteudo_encerramento = models.TextField(
+        blank=True,
+        verbose_name='Encerramento',
+        help_text='Conteúdo da seção de encerramento'
+    )
+    
+    # Bloco 7: Rodapé (2 modelos)
+    modelo_rodape = models.IntegerField(
+        default=1,
+        choices=[(1, 'Completo'), (2, 'Sem Rodapé')],
+        verbose_name='Modelo do Rodapé'
+    )
+    
+    def save(self, *args, **kwargs):
+        # Gerar código sequencial se não existir ou for o padrão
+        if not self.codigo or self.codigo == '000':
+            last_documento = ModeloDocumento.objects.order_by('-id').first()
+            if last_documento and last_documento.codigo and last_documento.codigo != '000':
+                try:
+                    last_number = int(last_documento.codigo)
+                    self.codigo = str(last_number + 1).zfill(3)
+                except ValueError:
+                    self.codigo = '001'
+            else:
+                self.codigo = '001'
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.nome} ({self.codigo})"
 
 
 class OrigemCliente(BaseCadastro):

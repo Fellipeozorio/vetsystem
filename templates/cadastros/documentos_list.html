@@ -1,5 +1,5 @@
 {% extends 'cadastros/base_list.html' %}
-<!-- TEMPLATE ATUALIZADO EM 23/02/2026 - VERSÃO COM AUTOR E CÓDIGO -->
+<!-- TEMPLATE CRIADO EM 23/02/2026 - BASEADO EM RECEITAS -->
 
 {% block table_header %}
 <th>Nome</th>
@@ -20,7 +20,7 @@
 </td>
 <td onclick="event.stopPropagation()">
   <div class="btn-list flex-nowrap">
-    <a href="{% url 'cadastros:receita_edit' item.id %}" class="btn btn-sm btn-icon btn-ghost-secondary" title="Editar">
+    <a href="{% url 'cadastros:documento_edit' item.id %}" class="btn btn-sm btn-icon btn-ghost-secondary" title="Editar">
       <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
     </a>
     <button class="btn btn-sm btn-icon btn-ghost-danger" onclick="deleteItem({{ item.id }}, '{{ item.nome|escapejs }}')" title="Excluir">
@@ -92,38 +92,38 @@
 <script>
 // Sobrescrever funções globais do base_list.html para redirecionar para páginas completas
 function openAddOffcanvas() {
-  window.location.href = "{% url 'cadastros:receita_create' %}";
+  window.location.href = "{% url 'cadastros:documento_create' %}";
 }
 
 function viewItem(id) {
-  window.location.href = `/cadastros/receitas/${id}/editar/`;
+  window.location.href = `/cadastros/documentos/${id}/editar/`;
 }
 
 function editItem(id) {
-  window.location.href = `/cadastros/receitas/${id}/editar/`;
+  window.location.href = `/cadastros/documentos/${id}/editar/`;
 }
 
 // Variáveis para controle de exclusão
-let deleteReceitaId = null;
-let deleteReceitaNome = null;
+let deleteDocumentoId = null;
+let deleteDocumentoNome = null;
 
 // Função de deletar - exibe modal danger
 function deleteItem(id, nome) {
-  deleteReceitaId = id;
-  deleteReceitaNome = nome;
+  deleteDocumentoId = id;
+  deleteDocumentoNome = nome;
   
-  document.getElementById('delete-message-receita').textContent = `Tem certeza que deseja excluir a receita "${nome}"?`;
+  document.getElementById('delete-message-documento').textContent = `Tem certeza que deseja excluir o documento "${nome}"?`;
   
-  const modal = new bootstrap.Modal(document.getElementById('modal-danger-receita'));
+  const modal = new bootstrap.Modal(document.getElementById('modal-danger-documento'));
   modal.show();
 }
 
 // Confirmar exclusão ao clicar no botão do modal
 document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('btn-confirm-delete-receita').addEventListener('click', function() {
-    if (!deleteReceitaId) return;
+  document.getElementById('btn-confirm-delete-documento').addEventListener('click', function() {
+    if (!deleteDocumentoId) return;
     
-    fetch(`/cadastros/receitas/${deleteReceitaId}/excluir/`, {
+    fetch(`/cadastros/documentos/${deleteDocumentoId}/excluir/`, {
       method: 'POST',
       headers: {
         'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', function() {
     })
     .then(response => response.json())
     .then(data => {
-      const modal = bootstrap.Modal.getInstance(document.getElementById('modal-danger-receita'));
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modal-danger-documento'));
       modal.hide();
       
       if (data.success) {
@@ -141,17 +141,17 @@ document.addEventListener('DOMContentLoaded', function() {
         alert('Erro ao excluir: ' + (data.error || 'Erro desconhecido'));
       }
       
-      deleteReceitaId = null;
-      deleteReceitaNome = null;
+      deleteDocumentoId = null;
+      deleteDocumentoNome = null;
     })
     .catch(error => {
-      const modal = bootstrap.Modal.getInstance(document.getElementById('modal-danger-receita'));
+      const modal = bootstrap.Modal.getInstance(document.getElementById('modal-danger-documento'));
       if (modal) modal.hide();
       
       alert('Erro ao excluir: ' + error);
       
-      deleteReceitaId = null;
-      deleteReceitaNome = null;
+      deleteDocumentoId = null;
+      deleteDocumentoNome = null;
     });
   });
 });
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 {% block extra_content %}
 <!-- Modal Danger - Confirmar Exclusão -->
-<div class="modal modal-blur fade" id="modal-danger-receita" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+<div class="modal modal-blur fade" id="modal-danger-documento" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
     <div class="modal-content">
       <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
       <div class="modal-body text-center py-4">
         <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
         <h3>Confirmar Exclusão</h3>
-        <div class="text-secondary" id="delete-message-receita">Tem certeza que deseja excluir esta receita?</div>
+        <div class="text-secondary" id="delete-message-documento">Tem certeza que deseja excluir este documento?</div>
       </div>
       <div class="modal-footer">
         <div class="w-100">
@@ -177,7 +177,7 @@ document.addEventListener('DOMContentLoaded', function() {
               <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
             </div>
             <div class="col">
-              <button type="button" class="btn btn-danger w-100" id="btn-confirm-delete-receita">Excluir</button>
+              <button type="button" class="btn btn-danger w-100" id="btn-confirm-delete-documento">Excluir</button>
             </div>
           </div>
         </div>

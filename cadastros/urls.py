@@ -17,10 +17,16 @@ urlpatterns = [
     path('exames/<int:pk>/excluir/', views.exame_delete, name='exame_delete'),
     
     # URLs específicas para receitas
-    path('modelos-receita/', views.receitas_list, name='modelos-receita_list'),
-    path('modelos-receita/criar/', views.receita_create, name='receita_create'),
-    path('modelos-receita/<int:pk>/editar/', views.receita_edit, name='receita_edit'),
-    path('modelos-receita/<int:pk>/excluir/', views.receita_delete, name='receita_delete'),
+    path('receitas/', views.receitas_list, name='receitas_list'),
+    path('receitas/criar/', views.receita_create, name='receita_create'),
+    path('receitas/<int:pk>/editar/', views.receita_edit, name='receita_edit'),
+    path('receitas/<int:pk>/excluir/', views.receita_delete, name='receita_delete'),
+    
+    # URLs específicas para documentos
+    path('documentos/', views.documentos_list, name='documentos_list'),
+    path('documentos/criar/', views.documento_create, name='documento_create'),
+    path('documentos/<int:pk>/editar/', views.documento_edit, name='documento_edit'),
+    path('documentos/<int:pk>/excluir/', views.documento_delete, name='documento_delete'),
     
     # URLs para protocolos de vacinas
     path('vacinas/<int:vacina_id>/protocolos/', views.vacina_protocolos_list, name='vacina_protocolos_list'),

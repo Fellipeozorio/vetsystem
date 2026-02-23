@@ -23,8 +23,6 @@ MODEL_MAP = {
     'exames': Exame,
     'atributos-exames': AtributoExame,
     'referencias-exames': ReferenciaExame,
-    'modelos-receita': ModeloReceita,
-    'modelos-documento': ModeloDocumento,
     'origens-cliente': OrigemCliente,
 }
 
@@ -39,8 +37,6 @@ MENU_LABELS = {
     'exames': 'Exames',
     'atributos-exames': 'Atributos de Exames',
     'referencias-exames': 'Referências de Exames',
-    'modelos-receita': 'Modelos de Receita',
-    'modelos-documento': 'Modelos de Documento',
     'origens-cliente': 'Origem dos Clientes',
 }
 
@@ -152,7 +148,6 @@ def cadastro_list(request, tipo):
         'exames': 'cadastros/exames_list.html',
         'patologias': 'cadastros/patologias_list.html',
         'tipos-atendimento': 'cadastros/tipos-atendimento_list.html',
-        'modelos-receita': 'cadastros/receitas_list.html',
     }
     
     template = template_map.get(tipo, 'cadastros/base_list.html')
@@ -189,8 +184,6 @@ def cadastro_create(request, tipo):
                     data['laboratorios'] = laboratorios_json
             elif tipo in ['filas-atendimento', 'exames']:
                 data['descricao'] = request.POST.get('descricao', '')
-            elif tipo in ['modelos-receita', 'modelos-documento']:
-                data['conteudo'] = request.POST.get('conteudo', '')
             
             # Adicionar campo ativo se existir
             if hasattr(model, 'ativo'):
@@ -279,8 +272,6 @@ def cadastro_update(request, tipo, pk):
                     obj.laboratorios = laboratorios_json
             elif tipo in ['filas-atendimento', 'exames']:
                 obj.descricao = request.POST.get('descricao', '')
-            elif tipo in ['modelos-receita', 'modelos-documento']:
-                obj.conteudo = request.POST.get('conteudo', '')
             
             # Atualizar campo ativo se existir
             if hasattr(obj, 'ativo'):
@@ -890,7 +881,7 @@ def exame_delete(request, pk):
 
 @login_required
 def receitas_list(request):
-    '''Listar receitas com busca e filtros'''
+    """Listar receitas com busca e filtros"""
     query = request.GET.get('q', '')
     
     # Buscar receitas
@@ -899,7 +890,7 @@ def receitas_list(request):
     else:
         items = ModeloReceita.objects.all()
     
-    # Filtros avan�ados
+    # Filtros avançados
     active_filters = {}
     
     # Filtro por nome
@@ -908,39 +899,39 @@ def receitas_list(request):
         items = items.filter(nome__icontains=nome)
         active_filters['nome'] = nome
     
-    # Filtro por c�digo
-    if request.GET.get('filter_codigo'):
-        codigo = request.GET.get('filter_codigo')
-        items = items.filter(codigo__icontains=codigo)
-        active_filters['codigo'] = codigo
-    
-    # Filtro por autor
-    if request.GET.get('filter_autor__username'):
-        autor = request.GET.get('filter_autor__username')
-        items = items.filter(autor__username__icontains=autor)
-        active_filters['autor__username'] = autor
-    
     # Filtro por status
     if request.GET.get('filter_ativo'):
         value = request.GET.get('filter_ativo')
         if value.lower() in ['true', '1', 'sim']:
             items = items.filter(ativo=True)
             active_filters['ativo'] = 'True'
-        elif value.lower() in ['false', '0', 'n�o', 'nao']:
+        elif value.lower() in ['false', '0', 'não', 'nao']:
             items = items.filter(ativo=False)
             active_filters['ativo'] = 'False'
+    
+    # Filtro por código
+    if request.GET.get('filter_codigo'):
+        codigo = request.GET.get('filter_codigo')
+        items = items.filter(codigo__icontains=codigo)
+        active_filters['codigo'] = codigo
+    
+    # Filtro por autor
+    if request.GET.get('filter_autor'):
+        autor = request.GET.get('filter_autor')
+        items = items.filter(autor__username__icontains=autor)
+        active_filters['autor'] = autor
     
     # Ordenar por nome
     items = items.order_by('nome')
     
-    # Pagina��o
-    paginator = Paginator(items, 20)  # 20 itens por p�gina
+    # Paginação
+    paginator = Paginator(items, 20)  # 20 itens por página
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     context = {
-        'tipo': 'modelos-receita',
-        'label': 'Modelos de Receita',
+        'tipo': 'receitas',
+        'label': 'Receitas',
         'page_obj': page_obj,
         'query': query,
         'active_filters': active_filters,
@@ -951,28 +942,31 @@ def receitas_list(request):
 
 @login_required
 def receita_create(request):
-    '''Criar nova receita'''
+    """Criar nova receita"""
     if request.method == 'POST':
         try:
-            # Processar dados do formul�rio
+            # Processar dados do formulário
             data = {
                 'nome': request.POST.get('nome'),
+                'descricao': request.POST.get('descricao', ''),
                 'modelo_cabecalho': int(request.POST.get('modelo_cabecalho', 1)),
-                'modelo_titulo': int(request.POST.get('modelo_titulo', 1)),
                 'modelo_info_paciente': int(request.POST.get('modelo_info_paciente', 1)),
                 'conteudo_apresentacao': request.POST.get('conteudo_apresentacao', ''),
+                'conteudo_encerramento': request.POST.get('conteudo_encerramento', ''),
                 'modelo_rodape': int(request.POST.get('modelo_rodape', 1)),
-                'autor': request.user,  # Atribuir usu�rio logado como autor
             }
             
             # Processar campo booleano ativo
             data['ativo'] = request.POST.get('ativo', 'false') == 'true'
             
+            # Definir o autor como o usuário atual
+            data['autor'] = request.user
+            
             # Criar objeto
             ModeloReceita.objects.create(**data)
             
             messages.success(request, 'Receita criada com sucesso!')
-            return redirect('cadastros:modelos-receita_list')
+            return redirect('cadastros:receitas_list')
             
         except Exception as e:
             messages.error(request, f'Erro ao criar receita: {str(e)}')
@@ -989,17 +983,18 @@ def receita_create(request):
 
 @login_required
 def receita_edit(request, pk):
-    '''Editar receita existente'''
+    """Editar receita existente"""
     obj = get_object_or_404(ModeloReceita, pk=pk)
     
     if request.method == 'POST':
         try:
             # Atualizar dados
             obj.nome = request.POST.get('nome')
+            obj.descricao = request.POST.get('descricao', '')
             obj.modelo_cabecalho = int(request.POST.get('modelo_cabecalho', 1))
-            obj.modelo_titulo = int(request.POST.get('modelo_titulo', 1))
             obj.modelo_info_paciente = int(request.POST.get('modelo_info_paciente', 1))
             obj.conteudo_apresentacao = request.POST.get('conteudo_apresentacao', '')
+            obj.conteudo_encerramento = request.POST.get('conteudo_encerramento', '')
             obj.modelo_rodape = int(request.POST.get('modelo_rodape', 1))
             
             # Processar campo booleano
@@ -1008,7 +1003,7 @@ def receita_edit(request, pk):
             obj.save()
             
             messages.success(request, 'Receita atualizada com sucesso!')
-            return redirect('cadastros:modelos-receita_list')
+            return redirect('cadastros:receitas_list')
             
         except Exception as e:
             messages.error(request, f'Erro ao atualizar receita: {str(e)}')
@@ -1026,7 +1021,7 @@ def receita_edit(request, pk):
 
 @login_required
 def receita_delete(request, pk):
-    '''Excluir receita'''
+    """Excluir receita"""
     obj = get_object_or_404(ModeloReceita, pk=pk)
     
     if request.method == 'POST':
@@ -1036,16 +1031,184 @@ def receita_delete(request, pk):
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({
                     'success': True,
-                    'message': 'Receita exclu�da com sucesso!'
+                    'message': 'Receita excluída com sucesso!'
                 })
             # Se for POST normal, redirecionar
-            messages.success(request, f'Receita "{obj.nome}" exclu�da com sucesso!')
-            return redirect('cadastros:modelos-receita_list')
+            messages.success(request, f'Receita "{obj.nome}" excluída com sucesso!')
+            return redirect('cadastros:receitas_list')
         except Exception as e:
             if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return JsonResponse({'success': False, 'error': str(e)})
             messages.error(request, f'Erro ao excluir receita: {str(e)}')
-            return redirect('cadastros:modelos-receita_list')
+            return redirect('cadastros:receitas_list')
     
-    # GET n�o � mais suportado - redirecionar para a lista
-    return redirect('cadastros:modelos-receita_list')
+    # GET não é mais suportado - redirecionar para a lista
+    return redirect('cadastros:receitas_list')
+
+
+# ================== VIEWS ESPECÍFICAS PARA DOCUMENTOS ==================
+
+def documentos_list(request):
+    """Listar documentos com busca e filtros"""
+    query = request.GET.get('q', '')
+    
+    # Buscar documentos
+    if query:
+        items = ModeloDocumento.objects.filter(nome__icontains=query)
+    else:
+        items = ModeloDocumento.objects.all()
+    
+    # Filtros avançados
+    active_filters = {}
+    
+    # Filtro por nome
+    if request.GET.get('filter_nome'):
+        nome = request.GET.get('filter_nome')
+        items = items.filter(nome__icontains=nome)
+        active_filters['nome'] = nome
+    
+    # Filtro por status
+    if request.GET.get('filter_ativo'):
+        value = request.GET.get('filter_ativo')
+        if value.lower() in ['true', '1', 'sim']:
+            items = items.filter(ativo=True)
+            active_filters['ativo'] = 'True'
+        elif value.lower() in ['false', '0', 'não', 'nao']:
+            items = items.filter(ativo=False)
+            active_filters['ativo'] = 'False'
+    
+    # Filtro por código
+    if request.GET.get('filter_codigo'):
+        codigo = request.GET.get('filter_codigo')
+        items = items.filter(codigo__icontains=codigo)
+        active_filters['codigo'] = codigo
+    
+    # Filtro por autor
+    if request.GET.get('filter_autor'):
+        autor = request.GET.get('filter_autor')
+        items = items.filter(autor__username__icontains=autor)
+        active_filters['autor'] = autor
+    
+    # Ordenar por nome
+    items = items.order_by('nome')
+    
+    # Paginação
+    paginator = Paginator(items, 20)  # 20 itens por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    context = {
+        'tipo': 'documentos',
+        'label': 'Documentos',
+        'page_obj': page_obj,
+        'query': query,
+        'active_filters': active_filters,
+    }
+    
+    return render(request, 'cadastros/documentos_list.html', context)
+
+
+@login_required
+def documento_create(request):
+    """Criar novo documento"""
+    if request.method == 'POST':
+        try:
+            # Processar dados do formulário
+            data = {
+                'nome': request.POST.get('nome'),
+                'descricao': request.POST.get('descricao', ''),
+                'modelo_cabecalho': int(request.POST.get('modelo_cabecalho', 1)),
+                'modelo_info_paciente': int(request.POST.get('modelo_info_paciente', 1)),
+                'conteudo_apresentacao': request.POST.get('conteudo_apresentacao', ''),
+                'conteudo_encerramento': request.POST.get('conteudo_encerramento', ''),
+                'modelo_rodape': int(request.POST.get('modelo_rodape', 1)),
+            }
+            
+            # Processar campo booleano ativo
+            data['ativo'] = request.POST.get('ativo', 'false') == 'true'
+            
+            # Definir o autor como o usuário atual
+            data['autor'] = request.user
+            
+            # Criar objeto
+            ModeloDocumento.objects.create(**data)
+            
+            messages.success(request, 'Documento criado com sucesso!')
+            return redirect('cadastros:documentos_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao criar documento: {str(e)}')
+    
+    # Buscar dados da unidade para preview
+    dados_unidade = DadosUnidade.objects.first()
+    
+    context = {
+        'dados_unidade': dados_unidade,
+    }
+    
+    return render(request, 'cadastros/documento_form.html', context)
+
+
+@login_required
+def documento_edit(request, pk):
+    """Editar documento existente"""
+    obj = get_object_or_404(ModeloDocumento, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Atualizar dados
+            obj.nome = request.POST.get('nome')
+            obj.descricao = request.POST.get('descricao', '')
+            obj.modelo_cabecalho = int(request.POST.get('modelo_cabecalho', 1))
+            obj.modelo_info_paciente = int(request.POST.get('modelo_info_paciente', 1))
+            obj.conteudo_apresentacao = request.POST.get('conteudo_apresentacao', '')
+            obj.conteudo_encerramento = request.POST.get('conteudo_encerramento', '')
+            obj.modelo_rodape = int(request.POST.get('modelo_rodape', 1))
+            
+            # Processar campo booleano
+            obj.ativo = request.POST.get('ativo', 'false') == 'true'
+            
+            obj.save()
+            
+            messages.success(request, 'Documento atualizado com sucesso!')
+            return redirect('cadastros:documentos_list')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao atualizar documento: {str(e)}')
+    
+    # Buscar dados da unidade para preview
+    dados_unidade = DadosUnidade.objects.first()
+    
+    context = {
+        'object': obj,
+        'dados_unidade': dados_unidade,
+    }
+    
+    return render(request, 'cadastros/documento_form.html', context)
+
+
+@login_required
+def documento_delete(request, pk):
+    """Excluir documento"""
+    obj = get_object_or_404(ModeloDocumento, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            obj.delete()
+            # Se for AJAX, retornar JSON
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'message': 'Documento excluído com sucesso!'
+                })
+            # Se for POST normal, redirecionar
+            messages.success(request, f'Documento "{obj.nome}" excluído com sucesso!')
+            return redirect('cadastros:documentos_list')
+        except Exception as e:
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'error': str(e)})
+            messages.error(request, f'Erro ao excluir documento: {str(e)}')
+            return redirect('cadastros:documentos_list')
+    
+    # GET não é mais suportado - redirecionar para a lista
+    return redirect('cadastros:documentos_list')
