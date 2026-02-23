@@ -16,6 +16,15 @@
     display: none;
   }
   
+  /* Bloquear redimensionamento dos editores */
+  .tox-tinymce {
+    resize: none !important;
+  }
+  
+  .tox-statusbar__resize-handle {
+    display: none !important;
+  }
+  
   .hugerte-loading {
     height: 200px;
     border: 1px solid #e2e8f0;
@@ -32,13 +41,13 @@
     content: 'Carregando editor...';
   }
   
-  /* A4 Preview */
+  /* A4 Preview com padding lateral para as setas */
   .a4-preview {
     background: white;
     width: 100%;
     max-width: 24cm;
     min-height: 29.7cm;
-    padding: 1.5cm;
+    padding: 1.5cm 3cm;
     margin: 20px auto;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
     position: relative;
@@ -54,7 +63,6 @@
   .exam-block {
     border: 1px solid #ccc;
     padding: 8px 10px;
-    padding-top: 28px;
     position: relative;
     background: white;
   }
@@ -68,11 +76,11 @@
   }
   
   .model-navigation.left {
-    left: 5px;
+    left: -55px;
   }
   
   .model-navigation.right {
-    right: 5px;
+    right: -55px;
   }
   
   .arrow-btn {
@@ -96,26 +104,30 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
   }
   
-  /* Label interno no topo do bloco, centralizado, visível apenas no hover */
-  .block-label {
+  /* Badge que aparece no hover, igual ao bloco de resultados */
+  .block-badge {
     position: absolute;
-    top: 8px;
-    left: 0;
-    right: 0;
-    text-align: center;
-    font-size: 0.7rem;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #206bc4;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    font-size: 0.65rem;
     font-weight: 600;
-    color: #999;
     text-transform: uppercase;
     letter-spacing: 0.5px;
     opacity: 0;
     transition: opacity 0.2s;
     pointer-events: none;
+    white-space: nowrap;
+    z-index: 20;
   }
   
-  /* Mostrar label no hover do bloco ou das setas */
-  .block-container:hover .block-label,
-  .exam-block:hover .block-label {
+  /* Mostrar badge no hover do container ou das setas */
+  .block-container:hover .block-badge,
+  .exam-block:hover .block-badge {
     opacity: 1;
   }
   
@@ -184,11 +196,16 @@
     color: #666;
   }
   
-  /* Placeholder */
+  /* Placeholder - reduzido e destacado */
   .results-placeholder {
     text-align: center;
-    color: #999;
-    padding: 40px;
+    color: #206bc4;
+    padding: 20px;
+    font-weight: 500;
+  }
+  
+  .results-placeholder svg {
+    color: #206bc4;
   }
   
   /* Editores sem moldura */
@@ -198,10 +215,10 @@
   }
   
   .editor-label {
-    font-size: 0.85rem;
+    font-size: 0.7rem;
     font-weight: 600;
     color: #666;
-    margin-bottom: 10px;
+    margin-bottom: 5px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
@@ -279,7 +296,7 @@
                 </button>
               </div>
               <div class="exam-block" id="cabecalho-preview">
-                <span class="block-label" id="label-cabecalho">Cabeçalho - Modelo 1 de 4</span>
+                <span class="block-badge" id="label-cabecalho">Cabeçalho - Modelo 1 de 4</span>
                 <!-- Conteúdo dinâmico -->
               </div>
               <div class="model-navigation right">
@@ -294,7 +311,7 @@
             
             <!-- BLOCO 2: Título do Exame -->
             <div class="exam-block" style="margin: 0 0 10px 0;">
-              <span class="block-label">Título do Exame</span>
+              <span class="block-badge">Título do Exame</span>
               <div class="exam-title" id="exam-title-preview">
                 {{ object.nome|default:"NOME DO EXAME" }}
               </div>
@@ -310,7 +327,7 @@
                 </button>
               </div>
               <div class="exam-block" id="info_paciente-preview">
-                <span class="block-label" id="label-info_paciente">Informações do Paciente - Modelo 1 de 3</span>
+                <span class="block-badge" id="label-info_paciente">Informações do Paciente - Modelo 1 de 3</span>
                 <!-- Conteúdo dinâmico -->
               </div>
               <div class="model-navigation right">
@@ -332,9 +349,9 @@
             
             <!-- BLOCO 5: Resultados (placeholder) -->
             <div class="exam-block" style="margin: 0 0 10px 0;">
-              <span class="block-label">Resultados do Exame</span>
+              <span class="block-badge">Resultados do Exame</span>
               <div class="results-placeholder">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clipboard-data mb-2" width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-clipboard-data mb-2" width="40" height="40" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
                   <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
                   <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
                   <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
@@ -342,8 +359,8 @@
                   <path d="M12 17v-1" />
                   <path d="M15 17v-2" />
                 </svg>
-                <p><strong>Nesse espaço serão exibidos os resultados do exame.</strong></p>
-                <small>Os resultados serão preenchidos automaticamente quando o exame for utilizado no atendimento clínico.</small>
+                <p class="mb-1"><strong>Nesse espaço serão exibidos os resultados do exame.</strong></p>
+                <small>Os resultados serão preenchidos automaticamente durante o atendimento clínico.</small>
               </div>
             </div>
             
@@ -364,7 +381,7 @@
                 </button>
               </div>
               <div class="exam-block" id="rodape-preview">
-                <span class="block-label" id="label-rodape">Rodapé - Modelo 1 de 2</span>
+                <span class="block-badge" id="label-rodape">Rodapé - Modelo 1 de 2</span>
                 <!-- Conteúdo dinâmico -->
               </div>
               <div class="model-navigation right">
@@ -810,11 +827,12 @@ document.addEventListener('DOMContentLoaded', function() {
   updatePreview('info_paciente');
   updatePreview('rodape');
   
-  // Inicializar HugeRTE com altura de 200px
+  // Inicializar HugeRTE com altura de 200px e sem redimensionamento
   HugeRTEEditor.init('#conteudo_apresentacao', { 
     height: 200,
     min_height: 200,
-    max_height: 200
+    max_height: 200,
+    resize: false
   }, 'editorApresentacao')
     .then(() => {
       const loading = document.getElementById('loading-apresentacao');
@@ -826,7 +844,8 @@ document.addEventListener('DOMContentLoaded', function() {
   HugeRTEEditor.init('#conteudo_encerramento', { 
     height: 200,
     min_height: 200,
-    max_height: 200
+    max_height: 200,
+    resize: false
   }, 'editorEncerramento')
     .then(() => {
       const loading = document.getElementById('loading-encerramento');
