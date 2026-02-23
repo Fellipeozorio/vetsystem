@@ -7,7 +7,7 @@ from .models import (
     Especie, Raca, Pelagem, FilaAtendimento, Patologia,
     TipoAtendimento, Vacina, Exame, AtributoExame,
     ReferenciaExame, ModeloReceita, ModeloDocumento, OrigemCliente,
-    ProtocoloVacina
+    ProtocoloVacina, DadosUnidade
 )
 
 
@@ -632,3 +632,104 @@ def protocolo_delete(request, pk):
             return JsonResponse({'success': False, 'error': str(e)})
     
     return JsonResponse({'success': False, 'error': 'Método não permitido'})
+
+
+@login_required
+def dados_unidade_view(request):
+    """
+    View para visualizar/editar dados da unidade.
+    Todos os usuários autenticados podem visualizar.
+    Apenas staff/admin podem editar.
+    """
+    # Obter ou criar o registro único de dados da unidade
+    dados_unidade, created = DadosUnidade.objects.get_or_create(
+        pk=1,
+        defaults={
+            'nome_empreendimento': '',
+            'cnpj': '00.000.000/0000-00',
+            'inscricao_estadual': '',
+            'registro_crmv': '',
+            'endereco': '',
+            'numero': '',
+            'bairro': '',
+            'cidade': '',
+            'estado': '',
+            'cep': '',
+            'telefone_comercial': '',
+            'celular': '',
+            'email': '',
+        }
+    )
+    
+    # Verificar se o usuário tem permissão para editar (staff ou superuser)
+    pode_editar = request.user.is_staff or request.user.is_superuser
+    
+    # Processar formulário de edição (apenas para staff/admin)
+    if request.method == 'POST' and pode_editar:
+        try:
+            dados_unidade.nome_empreendimento = request.POST.get('nome_empreendimento', '')
+            dados_unidade.cnpj = request.POST.get('cnpj', '')
+            dados_unidade.inscricao_estadual = request.POST.get('inscricao_estadual', '')
+            dados_unidade.registro_crmv = request.POST.get('registro_crmv', '')
+            dados_unidade.endereco = request.POST.get('endereco', '')
+            dados_unidade.numero = request.POST.get('numero', '')
+            dados_unidade.bairro = request.POST.get('bairro', '')
+            dados_unidade.cidade = request.POST.get('cidade', '')
+            dados_unidade.estado = request.POST.get('estado', '')
+            dados_unidade.cep = request.POST.get('cep', '')
+            dados_unidade.telefone_comercial = request.POST.get('telefone_comercial', '')
+            dados_unidade.celular = request.POST.get('celular', '')
+            dados_unidade.email = request.POST.get('email', '')
+            
+            # Processar contatos adicionais
+            contatos_adicionais = []
+            
+            # Primeiro, preservar contatos salvos
+            i = 1
+            while f'contato_salvo_tipo_{i}' in request.POST:
+                tipo = request.POST.get(f'contato_salvo_tipo_{i}')
+                valor = request.POST.get(f'contato_salvo_valor_{i}')
+                whatsapp = request.POST.get(f'contato_salvo_whatsapp_{i}', 'false')
+                
+                if tipo and valor:
+                    contatos_adicionais.append({
+                        'tipo': tipo,
+                        'valor': valor,
+                        'whatsapp': whatsapp == 'true'
+                    })
+                i += 1
+            
+            # Depois, adicionar novos contatos
+            i = 1
+            while f'contato_tipo_{i}' in request.POST:
+                tipo = request.POST.get(f'contato_tipo_{i}')
+                valor = request.POST.get(f'contato_valor_{i}')
+                whatsapp = request.POST.get(f'contato_whatsapp_{i}', 'false')
+                
+                if tipo and valor:
+                    contatos_adicionais.append({
+                        'tipo': tipo,
+                        'valor': valor,
+                        'whatsapp': whatsapp == 'true'
+                    })
+                i += 1
+            
+            dados_unidade.contatos_adicionais = contatos_adicionais
+            
+            # Processar upload de imagem (logomarca)
+            if 'logomarca' in request.FILES:
+                dados_unidade.logomarca = request.FILES['logomarca']
+            
+            dados_unidade.save()
+            messages.success(request, 'Dados da unidade atualizados com sucesso!')
+            return redirect('cadastros:dados_unidade')
+            
+        except Exception as e:
+            messages.error(request, f'Erro ao atualizar dados: {str(e)}')
+    
+    context = {
+        'dados_unidade': dados_unidade,
+        'pode_editar': pode_editar,
+    }
+    
+    return render(request, 'cadastros/dados_unidade.html', context)

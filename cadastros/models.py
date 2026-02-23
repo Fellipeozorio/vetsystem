@@ -318,3 +318,97 @@ class ModeloDocumento(models.Model):
 
 class OrigemCliente(BaseCadastro):
     pass
+
+
+class DadosUnidade(models.Model):
+    """
+    Modelo para armazenar informações da unidade/clínica.
+    Singleton: deve existir apenas um registro.
+    """
+    nome_empreendimento = models.CharField(
+        max_length=200,
+        verbose_name='Nome do Empreendimento'
+    )
+    cnpj = models.CharField(
+        max_length=18,
+        unique=True,
+        verbose_name='CNPJ',
+        help_text='Formato: 00.000.000/0000-00'
+    )
+    inscricao_estadual = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='Inscrição Estadual'
+    )
+    registro_crmv = models.CharField(
+        max_length=50,
+        blank=True,
+        verbose_name='Registro CRMV',
+        help_text='Registro no Conselho Regional de Medicina Veterinária'
+    )
+    
+    # Endereço
+    endereco = models.CharField(max_length=200, verbose_name='Endereço')
+    numero = models.CharField(max_length=20, verbose_name='Número')
+    bairro = models.CharField(max_length=100, verbose_name='Bairro')
+    cidade = models.CharField(max_length=100, verbose_name='Cidade')
+    estado = models.CharField(
+        max_length=2,
+        verbose_name='Estado',
+        help_text='UF - Ex: SP, RJ, MG'
+    )
+    cep = models.CharField(
+        max_length=9,
+        verbose_name='CEP',
+        help_text='Formato: 00000-000'
+    )
+    
+    # Contatos
+    telefone_comercial = models.CharField(
+        max_length=20,
+        blank=True,
+        verbose_name='Telefone Comercial',
+        help_text='Formato: (00) 0000-0000'
+    )
+    celular = models.CharField(
+        max_length=20,
+        verbose_name='Celular',
+        help_text='Formato: (00) 00000-0000'
+    )
+    email = models.EmailField(verbose_name='E-mail')
+    
+    # Contatos Adicionais (armazenado como JSON)
+    contatos_adicionais = models.JSONField(
+        default=list,
+        blank=True,
+        verbose_name='Contatos Adicionais',
+        help_text='Lista de contatos adicionais em formato JSON'
+    )
+    
+    # Logo
+    logomarca = models.ImageField(
+        upload_to='unit_logos/',
+        blank=True,
+        null=True,
+        verbose_name='Logomarca',
+        help_text='Logo da clínica para uso em documentos'
+    )
+    
+    # Metadados
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name='Criado em')
+    updated_at = models.DateTimeField(auto_now=True, verbose_name='Atualizado em')
+    
+    class Meta:
+        verbose_name = 'Dados da Unidade'
+        verbose_name_plural = 'Dados da Unidade'
+    
+    def __str__(self):
+        return self.nome_empreendimento
+    
+    def save(self, *args, **kwargs):
+        # Garantir que existe apenas um registro
+        if not self.pk and DadosUnidade.objects.exists():
+            # Se está tentando criar um novo registro e já existe um, atualiza o existente
+            existing = DadosUnidade.objects.first()
+            self.pk = existing.pk
+        super().save(*args, **kwargs)

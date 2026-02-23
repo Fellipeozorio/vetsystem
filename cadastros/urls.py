@@ -16,6 +16,9 @@ urlpatterns = [
     path('protocolos/<int:pk>/update/', views.protocolo_update, name='protocolo_update'),
     path('protocolos/<int:pk>/delete/', views.protocolo_delete, name='protocolo_delete'),
     
+    # URL para dados da unidade
+    path('dados-unidade/', views.dados_unidade_view, name='dados_unidade'),
+    
     # URLs genéricas para todos os outros cadastros
     path('<str:tipo>/', views.cadastro_list, name='list'),
     path('<str:tipo>/criar/', views.cadastro_create, name='create'),

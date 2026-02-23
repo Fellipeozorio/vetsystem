@@ -1,0 +1,746 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Dados da Unidade - VetSystem{% endblock %}
+
+{% block extra_head %}
+<style>
+.form-control[readonly], .form-select[disabled] {
+  background-color: #f8f9fa;
+  cursor: not-allowed;
+}
+
+.dropzone {
+  border: 2px dashed #d9dfe4;
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+  background-color: #f8f9fa;
+}
+
+.dropzone:hover {
+  border-color: #206bc4;
+  background-color: #e9ecef;
+}
+
+.dropzone.dragover {
+  border-color: #206bc4;
+  background-color: #e7f1ff;
+}
+
+.dropzone-icon {
+  font-size: 3rem;
+  color: #929dab;
+  margin-bottom: 1rem;
+}
+
+.logo-preview {
+  max-width: 300px;
+  max-height: 200px;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.contact-card {
+  border-left: 3px solid #206bc4;
+}
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Cadastros</div>
+        <h2 class="page-title">Dados da Unidade</h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <button type="button" class="btn btn-primary" id="btn-editar" data-can-edit="{{ pode_editar|lower }}">
+          <i class="ti ti-edit icon me-1"></i>
+          Editar Dados
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="row g-0">
+    <!-- Navegação Lateral -->
+    <div class="col-12 col-md-3 border-end">
+      <div class="card-body">
+        <div class="list-group list-group-transparent">
+          <a href="#identificacao" class="list-group-item list-group-item-action d-flex align-items-center active" data-bs-toggle="list">
+            <span class="me-2">
+              <i class="ti ti-building icon"></i>
+            </span>
+            Identificação
+          </a>
+          <a href="#endereco" class="list-group-item list-group-item-action d-flex align-items-center" data-bs-toggle="list">
+            <span class="me-2">
+              <i class="ti ti-map-pin icon"></i>
+            </span>
+            Endereço
+          </a>
+          <a href="#contatos" class="list-group-item list-group-item-action d-flex align-items-center" data-bs-toggle="list">
+            <span class="me-2">
+              <i class="ti ti-phone icon"></i>
+            </span>
+            Contatos
+          </a>
+          <a href="#logomarca" class="list-group-item list-group-item-action d-flex align-items-center" data-bs-toggle="list">
+            <span class="me-2">
+              <i class="ti ti-photo icon"></i>
+            </span>
+            Logomarca
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Conteúdo -->
+    <div class="col-12 col-md-9 d-flex flex-column">
+      <form method="POST" enctype="multipart/form-data" id="form-dados-unidade">
+        {% csrf_token %}
+        
+        <div class="card-body">
+          <div class="tab-content">
+            
+            <!-- Identificação da Empresa -->
+            <div class="tab-pane fade show active" id="identificacao">
+              <h2 class="mb-4">Identificação</h2>
+              <div class="row">
+                <div class="col-md-8 mb-3">
+                  <label class="form-label required">Nome do Empreendimento</label>
+                  <input type="text" class="form-control" name="nome_empreendimento" 
+                         value="{{ dados_unidade.nome_empreendimento }}" readonly required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label required">CNPJ</label>
+                  <input type="text" class="form-control" name="cnpj" id="cnpj"
+                         value="{{ dados_unidade.cnpj }}" 
+                         placeholder="00.000.000/0000-00" maxlength="18" readonly required>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Inscrição Estadual</label>
+                  <input type="text" class="form-control" name="inscricao_estadual" 
+                         value="{{ dados_unidade.inscricao_estadual }}" 
+                         maxlength="20" readonly>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Registro CRMV</label>
+                  <input type="text" class="form-control" name="registro_crmv" 
+                         value="{{ dados_unidade.registro_crmv }}" 
+                         maxlength="50" readonly>
+                </div>
+              </div>
+            </div>
+
+            <!-- Endereço -->
+            <div class="tab-pane fade" id="endereco">
+              <h2 class="mb-4">Endereço</h2>
+              <div class="row">
+                <div class="col-md-3 mb-3">
+                  <label class="form-label required">CEP</label>
+                  <input type="text" class="form-control" name="cep" id="cep"
+                         value="{{ dados_unidade.cep }}" 
+                         placeholder="00000-000" maxlength="9" readonly required>
+                  <small class="form-hint">Digite o CEP para preencher o endereço automaticamente. Caso necessário consulte diretamente nos <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank">Correios</a>.</small>
+                </div>
+                <div class="col-md-7 mb-3">
+                  <label class="form-label required">Endereço</label>
+                  <input type="text" class="form-control" name="endereco" id="endereco"
+                         value="{{ dados_unidade.endereco }}" 
+                         maxlength="200" readonly required>
+                </div>
+                <div class="col-md-2 mb-3">
+                  <label class="form-label required">Número</label>
+                  <input type="text" class="form-control" name="numero" id="numero"
+                         value="{{ dados_unidade.numero }}" 
+                         maxlength="20" readonly required>
+                </div>
+                <div class="col-md-4 mb-3">
+                  <label class="form-label required">Bairro</label>
+                  <input type="text" class="form-control" name="bairro" id="bairro"
+                         value="{{ dados_unidade.bairro }}" 
+                         maxlength="100" readonly required>
+                </div>
+                <div class="col-md-5 mb-3">
+                  <label class="form-label required">Cidade</label>
+                  <input type="text" class="form-control" name="cidade" id="cidade"
+                         value="{{ dados_unidade.cidade }}" 
+                         maxlength="100" readonly required>
+                </div>
+                <div class="col-md-3 mb-3">
+                  <label class="form-label required">Estado</label>
+                  <select class="form-select" name="estado" id="estado" disabled required>
+                    <option value="">Selecione...</option>
+                    <option value="AC" {% if dados_unidade.estado == 'AC' %}selected{% endif %}>AC</option>
+                    <option value="AL" {% if dados_unidade.estado == 'AL' %}selected{% endif %}>AL</option>
+                    <option value="AP" {% if dados_unidade.estado == 'AP' %}selected{% endif %}>AP</option>
+                    <option value="AM" {% if dados_unidade.estado == 'AM' %}selected{% endif %}>AM</option>
+                    <option value="BA" {% if dados_unidade.estado == 'BA' %}selected{% endif %}>BA</option>
+                    <option value="CE" {% if dados_unidade.estado == 'CE' %}selected{% endif %}>CE</option>
+                    <option value="DF" {% if dados_unidade.estado == 'DF' %}selected{% endif %}>DF</option>
+                    <option value="ES" {% if dados_unidade.estado == 'ES' %}selected{% endif %}>ES</option>
+                    <option value="GO" {% if dados_unidade.estado == 'GO' %}selected{% endif %}>GO</option>
+                    <option value="MA" {% if dados_unidade.estado == 'MA' %}selected{% endif %}>MA</option>
+                    <option value="MT" {% if dados_unidade.estado == 'MT' %}selected{% endif %}>MT</option>
+                    <option value="MS" {% if dados_unidade.estado == 'MS' %}selected{% endif %}>MS</option>
+                    <option value="MG" {% if dados_unidade.estado == 'MG' %}selected{% endif %}>MG</option>
+                    <option value="PA" {% if dados_unidade.estado == 'PA' %}selected{% endif %}>PA</option>
+                    <option value="PB" {% if dados_unidade.estado == 'PB' %}selected{% endif %}>PB</option>
+                    <option value="PR" {% if dados_unidade.estado == 'PR' %}selected{% endif %}>PR</option>
+                    <option value="PE" {% if dados_unidade.estado == 'PE' %}selected{% endif %}>PE</option>
+                    <option value="PI" {% if dados_unidade.estado == 'PI' %}selected{% endif %}>PI</option>
+                    <option value="RJ" {% if dados_unidade.estado == 'RJ' %}selected{% endif %}>RJ</option>
+                    <option value="RN" {% if dados_unidade.estado == 'RN' %}selected{% endif %}>RN</option>
+                    <option value="RS" {% if dados_unidade.estado == 'RS' %}selected{% endif %}>RS</option>
+                    <option value="RO" {% if dados_unidade.estado == 'RO' %}selected{% endif %}>RO</option>
+                    <option value="RR" {% if dados_unidade.estado == 'RR' %}selected{% endif %}>RR</option>
+                    <option value="SC" {% if dados_unidade.estado == 'SC' %}selected{% endif %}>SC</option>
+                    <option value="SP" {% if dados_unidade.estado == 'SP' %}selected{% endif %}>SP</option>
+                    <option value="SE" {% if dados_unidade.estado == 'SE' %}selected{% endif %}>SE</option>
+                    <option value="TO" {% if dados_unidade.estado == 'TO' %}selected{% endif %}>TO</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- Contatos -->
+            <div class="tab-pane fade" id="contatos">
+              <h2 class="mb-4">Contatos</h2>
+              <div class="row">
+                <div class="col-md-6 mb-3">
+                  <label class="form-label">Telefone Comercial</label>
+                  <input type="text" class="form-control phone-mask" name="telefone_comercial" id="telefone_comercial"
+                         value="{{ dados_unidade.telefone_comercial }}" 
+                         placeholder="(00) 0000-0000" maxlength="20" readonly>
+                </div>
+                <div class="col-md-6 mb-3">
+                  <label class="form-label required">Celular</label>
+                  <input type="text" class="form-control phone-mask" name="celular" id="celular"
+                         value="{{ dados_unidade.celular }}" 
+                         placeholder="(00) 00000-0000" maxlength="20" readonly required>
+                  <div class="mt-2">
+                    <label class="form-label">Este número é WhatsApp?</label>
+                    <div class="btn-group w-100" role="group">
+                      <input type="radio" class="btn-check" name="celular_whatsapp" id="whatsapp-sim" value="true" disabled checked>
+                      <label class="btn btn-outline-secondary" for="whatsapp-sim">Sim</label>
+                      <input type="radio" class="btn-check" name="celular_whatsapp" id="whatsapp-nao" value="false" disabled>
+                      <label class="btn btn-outline-secondary" for="whatsapp-nao">Não</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-12 mb-3">
+                  <label class="form-label required">E-mail</label>
+                  <input type="email" class="form-control" name="email" id="email"
+                         value="{{ dados_unidade.email }}" readonly required>
+                </div>
+              </div>
+
+              <!-- Contatos Adicionais Salvos -->
+              <div id="contatos-salvos-container">
+                {% if dados_unidade.contatos_adicionais %}
+                  {% for contato in dados_unidade.contatos_adicionais %}
+                  <!-- Hidden inputs para preservar contatos existentes -->
+                  <input type="hidden" class="contato-salvo-input" name="contato_salvo_tipo_{{ forloop.counter }}" value="{{ contato.tipo }}">
+                  <input type="hidden" class="contato-salvo-input" name="contato_salvo_valor_{{ forloop.counter }}" value="{{ contato.valor }}">
+                  <input type="hidden" class="contato-salvo-input" name="contato_salvo_whatsapp_{{ forloop.counter }}" value="{% if contato.whatsapp %}true{% else %}false{% endif %}">
+                  
+                  <hr class="my-3">
+                  <div class="card mb-3 contact-card contato-salvo-card">
+                    <div class="card-body">
+                      <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0">Contato Adicional {{ forloop.counter }}</h6>
+                        <button type="button" class="btn btn-sm btn-ghost-danger btn-remover-contato-salvo" style="display: none;" data-index="{{ forloop.counter }}">
+                          <i class="ti ti-trash me-1"></i>
+                          Remover
+                        </button>
+                      </div>
+                      <div class="row">
+                        <div class="col-md-6 mb-2">
+                          <label class="form-label">Tipo</label>
+                          <input type="text" class="form-control" value="{% if contato.tipo == 'celular' %}Celular{% elif contato.tipo == 'email' %}E-mail{% elif contato.tipo == 'telefone_residencial' %}Telefone Residencial{% elif contato.tipo == 'telefone_comercial' %}Telefone Comercial{% else %}{{ contato.tipo }}{% endif %}" readonly>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                          <label class="form-label">{% if contato.tipo == 'celular' %}Celular{% elif contato.tipo == 'email' %}E-mail{% elif contato.tipo == 'telefone_residencial' %}Telefone Residencial{% elif contato.tipo == 'telefone_comercial' %}Telefone Comercial{% else %}Valor{% endif %}</label>
+                          <input type="text" class="form-control" value="{{ contato.valor }}" readonly>
+                        </div>
+                        {% if contato.whatsapp %}
+                        <div class="col-md-12 mb-2">
+                          <span class="badge bg-success">
+                            <i class="ti ti-brand-whatsapp icon me-1"></i>
+                            WhatsApp
+                          </span>
+                        </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  </div>
+                  {% endfor %}
+                {% endif %}
+              </div>
+
+              <!-- Contatos Adicionais (Dinâmicos em modo de edição) -->
+              <div id="contatos-adicionais-container"></div>
+
+              <div id="btn-adicionar-contato-wrapper" style="display: none;">
+                <hr class="my-3">
+                <button type="button" class="btn btn-outline-primary w-100" id="btn-adicionar-contato">
+                  <i class="ti ti-plus icon me-1"></i>
+                  Adicionar outro contato
+                </button>
+              </div>
+            </div>
+
+            <!-- Logomarca -->
+            <div class="tab-pane fade" id="logomarca">
+              <h2 class="mb-4">Logomarca</h2>
+              <div id="logo-preview-container">
+                {% if dados_unidade.logomarca %}
+                  <div class="mb-3 text-center">
+                    <img src="{{ dados_unidade.logomarca.url }}" alt="Logomarca" class="logo-preview" id="current-logo">
+                  </div>
+                {% else %}
+                  <p class="text-muted text-center">Nenhuma logomarca cadastrada</p>
+                {% endif %}
+              </div>
+
+              <div id="dropzone-container" style="display: none;">
+                <div class="dropzone" id="logo-dropzone">
+                  <div class="dropzone-icon">
+                    <i class="ti ti-upload"></i>
+                  </div>
+                  <p class="mb-2">Arraste sua imagem aqui ou clique para selecionar</p>
+                  <p class="text-muted" style="font-size: 0.875rem;">Formatos: JPG, PNG, GIF (máx. 2MB)</p>
+                  <input type="file" name="logomarca" id="logomarca-input" accept="image/*" style="display: none;">
+                </div>
+                <div id="dropzone-preview" class="mt-3" style="display: none;">
+                  <div class="text-center">
+                    <img id="preview-image" class="logo-preview" alt="Preview">
+                    <button type="button" class="btn btn-sm btn-ghost-danger mt-2" id="remove-preview">
+                      <i class="ti ti-trash icon me-1"></i>
+                      Remover
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Botões de Ação -->
+        <div class="card-footer d-flex justify-content-between" id="action-buttons" style="display: none !important;">
+          <button type="button" class="btn" id="btn-cancelar">
+            <i class="ti ti-x icon me-1"></i>
+            Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary">
+            <i class="ti ti-device-floppy icon me-1"></i>
+            Salvar Alterações
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Confirmação de Cancelamento -->
+<div class="modal modal-blur fade" id="modal-cancelar" tabindex="-1" aria-modal="true" role="dialog">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z"/><path d="M12 16h.01"/></svg>
+        <h3>Descartar alterações?</h3>
+        <div class="text-secondary">Você tem alterações não salvas. Deseja realmente descartar?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Continuar editando</button></div>
+            <div class="col"><button type="button" class="btn btn-warning w-100" id="confirm-cancelar">Descartar</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de Sucesso -->
+<div class="modal modal-blur fade" id="modal-success" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <i class="ti ti-check icon mb-2 text-success icon-lg" style="font-size: 3rem;"></i>
+        <h3>Dados Salvos!</h3>
+        <div class="text-muted">Os dados da unidade foram atualizados com sucesso.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn w-100" data-bs-dismiss="modal">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('form-dados-unidade');
+  const btnEditar = document.getElementById('btn-editar');
+  const btnCancelar = document.getElementById('btn-cancelar');
+  const actionButtons = document.getElementById('action-buttons');
+  const canEdit = btnEditar.dataset.canEdit === 'true';
+  let isEditMode = false;
+  let contatoCount = {{ dados_unidade.contatos_adicionais|length|default:0 }};
+  let formChanged = false;
+
+  // Detectar mudanças no formulário
+  form.addEventListener('input', function() {
+    if (isEditMode) {
+      formChanged = true;
+    }
+  });
+
+  // Função para alternar modo de edição
+  function toggleEditMode(enable) {
+    isEditMode = enable;
+    const inputs = form.querySelectorAll('input, select, textarea');
+    
+    inputs.forEach(input => {
+      if (enable) {
+        input.removeAttribute('readonly');
+        input.removeAttribute('disabled');
+      } else {
+        if (input.tagName === 'SELECT') {
+          input.setAttribute('disabled', 'disabled');
+        } else {
+          input.setAttribute('readonly', 'readonly');
+        }
+      }
+    });
+
+    // Elementos do modo de edição
+    document.getElementById('btn-adicionar-contato-wrapper').style.display = enable ? 'block' : 'none';
+    document.getElementById('dropzone-container').style.display = enable ? 'block' : 'none';
+    document.getElementById('logo-preview-container').style.display = enable ? 'none' : 'block';
+    
+    // Mostrar/esconder botões de remover contatos salvos
+    const botoesRemover = document.querySelectorAll('.btn-remover-contato-salvo');
+    botoesRemover.forEach(btn => {
+      btn.style.display = enable ? 'inline-block' : 'none';
+    });
+    
+    actionButtons.style.display = enable ? 'flex' : 'none';
+    btnEditar.style.display = enable ? 'none' : 'inline-block';
+  }
+
+  // Botão Editar
+  btnEditar.addEventListener('click', function() {
+    if (!canEdit) {
+      alert('Você não tem permissão para editar os dados da unidade. Esta ação é restrita a administradores.');
+      return;
+    }
+    toggleEditMode(true);
+    formChanged = false;
+  });
+
+  // Botão Cancelar
+  btnCancelar.addEventListener('click', function() {
+    if (formChanged) {
+      const modalCancelar = new bootstrap.Modal(document.getElementById('modal-cancelar'));
+      modalCancelar.show();
+    } else {
+      location.reload();
+    }
+  });
+
+  // Confirmar cancelamento
+  document.getElementById('confirm-cancelar').addEventListener('click', function() {
+    location.reload();
+  });
+
+  // Remover contatos salvos
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('btn-remover-contato-salvo') || e.target.closest('.btn-remover-contato-salvo')) {
+      const btn = e.target.classList.contains('btn-remover-contato-salvo') ? e.target : e.target.closest('.btn-remover-contato-salvo');
+      const index = btn.dataset.index;
+      
+      // Remover os inputs hidden
+      document.querySelector(`input[name="contato_salvo_tipo_${index}"]`).remove();
+      document.querySelector(`input[name="contato_salvo_valor_${index}"]`).remove();
+      document.querySelector(`input[name="contato_salvo_whatsapp_${index}"]`).remove();
+      
+      // Remover o card
+      btn.closest('.contato-salvo-card').remove();
+      
+      formChanged = true;
+    }
+  });
+
+  // Máscaras de entrada
+  function formatPhone(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+      value = value.replace(/^(\d{2})(\d)/, '($1) $2');
+      value = value.replace(/(\d{4,5})(\d{4})$/, '$1-$2');
+    }
+    e.target.value = value;
+  }
+
+  function formatCNPJ(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 14) {
+      value = value.replace(/^(\d{2})(\d)/, '$1.$2');
+      value = value.replace(/^(\d{2})\.(\d{3})(\d)/, '$1.$2.$3');
+      value = value.replace(/\.(\d{3})(\d)/, '.$1/$2');
+      value = value.replace(/(\d{4})(\d)/, '$1-$2');
+    }
+    e.target.value = value;
+  }
+
+  function formatCEP(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 8) {
+      value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+    }
+    e.target.value = value;
+  }
+
+  document.getElementById('cnpj').addEventListener('input', formatCNPJ);
+  document.getElementById('cep').addEventListener('input', formatCEP);
+  document.getElementById('telefone_comercial').addEventListener('input', formatPhone);
+  document.getElementById('celular').addEventListener('input', formatPhone);
+
+  // Busca CEP
+  document.getElementById('cep').addEventListener('blur', function() {
+    if (!isEditMode) return;
+    
+    const cep = this.value.replace(/\D/g, '');
+    if (cep.length === 8) {
+      fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+          if (!data.erro) {
+            document.getElementById('endereco').value = data.logradouro;
+            document.getElementById('bairro').value = data.bairro;
+            document.getElementById('cidade').value = data.localidade;
+            document.getElementById('estado').value = data.uf;
+            document.getElementById('numero').focus();
+          } else {
+            alert('CEP não encontrado.');
+          }
+        })
+        .catch(error => {
+          console.error('Erro ao buscar CEP:', error);
+          alert('Erro ao buscar CEP. Tente novamente.');
+        });
+    }
+  });
+
+  // Adicionar contato adicional
+  document.getElementById('btn-adicionar-contato').addEventListener('click', function() {
+    contatoCount++;
+    const contatosSalvos = {{ dados_unidade.contatos_adicionais|length|default:0 }};
+    const totalContatos = contatosSalvos + contatoCount;
+    
+    const container = document.getElementById('contatos-adicionais-container');
+    const div = document.createElement('div');
+    div.className = 'card mb-3 contact-card';
+    div.innerHTML = `
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="mb-0">Novo Contato ${contatoCount}</h6>
+          <button type="button" class="btn btn-sm btn-ghost-danger" onclick="this.closest('.card').remove()">
+            <i class="ti ti-trash me-1"></i>
+            Remover
+          </button>
+        </div>
+        <div class="mb-2">
+          <label class="form-label">Tipo</label>
+          <select class="form-select contato-tipo" name="contato_tipo_${contatoCount}" data-count="${contatoCount}">
+            <option value="">Selecione...</option>
+            <option value="celular">Celular</option>
+            <option value="email">E-mail</option>
+            <option value="telefone_residencial">Telefone Residencial</option>
+            <option value="telefone_comercial">Telefone Comercial</option>
+            <option value="outros">Outros</option>
+          </select>
+        </div>
+        <div class="contato-campos-${contatoCount}"></div>
+      </div>
+    `;
+    container.appendChild(div);
+    
+    // Handler para mudança de tipo
+    div.querySelector('.contato-tipo').addEventListener('change', function() {
+      const tipo = this.value;
+      const count = this.dataset.count;
+      const camposDiv = div.querySelector(`.contato-campos-${count}`);
+      
+      if (tipo === 'celular') {
+        camposDiv.innerHTML = `
+          <div class="mb-2">
+            <label class="form-label">Celular</label>
+            <input type="text" class="form-control contato-phone-mask" name="contato_valor_${count}">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Este Número é WhatsApp?</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="contato-whatsapp-sim-${count}" value="true" checked>
+              <label class="btn btn-outline-secondary" for="contato-whatsapp-sim-${count}">Sim</label>
+              <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="contato-whatsapp-nao-${count}" value="false">
+              <label class="btn btn-outline-secondary" for="contato-whatsapp-nao-${count}">Não</label>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          const phoneInput = camposDiv.querySelector('.contato-phone-mask');
+          if (phoneInput) phoneInput.addEventListener('input', formatPhone);
+        }, 10);
+      } else if (tipo === 'telefone_residencial' || tipo === 'telefone_comercial') {
+        const tipoLabel = tipo === 'telefone_residencial' ? 'Telefone Residencial' : 'Telefone Comercial';
+        camposDiv.innerHTML = `
+          <div class="mb-2">
+            <label class="form-label">${tipoLabel}</label>
+            <input type="text" class="form-control contato-phone-mask" name="contato_valor_${count}">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Este Número é WhatsApp?</label>
+            <div class="btn-group w-100" role="group">
+              <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="contato-whatsapp-sim-${count}" value="true">
+              <label class="btn btn-outline-secondary" for="contato-whatsapp-sim-${count}">Sim</label>
+              <input type="radio" class="btn-check" name="contato_whatsapp_${count}" id="contato-whatsapp-nao-${count}" value="false" checked>
+              <label class="btn btn-outline-secondary" for="contato-whatsapp-nao-${count}">Não</label>
+            </div>
+          </div>
+        `;
+        setTimeout(() => {
+          const phoneInput = camposDiv.querySelector('.contato-phone-mask');
+          if (phoneInput) phoneInput.addEventListener('input', formatPhone);
+        }, 10);
+      } else if (tipo === 'email') {
+        camposDiv.innerHTML = `
+          <div class="mb-2">
+            <label class="form-label">E-mail</label>
+            <input type="email" class="form-control" name="contato_valor_${count}">
+          </div>
+        `;
+      } else if (tipo) {
+        camposDiv.innerHTML = `
+          <div class="mb-2">
+            <label class="form-label">Valor</label>
+            <input type="text" class="form-control" name="contato_valor_${count}">
+          </div>
+        `;
+      }
+    });
+  });
+
+  // Dropzone para logomarca
+  const dropzone = document.getElementById('logo-dropzone');
+  const logoInput = document.getElementById('logomarca-input');
+  const previewContainer = document.getElementById('dropzone-preview');
+  const previewImage = document.getElementById('preview-image');
+  const removePreviewBtn = document.getElementById('remove-preview');
+
+  if (dropzone) {
+    dropzone.addEventListener('click', () => logoInput.click());
+
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+
+    dropzone.addEventListener('dragleave', () => {
+      dropzone.classList.remove('dragover');
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      const files = e.dataTransfer.files;
+      if (files.length) {
+        logoInput.files = files;
+        previewFile(files[0]);
+      }
+    });
+
+    logoInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        previewFile(e.target.files[0]);
+      }
+    });
+
+    function previewFile(file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        previewImage.src = e.target.result;
+        dropzone.style.display = 'none';
+        previewContainer.style.display = 'block';
+      };
+      reader.readAsDataURL(file);
+    }
+
+    removePreviewBtn.addEventListener('click', () => {
+      logoInput.value = '';
+      previewContainer.style.display = 'none';
+      dropzone.style.display = 'block';
+    });
+  }
+
+  // Interceptar submit para mostrar modal de sucesso
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(form);
+    
+    fetch(form.action || window.location.href, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+      }
+    })
+    .then(response => {
+      if (response.redirected) {
+        // Mostrar modal de sucesso
+        const modalSuccess = new bootstrap.Modal(document.getElementById('modal-success'));
+        modalSuccess.show();
+        
+        // Recarregar após fechar o modal
+        document.getElementById('modal-success').addEventListener('hidden.bs.modal', function() {
+          location.reload();
+        });
+      } else {
+        return response.text().then(text => {
+          throw new Error('Erro ao salvar dados');
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      alert('Erro ao salvar dados. Tente novamente.');
+    });
+  });
+});
+</script>
+
+{% endblock %}
