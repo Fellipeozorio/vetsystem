@@ -270,6 +270,7 @@ class ProtocoloVacina(models.Model):
 
 
 class Exame(BaseCadastro):
+    codigo = models.CharField(max_length=10, unique=True, editable=False, default='000', verbose_name='Código')
     descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
     
     # Bloco 1: Cabeçalho (4 modelos)
@@ -306,6 +307,23 @@ class Exame(BaseCadastro):
         choices=[(1, 'Completo'), (2, 'Sem Rodapé')],
         verbose_name='Modelo do Rodapé'
     )
+    
+    def save(self, *args, **kwargs):
+        # Gerar código sequencial se não existir ou for o padrão
+        if not self.codigo or self.codigo == '000':
+            last_exame = Exame.objects.order_by('-id').first()
+            if last_exame and last_exame.codigo and last_exame.codigo != '000':
+                try:
+                    last_number = int(last_exame.codigo)
+                    self.codigo = str(last_number + 1).zfill(3)
+                except ValueError:
+                    self.codigo = '001'
+            else:
+                self.codigo = '001'
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.nome} ({self.codigo})"
 
 
 class AtributoExame(models.Model):

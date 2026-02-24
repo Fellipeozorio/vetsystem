@@ -51,6 +51,9 @@ class Client(models.Model):
     # Número sequencial interno
     codigo = models.PositiveIntegerField(unique=True, editable=False, null=True, blank=True)
     
+    # Status do cliente
+    ativo = models.BooleanField(default=True, verbose_name='Ativo')
+    
     # Informações básicas
     tipo = models.CharField(max_length=2, choices=TIPO_CHOICES, default='PF')
     nome_completo = models.CharField(max_length=200)

@@ -22,6 +22,44 @@ def client_list(request):
     # Query inicial
     clients = Client.objects.all()
     
+    # Dicionário de filtros ativos
+    active_filters = {}
+    
+    # Filtros avançados
+    if request.GET.get('filter_nome'):
+        nome = request.GET.get('filter_nome')
+        clients = clients.filter(nome_completo__icontains=nome)
+        active_filters['nome'] = nome
+    
+    if request.GET.get('filter_codigo'):
+        codigo = request.GET.get('filter_codigo')
+        clients = clients.filter(codigo__icontains=codigo)
+        active_filters['codigo'] = codigo
+    
+    if request.GET.get('filter_tipo'):
+        tipo = request.GET.get('filter_tipo')
+        clients = clients.filter(tipo=tipo)
+        active_filters['tipo'] = tipo
+    
+    if request.GET.get('filter_sexo'):
+        sexo = request.GET.get('filter_sexo')
+        clients = clients.filter(sexo=sexo)
+        active_filters['sexo'] = sexo
+    
+    if request.GET.get('filter_cpf'):
+        cpf = request.GET.get('filter_cpf')
+        clients = clients.filter(cpf__icontains=cpf)
+        active_filters['cpf'] = cpf
+    
+    if request.GET.get('filter_ativo'):
+        ativo = request.GET.get('filter_ativo')
+        if ativo.lower() == 'true':
+            clients = clients.filter(ativo=True)
+            active_filters['ativo'] = 'true'
+        elif ativo.lower() == 'false':
+            clients = clients.filter(ativo=False)
+            active_filters['ativo'] = 'false'
+    
     # Aplicar busca (nome, código, celular, email, CPF)
     if search:
         clients = clients.filter(
@@ -54,6 +92,7 @@ def client_list(request):
         'clients': page_obj,
         'search': search,
         'tipo_filter': tipo_filter,
+        'active_filters': active_filters,
         'origens_cliente': origens_cliente,
         'especies': especies,
         'racas': racas,

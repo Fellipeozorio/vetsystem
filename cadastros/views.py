@@ -743,6 +743,18 @@ def exames_list(request):
     # Filtros avançados
     active_filters = {}
     
+    # Filtro por nome
+    if request.GET.get('filter_nome'):
+        nome = request.GET.get('filter_nome')
+        items = items.filter(nome__icontains=nome)
+        active_filters['nome'] = nome
+    
+    # Filtro por código
+    if request.GET.get('filter_codigo'):
+        codigo = request.GET.get('filter_codigo')
+        items = items.filter(codigo__icontains=codigo)
+        active_filters['codigo'] = codigo
+    
     # Filtro por status
     if request.GET.get('filter_ativo'):
         value = request.GET.get('filter_ativo')

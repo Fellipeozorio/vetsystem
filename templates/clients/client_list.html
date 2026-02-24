@@ -11,47 +11,94 @@
         <div class="page-pretitle">Gerenciamento</div>
         <h2 class="page-title">Clientes</h2>
       </div>
-      <div class="col-auto ms-auto d-print-none">
-        <div class="btn-list">
-          <button type="button" class="btn btn-primary" id="btn-novo-cliente">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
-            Novo Cliente
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </div>
 {% endblock %}
 
 {% block content %}
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">Lista de Clientes</h3>
-    <div class="ms-auto">
-      <form method="get" class="d-flex gap-2">
-        <div class="input-icon">
-          <input type="text" class="form-control" name="search" placeholder="Buscar..." value="{{ search }}" autocomplete="off">
-          <span class="input-icon-addon">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
-          </span>
-        </div>
-        <select class="form-select" name="tipo" onchange="this.form.submit()" style="width: auto;">
-          <option value="">Todos os tipos</option>
-          <option value="PF" {% if tipo_filter == 'PF' %}selected{% endif %}>Pessoa Física</option>
-          <option value="PJ" {% if tipo_filter == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
-        </select>
-        <button type="button" class="btn btn-outline-secondary" title="Gerar Relatório">
-          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 17h6"/><path d="M9 13h6"/></svg>
+<!-- Filtros -->
+<div class="row mb-3">
+  <div class="col-md-4">
+    <form method="get" id="search-form">
+      {% for key, value in active_filters.items %}
+      <input type="hidden" name="filter_{{ key }}" value="{{ value }}">
+      {% endfor %}
+      <div class="input-group">
+        <input type="text" class="form-control" name="search" placeholder="Buscar por nome..." value="{{ search }}">
+        <button class="btn btn-primary" type="submit">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+          Buscar
         </button>
-      </form>
+      </div>
+    </form>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-filtros">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+      Filtros Avançados
+    </button>
+  </div>
+  <div class="col-md-6 text-end">
+    <button type="button" class="btn btn-primary" id="btn-novo-cliente">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+      Novo Cliente
+    </button>
+    <a href="?relatorio=pdf" class="btn btn-outline-secondary">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
+      Relatório
+    </a>
+  </div>
+</div>
+
+<!-- Filtros Ativos -->
+{% if active_filters or search %}
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="text-muted">Filtros ativos:</span>
+      
+      {% if search %}
+      <span class="tag">
+        Busca: "{{ search }}"
+        <a href="?{% for key, value in active_filters.items %}filter_{{ key }}={{ value }}&{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+      </span>
+      {% endif %}
+      
+      {% for key, value in active_filters.items %}
+      <span class="tag tag-blue">
+        {% if key == 'ativo' %}
+          Status: {% if value == 'true' %}Ativo{% else %}Inativo{% endif %}
+        {% elif key == 'nome' %}
+          Nome: "{{ value }}"
+        {% elif key == 'codigo' %}
+          Código: "{{ value }}"
+        {% elif key == 'tipo' %}
+          Tipo: {% if value == 'PF' %}Pessoa Física{% else %}Pessoa Jurídica{% endif %}
+        {% elif key == 'sexo' %}
+          Sexo: {% if value == 'M' %}Masculino{% else %}Feminino{% endif %}
+        {% elif key == 'cpf' %}
+          CPF: "{{ value }}"
+        {% else %}
+          {{ key|title }}: "{{ value }}"
+        {% endif %}
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% for k, v in active_filters.items %}{% if k != key %}filter_{{ k }}={{ v }}&{% endif %}{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+      </span>
+      {% endfor %}
+      
+      <a href="?" class="btn btn-sm btn-ghost-secondary">
+        Limpar todos os filtros
+      </a>
     </div>
   </div>
+</div>
+{% endif %}
+
+<div class="card">
   <div class="table-responsive">
     <table class="table table-vcenter card-table">
       <thead>
         <tr>
-          <th>Código</th>
           <th>Nome</th>
           <th>Animais</th>
         </tr>
@@ -59,11 +106,10 @@
       <tbody>
         {% for client in clients %}
         <tr class="client-row" data-client-id="{{ client.id }}">
-          <td class="text-secondary">{{ client.codigo }}</td>
           <td>
             <div class="d-flex align-items-center">
               <div>
-                <div class="font-weight-medium">{{ client.nome_completo }}</div>
+                <div class="font-weight-medium"><strong>{{ client.nome_completo }}</strong> <span class="text-muted">({{ client.codigo }})</span></div>
                 {% if client.tags %}
                 <div class="text-secondary small">
                   {% for tag in client.get_tags_list %}
@@ -90,7 +136,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="3" class="text-center text-secondary py-5">
+          <td colspan="2" class="text-center text-secondary py-5">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg mb-2 text-muted" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>
             <div>Nenhum cliente encontrado.</div>
           </td>
@@ -100,7 +146,128 @@
     </table>
   </div>
   
+  <!-- Paginação -->
+  {% if clients.has_other_pages %}
+  <div class="card-footer d-flex align-items-center">
+    <p class="m-0 text-secondary">
+      Mostrando <span>{{ clients.start_index }}</span> a <span>{{ clients.end_index }}</span> de <span>{{ clients.paginator.count }}</span> registros
+    </p>
+    <ul class="pagination m-0 ms-auto">
+      {% if clients.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 7l-5 5l5 5" /><path d="M17 7l-5 5l5 5" /></svg>
+        </a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6" /></svg>
+        </a>
+      </li>
+      {% endif %}
+      
+      {% for num in clients.paginator.page_range %}
+        {% if clients.number == num %}
+        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+        {% elif num > clients.number|add:'-3' and num < clients.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">{{ num }}</a></li>
+        {% endif %}
+      {% endfor %}
+      
+      {% if clients.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+        </a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7l5 5l-5 5" /><path d="M13 7l5 5l-5 5" /></svg>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
   
+  
+</div>
+
+<!-- Offcanvas de Filtros Avançados -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filtros" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      <input type="hidden" name="search" value="{{ search }}">
+      
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+      
+      <!-- Campo Nome -->
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" name="filter_nome" 
+               placeholder="Digite o nome"
+               value="{{ active_filters.nome }}">
+      </div>
+      
+      <!-- Campo Código -->
+      <div class="mb-3">
+        <label class="form-label">Código</label>
+        <input type="text" class="form-control" name="filter_codigo" 
+               placeholder="Digite o código"
+               value="{{ active_filters.codigo }}">
+      </div>
+      
+      <!-- Campo Tipo -->
+      <div class="mb-3">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="filter_tipo">
+          <option value="">Todos</option>
+          <option value="PF" {% if active_filters.tipo == 'PF' %}selected{% endif %}>Pessoa Física</option>
+          <option value="PJ" {% if active_filters.tipo == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
+        </select>
+      </div>
+      
+      <!-- Campo Sexo -->
+      <div class="mb-3">
+        <label class="form-label">Sexo</label>
+        <select class="form-select" name="filter_sexo">
+          <option value="">Todos</option>
+          <option value="M" {% if active_filters.sexo == 'M' %}selected{% endif %}>Masculino</option>
+          <option value="F" {% if active_filters.sexo == 'F' %}selected{% endif %}>Feminino</option>
+        </select>
+      </div>
+      
+      <!-- Campo CPF -->
+      <div class="mb-3">
+        <label class="form-label">CPF</label>
+        <input type="text" id="filter_cpf" class="form-control" name="filter_cpf" 
+               placeholder="Digite o CPF"
+               value="{{ active_filters.cpf }}">
+      </div>
+      
+      <!-- Campo Status -->
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="filter_ativo">
+          <option value="">Todos</option>
+          <option value="true" {% if active_filters.ativo == 'true' %}selected{% endif %}>Ativo</option>
+          <option value="false" {% if active_filters.ativo == 'false' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <!-- Wizard Lateral (Offcanvas) -->
@@ -1020,6 +1187,16 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Máscaras
   document.getElementById('cpf')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      e.target.value = value;
+    }
+  });
+  // Aplicar máscara também no campo de filtro avançado
+  document.getElementById('filter_cpf')?.addEventListener('input', function(e) {
     let value = e.target.value.replace(/\D/g, '');
     if (value.length <= 11) {
       value = value.replace(/(\d{3})(\d)/, '$1.$2');

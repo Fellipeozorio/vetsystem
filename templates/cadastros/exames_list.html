@@ -7,7 +7,7 @@
 {% endblock %}
 
 {% block table_row %}
-<td><strong>{{ item.nome }}</strong></td>
+<td><strong>{{ item.nome }}</strong> <span class="text-muted">({{ item.codigo }})</span></td>
 <td>
   {% if item.ativo %}
   <span class="badge bg-success text-white">Ativo</span>
@@ -25,6 +25,56 @@
     </button>
   </div>
 </td>
+{% endblock %}
+
+{% block offcanvas_filters %}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filters" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      <input type="hidden" name="q" value="{{ query }}">
+      
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+      
+      <!-- Campo Nome -->
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" name="filter_nome" 
+               placeholder="Digite o nome"
+               value="{{ active_filters.nome }}">
+      </div>
+      
+      <!-- Campo Código -->
+      <div class="mb-3">
+        <label class="form-label">Código</label>
+        <input type="text" class="form-control" name="filter_codigo" 
+               placeholder="Digite o código"
+               value="{{ active_filters.codigo }}">
+      </div>
+      
+      <!-- Campo Status -->
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="filter_ativo">
+          <option value="">Todos</option>
+          <option value="True" {% if active_filters.ativo == 'True' %}selected{% endif %}>Ativo</option>
+          <option value="False" {% if active_filters.ativo == 'False' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_content %}
