@@ -48,6 +48,7 @@ urlpatterns = [
     path('clientes/', include('clients.urls')),
     path('cadastros/', include('cadastros.urls')),
     path('animais/', include('patients.urls')),
+    path('atendimento/', include('medical_records.urls')),
 ]
 
 # Servir arquivos de mídia no desenvolvimento

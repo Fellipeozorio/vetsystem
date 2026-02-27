@@ -60,6 +60,27 @@ def client_list(request):
             clients = clients.filter(ativo=False)
             active_filters['ativo'] = 'false'
     
+    # Filtros de Animal
+    if request.GET.get('filter_pet_nome'):
+        pet_nome = request.GET.get('filter_pet_nome')
+        clients = clients.filter(pets__nome__icontains=pet_nome).distinct()
+        active_filters['pet_nome'] = pet_nome
+    
+    if request.GET.get('filter_pet_sexo'):
+        pet_sexo = request.GET.get('filter_pet_sexo')
+        clients = clients.filter(pets__sexo=pet_sexo).distinct()
+        active_filters['pet_sexo'] = pet_sexo
+    
+    if request.GET.get('filter_pet_especie'):
+        pet_especie = request.GET.get('filter_pet_especie')
+        clients = clients.filter(pets__raca__especie_id=pet_especie).distinct()
+        active_filters['pet_especie'] = pet_especie
+    
+    if request.GET.get('filter_pet_raca'):
+        pet_raca = request.GET.get('filter_pet_raca')
+        clients = clients.filter(pets__raca_id=pet_raca).distinct()
+        active_filters['pet_raca'] = pet_raca
+    
     # Aplicar busca (nome, código, celular, email, CPF)
     if search:
         clients = clients.filter(
@@ -87,6 +108,21 @@ def client_list(request):
     especies = Especie.objects.filter(ativo=True).order_by('nome')
     racas = Raca.objects.filter(ativo=True).order_by('nome')
     pelagens = Pelagem.objects.filter(ativo=True).order_by('nome')
+    
+    # Adicionar nomes de espécie e raça aos filtros ativos
+    if 'pet_especie' in active_filters:
+        try:
+            especie_obj = Especie.objects.get(id=active_filters['pet_especie'])
+            active_filters['pet_especie_nome'] = especie_obj.nome
+        except Especie.DoesNotExist:
+            active_filters['pet_especie_nome'] = 'Desconhecida'
+    
+    if 'pet_raca' in active_filters:
+        try:
+            raca_obj = Raca.objects.get(id=active_filters['pet_raca'])
+            active_filters['pet_raca_nome'] = raca_obj.nome
+        except Raca.DoesNotExist:
+            active_filters['pet_raca_nome'] = 'Desconhecida'
     
     context = {
         'clients': page_obj,

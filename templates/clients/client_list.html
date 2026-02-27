@@ -22,7 +22,9 @@
   <div class="col-md-4">
     <form method="get" id="search-form">
       {% for key, value in active_filters.items %}
+      {% if key != 'pet_especie_nome' and key != 'pet_raca_nome' %}
       <input type="hidden" name="filter_{{ key }}" value="{{ value }}">
+      {% endif %}
       {% endfor %}
       <div class="input-group">
         <input type="text" class="form-control" name="search" placeholder="Buscar por nome..." value="{{ search }}">
@@ -79,10 +81,22 @@
           Sexo: {% if value == 'M' %}Masculino{% else %}Feminino{% endif %}
         {% elif key == 'cpf' %}
           CPF: "{{ value }}"
+        {% elif key == 'pet_nome' %}
+          Animal: "{{ value }}"
+        {% elif key == 'pet_sexo' %}
+          Sexo Animal: {% if value == 'M' %}Macho{% elif value == 'F' %}Fêmea{% elif value == 'I' %}Indeterminado{% else %}{{ value }}{% endif %}
+        {% elif key == 'pet_especie' %}
+          Espécie: {{ active_filters.pet_especie_nome }}
+        {% elif key == 'pet_raca' %}
+          Raça: {{ active_filters.pet_raca_nome }}
+        {% elif key == 'pet_especie_nome' or key == 'pet_raca_nome' %}
+          {# Skip these - they are displayed with their parent filters #}
         {% else %}
           {{ key|title }}: "{{ value }}"
         {% endif %}
-        <a href="?{% if search %}search={{ search }}&{% endif %}{% for k, v in active_filters.items %}{% if k != key %}filter_{{ k }}={{ v }}&{% endif %}{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+        {% if key != 'pet_especie_nome' and key != 'pet_raca_nome' %}
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% for k, v in active_filters.items %}{% if k != key and k != 'pet_especie_nome' and k != 'pet_raca_nome' %}filter_{{ k }}={{ v }}&{% endif %}{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+        {% endif %}
       </span>
       {% endfor %}
       
@@ -205,6 +219,9 @@
       
       <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
       
+      <hr class="my-3">
+      <h5 class="mb-3">Campos do Cliente</h5>
+
       <!-- Campo Nome -->
       <div class="mb-3">
         <label class="form-label">Nome</label>
@@ -249,13 +266,50 @@
                value="{{ active_filters.cpf }}">
       </div>
       
-      <!-- Campo Status -->
+      {# Status removido dos filtros avançados conforme solicitado #}
+      
+      <!-- Seção do Animal -->
+      <hr class="my-4">
+      <h5 class="mb-3">Filtros do Animal</h5>
+      
+      <!-- Campo Nome do Animal -->
       <div class="mb-3">
-        <label class="form-label">Status</label>
-        <select class="form-select" name="filter_ativo">
+        <label class="form-label">Nome do Animal</label>
+        <input type="text" class="form-control" name="filter_pet_nome" 
+               placeholder="Digite o nome do animal"
+               value="{{ active_filters.pet_nome }}">
+      </div>
+      
+      <!-- Campo Sexo do Animal -->
+      <div class="mb-3">
+        <label class="form-label">Sexo do Animal</label>
+        <select class="form-select" name="filter_pet_sexo">
           <option value="">Todos</option>
-          <option value="true" {% if active_filters.ativo == 'true' %}selected{% endif %}>Ativo</option>
-          <option value="false" {% if active_filters.ativo == 'false' %}selected{% endif %}>Inativo</option>
+          <option value="M" {% if active_filters.pet_sexo == 'M' %}selected{% endif %}>Macho</option>
+          <option value="F" {% if active_filters.pet_sexo == 'F' %}selected{% endif %}>Fêmea</option>
+          <option value="I" {% if active_filters.pet_sexo == 'I' %}selected{% endif %}>Indeterminado</option>
+        </select>
+      </div>
+      
+      <!-- Campo Espécie -->
+      <div class="mb-3">
+        <label class="form-label">Espécie</label>
+        <select class="form-select" name="filter_pet_especie">
+          <option value="">Todas</option>
+          {% for especie in especies %}
+          <option value="{{ especie.id }}" {% if active_filters.pet_especie == especie.id|stringformat:'s' %}selected{% endif %}>{{ especie.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <!-- Campo Raça -->
+      <div class="mb-3">
+        <label class="form-label">Raça</label>
+        <select class="form-select" name="filter_pet_raca">
+          <option value="">Todas</option>
+          {% for raca in racas %}
+          <option value="{{ raca.id }}" {% if active_filters.pet_raca == raca.id|stringformat:'s' %}selected{% endif %}>{{ raca.nome }}</option>
+          {% endfor %}
         </select>
       </div>
       

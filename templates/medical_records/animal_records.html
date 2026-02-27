@@ -1,0 +1,345 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}{{ pet.nome }} - Prontuário{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <div class="page-pretitle">Prontuário Médico</div>
+        <h2 class="page-title">{{ pet.nome }} ({{ pet.codigo }})</h2>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+<!-- Cabeçalho com informações do Cliente e Animal -->
+<div class="card mb-3">
+  <div class="card-body">
+    <div class="row align-items-start">
+      <!-- Coluna 1: Informações do Cliente (col-md-4) -->
+      <div class="col-md-4">
+        <h4 class="mb-2">
+          <a href="{% url 'clients:list' %}?search={{ cliente.codigo }}" class="text-decoration-none">
+            {{ cliente.nome_completo }} ({{ cliente.codigo }})
+          </a>
+        </h4>
+
+        <div class="mb-2">
+          <a href="https://wa.me/55{{ cliente.celular|cut:' '|cut:'-'|cut:'('|cut:')' }}" target="_blank" class="text-decoration-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-whatsapp text-success" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9" /><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" /></svg>
+              {{ cliente.celular }}
+          </a>
+        </div>
+
+        {% if cliente.email %}
+        <div class="mb-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z" /><path d="M3 7l9 6l9 -6" /></svg>
+            {{ cliente.email }}
+        </div>
+        {% endif %}
+
+        <div class="mt-2">
+          {% if cliente.tipo == 'PF' %}
+          <span class="badge bg-purple text-purple-fg">Pessoa Física</span>
+          {% else %}
+          <span class="badge bg-purple text-purple-fg">Pessoa Jurídica</span>
+          {% endif %}
+          {% if not cliente.ativo %}
+          <span class="badge bg-secondary text-secondary-fg">Inativo</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Coluna 2: Informações do Animal (col-md-6) -->
+      <div class="col-md-6">
+        <h4 class="mb-2">
+          <a href="#" class="text-decoration-none" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-animal-edit">
+            {{ pet.nome }} ({{ pet.codigo }})
+          </a>
+        </h4>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <small class="text-muted">Espécie:</small> {{ pet.especie.nome }}<br>
+            <small class="text-muted">Raça:</small> {{ pet.raca.nome }}<br>
+            {% if pet.pelagem %}
+            <small class="text-muted">Pelagem:</small> {{ pet.pelagem.nome }}<br>
+            {% endif %}
+            <small class="text-muted">Peso:</small> {{ pet.peso|default:"-" }} kg
+          </div>
+          <div class="col-md-6">
+            {% if pet.data_nascimento %}
+            <small class="text-muted">Nascimento:</small> {{ pet.data_nascimento|date:"d/m/Y" }}<br>
+            {% elif pet.idade_estimada %}
+            <small class="text-muted">Idade estimada:</small> {{ pet.idade_estimada }} anos<br>
+            {% endif %}
+            <small class="text-muted">Sexo:</small> {% if pet.sexo == 'M' %}Macho{% elif pet.sexo == 'F' %}Fêmea{% else %}Indeterminado{% endif %}<br>
+            {% if pet.esterilizacao %}
+            <small class="text-muted">Esterilização:</small> {{ pet.get_esterilizacao_display }}<br>
+            {% endif %}
+            {% if pet.microchip %}
+            <small class="text-muted">Microchip:</small> {{ pet.microchip }}
+            {% endif %}
+          </div>
+        </div>
+        <div class="mt-2">
+          {% if pet.pedigree %}
+          <span class="badge bg-purple text-purple-fg">Pedigree</span>
+          {% endif %}
+          {% if pet.status == 'obito' %}
+          <span class="badge bg-danger text-danger-fg">Óbito</span>
+          {% endif %}
+          {% if pet.marcacoes %}
+            {% for tag in pet.get_marcacoes_list %}
+            <span class="badge bg-yellow text-yellow-fg">{{ tag }}</span>
+            {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Coluna 3: Avatar e Botão Fechar (col-md-2) -->
+      <div class="col-md-2 text-end">
+        <a href="{% url 'medical_records:atendimento_list' %}" class="btn btn-ghost-secondary btn-sm mb-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M18 6l-12 12" /><path d="M6 6l12 12" /></svg>
+        </a>
+        <div class="avatar avatar-xl avatar-rounded" style="background-image: url({% if pet.foto %}{{ pet.foto.url }}{% else %}{% static 'img/default-pet.png' %}{% endif %})">
+        </div>
+
+       </div>
+    </div>
+  </div>
+</div>
+
+<!-- Layout Tabs -->
+<div class="d-flex align-items-stretch w-100" id="tabs-container">
+
+  <!-- COLUNA ESQUERDA -->
+  <div id="left-tabs-col" class="col-md-3 transition-layout">
+    <div class="card panel-card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+          <li class="nav-item" role="presentation">
+            <a href="#tab-venda-left" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">Venda</a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a href="#tab-orcamentos-left" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">Orçamentos</a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card-body">
+        <div class="tab-content">
+          <div class="tab-pane active show" id="tab-venda-left" role="tabpanel">
+            <p class="text-muted">Nenhum item cadastrado</p>
+          </div>
+          <div class="tab-pane" id="tab-orcamentos-left" role="tabpanel">
+            <p class="text-muted">Nenhum item cadastrado</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRA -->
+  <div id="divider-col" class="divider-col">
+    <div id="toggle-divider" class="divider-bar" role="button" tabindex="0" aria-expanded="true" title="Ocultar painel esquerdo">
+      <span id="divider-icon" class="divider-icon">&lt;</span>
+    </div>
+  </div>
+
+  <!-- COLUNA DIREITA -->
+  <div id="right-tabs-col" class="right-panel transition-layout">
+    <div class="card panel-card">
+      <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+          <li class="nav-item" role="presentation">
+            <a href="#tab-historico" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
+              <i class="ti ti-history icon me-1"></i> Histórico
+            </a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a href="#tab-protocolos" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+              <i class="ti ti-clipboard-list icon me-1"></i> Protocolos
+            </a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a href="#tab-linha-tempo" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+              <i class="ti ti-timeline icon me-1"></i> Linha do Tempo
+            </a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a href="#tab-agenda" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+              <i class="ti ti-calendar icon me-1"></i> Agenda
+            </a>
+          </li>
+          <li class="nav-item" role="presentation">
+            <a href="#tab-vendas" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">
+              <i class="ti ti-shopping-cart icon me-1"></i> Vendas
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <div class="card-body">
+        <div class="tab-content">
+          <!-- Tab Histórico (ativo por padrão) -->
+          <div class="tab-pane active show" id="tab-historico" role="tabpanel">
+            {% include 'medical_records/partials/historico_tab.html' %}
+          </div>
+          
+          <!-- Tab Protocolos -->
+          <div class="tab-pane" id="tab-protocolos" role="tabpanel">
+            {% include 'medical_records/partials/protocolos_tab.html' %}
+          </div>
+          
+          <!-- Tab Linha do Tempo -->
+          <div class="tab-pane" id="tab-linha-tempo" role="tabpanel">
+            {% include 'medical_records/partials/linha_tempo_tab.html' %}
+          </div>
+          
+          <!-- Tab Agenda -->
+          <div class="tab-pane" id="tab-agenda" role="tabpanel">
+            {% include 'medical_records/partials/agenda_tab.html' %}
+          </div>
+          
+          <!-- Tab Vendas -->
+          <div class="tab-pane" id="tab-vendas" role="tabpanel">
+            {% include 'medical_records/partials/vendas_tab.html' %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Offcanvas para edição do animal -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-animal-edit" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Editar Animal</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body">
+    <p class="text-muted">Formulário de edição do animal em desenvolvimento...</p>
+  </div>
+</div>
+
+<style>
+
+/* animação layout */
+.transition-layout{
+  transition: width .25s ease, flex-basis .25s ease;
+}
+
+/* LEFT PANEL FIXO */
+.left-panel{
+  width:510px;
+  flex:0 0 510px;
+  min-width:510px;
+}
+
+/* RIGHT PANEL FLUIDO */
+.right-panel{
+  flex:1;
+  min-width:0;
+}
+
+/* BARRA */
+.divider-col{
+  width:18px;
+  flex:0 0 18px;
+  padding:0;
+  display:flex;
+}
+
+.divider-bar{
+  width:100%;
+  height:100%;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:0;
+  background:transparent;
+  transition:background .2s;
+  user-select:none;
+}
+
+.divider-bar:hover{
+  background:#d1d5db;
+}
+
+.divider-bar.collapsed{
+  background:#e5e7eb;
+}
+
+.divider-bar.collapsed:hover{
+  background:#9ca3af;
+}
+
+.divider-icon{
+  font-size:14px;
+  color:#6b7280;
+  font-weight:600;
+}
+
+/* altura mínima dos cards */
+.panel-card{
+  min-height:510px;
+}
+
+</style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  const left = document.getElementById("left-tabs-col");
+  const divider = document.getElementById("toggle-divider");
+  const icon = document.getElementById("divider-icon");
+
+  let collapsed = false;
+
+  divider.addEventListener("click", function(){
+
+    collapsed = !collapsed;
+
+    if(collapsed){
+      left.style.display = "none";
+      divider.classList.add("collapsed");
+      icon.innerHTML = "&gt;";
+      // atualizar tooltip e acessibilidade
+      divider.setAttribute('title', 'Exibir painel esquerdo');
+      divider.setAttribute('aria-expanded', 'false');
+    }else{
+      left.style.display = "";
+      divider.classList.remove("collapsed");
+      icon.innerHTML = "&lt;";
+      // atualizar tooltip e acessibilidade
+      divider.setAttribute('title', 'Ocultar painel esquerdo');
+      divider.setAttribute('aria-expanded', 'true');
+    }
+
+  });
+
+  // garantir que o título exibido ao passar o mouse esteja correto
+  divider.addEventListener('mouseenter', function(){
+    divider.setAttribute('title', collapsed ? 'Exibir painel esquerdo' : 'Ocultar painel esquerdo');
+  });
+
+  // permitir ativar com Enter/Space para acessibilidade
+  divider.addEventListener('keydown', function(e){
+    if(e.key === 'Enter' || e.key === ' ' || e.code === 'Space'){
+      e.preventDefault();
+      divider.click();
+    }
+  });
+
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,691 @@
+{% load static %}
+<!-- Barra superior com filtros -->
+<div class="history-toolbar">
+  <!-- ESQUERDA -->
+  <div class="d-flex flex-wrap align-items-center gap-1">
+    <!-- Período -->
+    <div class="dropdown">
+      <button class="btn btn-toolbar" type="button" data-bs-toggle="dropdown" id="period-button">
+        <i class="ti ti-calendar me-1"></i>
+        <span id="period-text">Período</span>
+      </button>
+      <ul class="dropdown-menu">
+        <li><a class="dropdown-item" href="#" data-period="today">Hoje</a></li>
+        <li><a class="dropdown-item" href="#" data-period="yesterday">Ontem</a></li>
+        <li><a class="dropdown-item" href="#" data-period="7days">Últimos 7 dias</a></li>
+        <li><a class="dropdown-item" href="#" data-period="thismonth">Este mês</a></li>
+        <li><a class="dropdown-item" href="#" data-period="lastmonth">Mês anterior</a></li>
+        <li><hr class="dropdown-divider"></li>
+        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modal-periodo">Selecionar período</a></li>
+      </ul>
+    </div>
+
+    <button class="btn btn-toolbar-icon" id="clear-filters" title="Limpar filtros">
+      <i class="ti ti-arrow-back-up"></i>
+    </button>
+
+    <!-- filtros por tipo -->
+    <div class="d-flex gap-1" id="filter-buttons">
+      <button class="btn btn-filter active" data-filter="atendimento" data-color="#0066CC" title="Filtrar por Atendimento"><i class="ti ti-first-aid-kit"></i></button>
+      <button class="btn btn-filter active" data-filter="peso" data-color="#8B4513" title="Filtrar por Peso"><i class="ti ti-weight"></i></button>
+      <button class="btn btn-filter active" data-filter="patologia" data-color="#6C2C91" title="Filtrar por Patologia"><i class="ti ti-virus"></i></button>
+      <button class="btn btn-filter active" data-filter="documento" data-color="#90EE90" title="Filtrar por Documento"><i class="ti ti-file-text"></i></button>
+      <button class="btn btn-filter active" data-filter="exame" data-color="#FA8072" title="Filtrar por Exame"><i class="ti ti-test-pipe"></i></button>
+      <button class="btn btn-filter active" data-filter="fotos" data-color="#003366" title="Filtrar por Fotos"><i class="ti ti-camera"></i></button>
+      <button class="btn btn-filter active" data-filter="vacina" data-color="#FFD700" title="Filtrar por Vacina"><i class="ti ti-vaccine"></i></button>
+      <button class="btn btn-filter active" data-filter="receita" data-color="#9370DB" title="Filtrar por Receita"><i class="ti ti-edit"></i></button>
+      <button class="btn btn-filter active" data-filter="observacoes" data-color="#6c757d" title="Filtrar por Observações"><i class="ti ti-message"></i></button>
+      <button class="btn btn-filter active" data-filter="video" data-color="#006400" title="Filtrar por Vídeo"><i class="ti ti-video"></i></button>
+      <button class="btn btn-filter active" data-filter="internacao" data-color="#8B0000" title="Filtrar por Internação"><i class="ti ti-report-medical"></i></button>
+    </div>
+
+    <!-- todos / nenhum -->
+    <div class="toolbar-links">
+      <a href="#" id="select-all-filters">todos</a>
+      <span>|</span>
+      <a href="#" id="deselect-all-filters">nenhum</a>
+    </div>
+  </div>
+
+  <!-- DIREITA -->
+  <div class="d-flex align-items-center gap-2">
+    <div class="btn-group">
+      <button class="btn btn-toolbar-icon active" data-sort="desc" title="Mais recentes primeiro">
+        <i class="ti ti-arrow-down"></i>
+      </button>
+      <button class="btn btn-toolbar-icon" data-sort="asc" title="Mais antigos primeiro">
+        <i class="ti ti-arrow-up"></i>
+      </button>
+    </div>
+
+    <button class="btn btn-ui btn-report">
+      <i class="ti ti-file-text"></i>
+      Relatório
+    </button>
+  </div>
+</div>
+
+<!-- Conteúdo principal: Timeline (3 cols) + Botões Adicionar (9 cols) -->
+<div class="row g-0">
+  <!-- Coluna esquerda: Timeline vertical (3 colunas) -->
+  <div class="col-md-3 border-end p-3" style="max-height: 600px; overflow-y: auto;">
+    <ul class="timeline timeline-vertical" id="timeline-list">
+      <!-- Registros serão adicionados dinamicamente aqui -->
+    </ul>
+    
+    <div class="text-center p-3 text-muted" id="no-timeline-records">
+      <i class="ti ti-clipboard-off" style="font-size: 48px; opacity: 0.3;"></i>
+      <p class="small mt-2 mb-0">Nenhum registro encontrado</p>
+      <p class="small text-muted">Adicione um novo registro usando os botões ao lado</p>
+    </div>
+  </div>
+  
+  <!-- Coluna direita: Botões de Adicionar -->
+  <div class="col-md-9 p-4">
+    <h5 class="mb-3">Adicionar</h5>
+    <div class="row g-3" id="add-buttons">
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="atendimento" style="background-color: #0066CC; border-color: #0066CC;">
+          <i class="ti ti-first-aid-kit"></i>
+          <span>Atendimento</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="peso" style="background-color: #8B4513; border-color: #8B4513;">
+          <i class="ti ti-weight"></i>
+          <span>Peso</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="patologia" style="background-color: #6C2C91; border-color: #6C2C91;">
+          <i class="ti ti-virus"></i>
+          <span>Patologia</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="documento" style="background-color: #90EE90; border-color: #90EE90; color: #333;">
+          <i class="ti ti-file-text"></i>
+          <span>Documento</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="exame" style="background-color: #FA8072; border-color: #FA8072;">
+          <i class="ti ti-test-pipe"></i>
+          <span>Exame</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="fotos" style="background-color: #003366; border-color: #003366;">
+          <i class="ti ti-camera"></i>
+          <span>Fotos</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="vacina" style="background-color: #FFD700; border-color: #FFD700; color: #333;">
+          <i class="ti ti-vaccine"></i>
+          <span>Vacina</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="receita" style="background-color: #9370DB; border-color: #9370DB;">
+          <i class="ti ti-edit"></i>
+          <span>Receita</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="observacoes" style="background-color: #6c757d; border-color: #6c757d;">
+          <i class="ti ti-message"></i>
+          <span>Observações</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="video" style="background-color: #006400; border-color: #006400;">
+          <i class="ti ti-video"></i>
+          <span>Vídeo</span>
+        </button>
+      </div>
+      <div class="col-md-4">
+        <button type="button" class="btn-add" data-tipo="internacao" style="background-color: #8B0000; border-color: #8B0000;">
+          <i class="ti ti-report-medical"></i>
+          <span>Internação</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para selecionar período personalizado -->
+<div class="modal fade" id="modal-periodo" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Selecionar Período</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Data inicial</label>
+          <input type="date" class="form-control" id="data-inicial">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Data final</label>
+          <input type="date" class="form-control" id="data-final">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Filtrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+/* ===== TOOLBAR ===== */
+.history-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+}
+
+.btn-toolbar {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 0.85rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.btn-toolbar:hover {
+  background: #f3f4f6;
+}
+
+.btn-toolbar-icon {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  transition: background 0.15s;
+}
+
+.btn-toolbar-icon:hover {
+  background: #f3f4f6;
+}
+
+.btn-toolbar-icon.active {
+  color: #2563eb;
+  border-color: #2563eb;
+  background: #eff6ff;
+}
+
+/* ===== FILTROS ===== */
+.btn-filter {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #9ca3af;
+  transition: all 0.15s;
+  border-radius: 4px;
+}
+
+.btn-filter:not(.active) {
+  color: #9ca3af;
+  border-color: #e5e7eb;
+}
+
+.btn-filter:hover {
+  background: #f3f4f6;
+}
+
+/* Estado ativo: usar data-color */
+.btn-filter.active[data-color] {
+  color: #fff;
+  border-width: 1px;
+  border-style: solid;
+}
+
+/* Aplicar cores específicas via inline style em JS */
+
+/* Links todos/nenhum */
+.toolbar-links {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+.toolbar-links a {
+  text-decoration: none;
+  color: #6b7280;
+}
+
+.toolbar-links a:hover {
+  text-decoration: underline;
+}
+
+/* ===== BOTÕES ADICIONAR ===== */
+.btn-add {
+  width: 100%;
+  min-height: 90px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid;
+  border-radius: 8px;
+  color: #fff;
+  font-weight: 500;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.btn-add i {
+  font-size: 32px;
+}
+
+.btn-add:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* ===== TIMELINE ===== */
+.timeline-vertical {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timeline-event {
+  margin-bottom: 0.75rem;
+}
+
+.timeline-event-content {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-left: 4px solid;
+  border-radius: 4px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timeline-event-content:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transform: translateX(2px);
+}
+
+.timeline-event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-event-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.timeline-event-date {
+  font-size: 0.75rem;
+  color: #6c757d;
+}
+
+.timeline-event-body {
+  font-size: 0.8125rem;
+  color: #495057;
+  margin: 0;
+}
+
+.timeline-event-avatar {
+  margin-top: 0.5rem;
+}
+
+/* Cores por tipo */
+.timeline-event-content[data-type="atendimento"] { border-left-color: #0066CC; }
+.timeline-event-content[data-type="peso"] { border-left-color: #8B4513; }
+.timeline-event-content[data-type="patologia"] { border-left-color: #6C2C91; }
+.timeline-event-content[data-type="documento"] { border-left-color: #90EE90; }
+.timeline-event-content[data-type="exame"] { border-left-color: #FA8072; }
+.timeline-event-content[data-type="fotos"] { border-left-color: #003366; }
+.timeline-event-content[data-type="vacina"] { border-left-color: #FFD700; }
+.timeline-event-content[data-type="receita"] { border-left-color: #9370DB; }
+.timeline-event-content[data-type="observacoes"] { border-left-color: #6c757d; }
+.timeline-event-content[data-type="video"] { border-left-color: #006400; }
+.timeline-event-content[data-type="internacao"] { border-left-color: #8B0000; }
+
+/* Ocultar timeline quando vazia */
+.timeline-event-content.hidden {
+  display: none;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  if (!document.getElementById('timeline-list')) return;
+  
+  console.log('=== Histórico inicializado ===');
+  
+  // ===== CONFIGURAÇÃO =====
+  const tipoConfig = {
+    atendimento: { color: '#0066CC', label: 'Atendimento' },
+    peso: { color: '#8B4513', label: 'Peso' },
+    patologia: { color: '#6C2C91', label: 'Patologia' },
+    documento: { color: '#90EE90', label: 'Documento' },
+    exame: { color: '#FA8072', label: 'Exame' },
+    fotos: { color: '#003366', label: 'Fotos' },
+    vacina: { color: '#FFD700', label: 'Vacina' },
+    receita: { color: '#9370DB', label: 'Receita' },
+    observacoes: { color: '#6c757d', label: 'Observações' },
+    video: { color: '#006400', label: 'Vídeo' },
+    internacao: { color: '#8B0000', label: 'Internação' }
+  };
+
+  // ===== ELEMENTOS =====
+  const periodText = document.getElementById('period-text');
+  const filterButtons = document.querySelectorAll('#filter-buttons .btn-filter');
+  const timelineList = document.getElementById('timeline-list');
+  const noRecords = document.getElementById('no-timeline-records');
+  
+  // Estado da filtragem
+  let currentPeriod = null;
+  let customStartDate = null;
+  let customEndDate = null;
+
+  // ===== APLICAR CORES AOS FILTROS =====
+  filterButtons.forEach(btn => {
+    const color = btn.dataset.color;
+    if (color && btn.classList.contains('active')) {
+      btn.style.backgroundColor = color;
+      btn.style.borderColor = color;
+    }
+  });
+
+  // ===== FORMATAR DATA =====
+  function formatDate(date) {
+    const d = String(date.getDate()).padStart(2, '0');
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const y = String(date.getFullYear()).slice(-2);
+    return `${d}/${m}/${y}`;
+  }
+
+  // ===== VERIFICAR SE DATA ESTÁ NO PERÍODO =====
+  function isInPeriod(itemDate) {
+    if (!currentPeriod && !customStartDate) return true;
+
+    const item = new Date(itemDate);
+    item.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (customStartDate && customEndDate) {
+      const start = new Date(customStartDate);
+      const end = new Date(customEndDate);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+      return item >= start && item <= end;
+    }
+
+    switch(currentPeriod) {
+      case 'today':
+        return item.getTime() === today.getTime();
+      case 'yesterday':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return item.getTime() === yesterday.getTime();
+      case '7days':
+        const sevenDaysAgo = new Date(today);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        return item >= sevenDaysAgo && item <= today;
+      case 'thismonth':
+        return item.getMonth() === today.getMonth() && item.getFullYear() === today.getFullYear();
+      case 'lastmonth':
+        const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+        return item.getMonth() === lastMonth.getMonth() && item.getFullYear() === lastMonth.getFullYear();
+      default:
+        return true;
+    }
+  }
+
+  // ===== FILTRAR TIMELINE =====
+  function applyFilters() {
+    const activeFilters = Array.from(filterButtons)
+      .filter(btn => btn.classList.contains('active'))
+      .map(btn => btn.dataset.filter);
+
+    let visibleCount = 0;
+    
+    document.querySelectorAll('.timeline-event').forEach(item => {
+      const content = item.querySelector('.timeline-event-content');
+      const tipo = content.dataset.type;
+      const dataAttr = content.dataset.date;
+      
+      const typeMatch = activeFilters.includes(tipo);
+      const periodMatch = isInPeriod(dataAttr);
+      
+      if (typeMatch && periodMatch) {
+        item.style.display = '';
+        visibleCount++;
+      } else {
+        item.style.display = 'none';
+      }
+    });
+
+    noRecords.style.display = visibleCount === 0 ? '' : 'none';
+    console.log(`Filtros aplicados: ${visibleCount} itens visíveis`);
+  }
+
+  // ===== DROPDOWN DE PERÍODO =====
+  document.querySelectorAll('[data-period]').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      currentPeriod = this.dataset.period;
+      customStartDate = null;
+      customEndDate = null;
+
+      const today = new Date();
+      let text = '';
+
+      switch(currentPeriod) {
+        case 'today':
+          text = formatDate(today);
+          break;
+        case 'yesterday':
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          text = formatDate(yesterday);
+          break;
+        case '7days':
+          const sevenDaysAgo = new Date(today);
+          sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+          text = `${formatDate(sevenDaysAgo)} até ${formatDate(today)}`;
+          break;
+        case 'thismonth':
+          const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+          text = `${formatDate(firstDay)} até ${formatDate(today)}`;
+          break;
+        case 'lastmonth':
+          const lastMonthEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+          const lastMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+          text = `${formatDate(lastMonthStart)} até ${formatDate(lastMonthEnd)}`;
+          break;
+      }
+
+      periodText.textContent = text;
+      applyFilters();
+    });
+  });
+
+  // ===== MODAL PERÍODO CUSTOMIZADO =====
+  const modalPeriodo = document.getElementById('modal-periodo');
+  if (modalPeriodo) {
+    const btnFiltrar = modalPeriodo.querySelector('.btn-primary');
+    btnFiltrar?.addEventListener('click', function() {
+      const dataInicial = document.getElementById('data-inicial').value;
+      const dataFinal = document.getElementById('data-final').value;
+      
+      if (dataInicial && dataFinal) {
+        customStartDate = dataInicial;
+        customEndDate = dataFinal;
+        currentPeriod = null;
+        
+        const start = new Date(dataInicial);
+        const end = new Date(dataFinal);
+        periodText.textContent = `${formatDate(start)} até ${formatDate(end)}`;
+        applyFilters();
+      }
+    });
+  }
+
+  // ===== FILTROS POR TIPO =====
+  filterButtons.forEach(btn => {
+    btn.addEventListener('click', function() {
+      const wasActive = this.classList.contains('active');
+      this.classList.toggle('active');
+      
+      const color = this.dataset.color;
+      if (this.classList.contains('active') && color) {
+        this.style.backgroundColor = color;
+        this.style.borderColor = color;
+        this.style.color = '#fff';
+      } else {
+        this.style.backgroundColor = '';
+        this.style.borderColor = '';
+        this.style.color = '';
+      }
+      
+      applyFilters();
+    });
+  });
+
+  // ===== TODOS / NENHUM =====
+  document.getElementById('select-all-filters')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    filterButtons.forEach(btn => {
+      btn.classList.add('active');
+      const color = btn.dataset.color;
+      if (color) {
+        btn.style.backgroundColor = color;
+        btn.style.borderColor = color;
+        btn.style.color = '#fff';
+      }
+    });
+    applyFilters();
+  });
+
+  document.getElementById('deselect-all-filters')?.addEventListener('click', function(e) {
+    e.preventDefault();
+    filterButtons.forEach(btn => {
+      btn.classList.remove('active');
+      btn.style.backgroundColor = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+    });
+    applyFilters();
+  });
+
+  // ===== LIMPAR FILTROS =====
+  document.getElementById('clear-filters')?.addEventListener('click', function() {
+    currentPeriod = null;
+    customStartDate = null;
+    customEndDate = null;
+    periodText.textContent = 'Período';
+    
+    filterButtons.forEach(btn => {
+      btn.classList.add('active');
+      const color = btn.dataset.color;
+      if (color) {
+        btn.style.backgroundColor = color;
+        btn.style.borderColor = color;
+        btn.style.color = '#fff';
+      }
+    });
+    
+    applyFilters();
+    console.log('Filtros resetados');
+  });
+
+  // ===== ORDENAÇÃO =====
+  document.querySelectorAll('[data-sort]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      
+      const order = this.dataset.sort;
+      const items = Array.from(timelineList.querySelectorAll('.timeline-event'));
+      
+      items.sort((a, b) => {
+        const dateA = new Date(a.querySelector('.timeline-event-content').dataset.date);
+        const dateB = new Date(b.querySelector('.timeline-event-content').dataset.date);
+        return order === 'desc' ? dateB - dateA : dateA - dateB;
+      });
+      
+      items.forEach(item => timelineList.appendChild(item));
+      console.log('Ordenação:', order);
+    });
+  });
+
+  // ===== BOTÃO RELATÓRIO =====
+  document.getElementById('btn-report')?.addEventListener('click', function() {
+    alert('Funcionalidade de relatório em desenvolvimento');
+  });
+
+  // ===== BOTÕES ADICIONAR =====
+  document.querySelectorAll('#add-buttons .btn-add').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const tipo = this.dataset.tipo;
+      const label = tipoConfig[tipo]?.label || tipo;
+      console.log('Adicionar:', label);
+      alert(`Formulário de ${label} será implementado`);
+    });
+  });
+
+  // ===== FUNÇÃO PÚBLICA: ADICIONAR ITEM =====
+  window.adicionarItemTimeline = function(tipo, titulo, data, descricao, usuario) {
+    const config = tipoConfig[tipo] || tipoConfig.atendimento;
+    const li = document.createElement('li');
+    li.className = 'timeline-event';
+    
+    li.innerHTML = `
+      <div class="timeline-event-content" data-type="${tipo}" data-date="${data}">
+        <div class="timeline-event-header">
+          <div>
+            <div class="timeline-event-title">${titulo}</div>
+            <div class="timeline-event-date">${formatDate(new Date(data))}</div>
+          </div>
+        </div>
+        <p class="timeline-event-body">${descricao}</p>
+        <div class="timeline-event-avatar d-flex justify-content-end">
+          <span class="text-muted small">${usuario || 'Sistema'}</span>
+        </div>
+      </div>
+    `;
+    
+    li.querySelector('.timeline-event-content').addEventListener('click', function() {
+      alert(`Editar: ${titulo}`);
+    });
+    
+    timelineList.appendChild(li);
+    applyFilters();
+  };
+
+  // ===== INICIALIZAÇÃO =====
+  applyFilters();
+  console.log('✓ Histórico pronto');
+});
+</script>
+

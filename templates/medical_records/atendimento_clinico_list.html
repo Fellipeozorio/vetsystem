@@ -1,0 +1,353 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Atendimento Clínico - VetSystem{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row align-items-center">
+      <div class="col-auto">
+        <div class="page-pretitle">Prontuário</div>
+        <h2 class="page-title">Atendimento Clínico</h2>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Filtros -->
+<div class="row mb-3">
+  <div class="col-md-4">
+    <form method="get" id="search-form">
+      {% for key, value in active_filters.items %}
+      {% if key != 'pet_especie_nome' and key != 'pet_raca_nome' %}
+      <input type="hidden" name="filter_{{ key }}" value="{{ value }}">
+      {% endif %}
+      {% endfor %}
+      <div class="input-group">
+        <input type="text" class="form-control" name="search" placeholder="Buscar por nome..." value="{{ search }}">
+        <button class="btn btn-primary" type="submit">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+          Buscar
+        </button>
+      </div>
+    </form>
+  </div>
+  <div class="col-md-2">
+    <button class="btn btn-outline-primary w-100" type="button" data-bs-toggle="offcanvas" data-bs-target="#offcanvas-filtros">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+      Filtros Avançados
+    </button>
+  </div>
+</div>
+
+<!-- Filtros Ativos -->
+{% if active_filters or search %}
+<div class="row mb-3">
+  <div class="col-12">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="text-muted">Filtros ativos:</span>
+      
+      {% if search %}
+      <span class="tag">
+        Busca: "{{ search }}"
+        <a href="?{% for key, value in active_filters.items %}filter_{{ key }}={{ value }}&{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+      </span>
+      {% endif %}
+      
+      {% for key, value in active_filters.items %}
+      <span class="tag tag-blue">
+        {% if key == 'ativo' %}
+          Status: {% if value == 'true' %}Ativo{% else %}Inativo{% endif %}
+        {% elif key == 'nome' %}
+          Nome: "{{ value }}"
+        {% elif key == 'codigo' %}
+          Código: "{{ value }}"
+        {% elif key == 'tipo' %}
+          Tipo: {% if value == 'PF' %}Pessoa Física{% else %}Pessoa Jurídica{% endif %}
+        {% elif key == 'sexo' %}
+          Sexo: {% if value == 'M' %}Masculino{% else %}Feminino{% endif %}
+        {% elif key == 'cpf' %}
+          CPF: "{{ value }}"
+        {% elif key == 'pet_nome' %}
+          Animal: "{{ value }}"
+        {% elif key == 'pet_sexo' %}
+          Sexo Animal: {% if value == 'M' %}Macho{% elif value == 'F' %}Fêmea{% elif value == 'I' %}Indeterminado{% else %}{{ value }}{% endif %}
+        {% elif key == 'pet_especie' %}
+          Espécie: {{ active_filters.pet_especie_nome }}
+        {% elif key == 'pet_raca' %}
+          Raça: {{ active_filters.pet_raca_nome }}
+        {% elif key == 'pet_especie_nome' or key == 'pet_raca_nome' %}
+          {# Skip these - they are displayed with their parent filters #}
+        {% else %}
+          {{ key|title }}: "{{ value }}"
+        {% endif %}
+        {% if key != 'pet_especie_nome' and key != 'pet_raca_nome' %}
+        <a href="?{% if search %}search={{ search }}&{% endif %}{% for k, v in active_filters.items %}{% if k != key and k != 'pet_especie_nome' and k != 'pet_raca_nome' %}filter_{{ k }}={{ v }}&{% endif %}{% endfor %}" class="btn-close" style="font-size: 0.65rem; margin-left: 0.5rem;"></a>
+        {% endif %}
+      </span>
+      {% endfor %}
+      
+      <a href="?" class="btn btn-sm btn-ghost-secondary">
+        Limpar todos os filtros
+      </a>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-vcenter card-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Animais</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for client in clients %}
+        <tr class="client-row" data-client-id="{{ client.id }}">
+          <td>
+            <div class="d-flex align-items-center">
+              <div>
+                <div class="font-weight-medium"><strong>{{ client.nome_completo }}</strong> <span class="text-muted">({{ client.codigo }})</span></div>
+                {% if client.tags %}
+                <div class="text-secondary small">
+                  {% for tag in client.get_tags_list %}
+                    <span class="badge bg-blue-lt me-1">{{ tag }}</span>
+                  {% endfor %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+          <td>
+            {% if client.pets.exists %}
+              {% for pet in client.pets.all %}
+                {% if pet.status == 'obito' %}
+                  <a href="{% url 'medical_records:animal_records' pet.id %}" class="badge text-white me-1 pet-link" data-pet-id="{{ pet.id }}" onclick="event.stopPropagation();" style="background-color: var(--tblr-gray-500);">{{ pet.nome }}</a>
+                {% else %}
+                  <a href="{% url 'medical_records:animal_records' pet.id %}" class="badge text-white me-1 pet-link" data-pet-id="{{ pet.id }}" onclick="event.stopPropagation();" style="background-color: #2fb344;">{{ pet.nome }}</a>
+                {% endif %}
+              {% endfor %}
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="2" class="text-center text-secondary py-5">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg mb-2 text-muted" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>
+            <div>Nenhum cliente encontrado.</div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- Paginação -->
+  {% if clients.has_other_pages %}
+  <div class="card-footer d-flex align-items-center">
+    <p class="m-0 text-secondary">
+      Mostrando <span>{{ clients.start_index }}</span> a <span>{{ clients.end_index }}</span> de <span>{{ clients.paginator.count }}</span> registros
+    </p>
+    <ul class="pagination m-0 ms-auto">
+      {% if clients.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 7l-5 5l5 5" /><path d="M17 7l-5 5l5 5" /></svg>
+        </a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6" /></svg>
+        </a>
+      </li>
+      {% endif %}
+      
+      {% for num in clients.paginator.page_range %}
+        {% if clients.number == num %}
+        <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+        {% elif num > clients.number|add:'-3' and num < clients.number|add:'3' %}
+        <li class="page-item"><a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">{{ num }}</a></li>
+        {% endif %}
+      {% endfor %}
+      
+      {% if clients.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+        </a>
+      </li>
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clients.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7l5 5l-5 5" /><path d="M13 7l5 5l-5 5" /></svg>
+        </a>
+      </li>
+      {% endif %}
+    </ul>
+  </div>
+  {% endif %}
+  
+  
+</div>
+
+<!-- Offcanvas de Filtros Avançados -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filtros" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      <input type="hidden" name="search" value="{{ search }}">
+      
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+      
+      <hr class="my-3">
+      <h5 class="mb-3">Filtros do Cliente</h5>
+
+      <!-- Campo Nome -->
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" name="filter_nome" 
+               placeholder="Digite o nome"
+               value="{{ active_filters.nome }}">
+      </div>
+      
+      <!-- Campo Código -->
+      <div class="mb-3">
+        <label class="form-label">Código</label>
+        <input type="text" class="form-control" name="filter_codigo" 
+               placeholder="Digite o código"
+               value="{{ active_filters.codigo }}">
+      </div>
+      
+      <!-- Campo Tipo -->
+      <div class="mb-3">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="filter_tipo">
+          <option value="">Todos</option>
+          <option value="PF" {% if active_filters.tipo == 'PF' %}selected{% endif %}>Pessoa Física</option>
+          <option value="PJ" {% if active_filters.tipo == 'PJ' %}selected{% endif %}>Pessoa Jurídica</option>
+        </select>
+      </div>
+      
+      <!-- Campo Sexo -->
+      <div class="mb-3">
+        <label class="form-label">Sexo</label>
+        <select class="form-select" name="filter_sexo">
+          <option value="">Todos</option>
+          <option value="M" {% if active_filters.sexo == 'M' %}selected{% endif %}>Masculino</option>
+          <option value="F" {% if active_filters.sexo == 'F' %}selected{% endif %}>Feminino</option>
+        </select>
+      </div>
+      
+      <!-- Campo CPF -->
+      <div class="mb-3">
+        <label class="form-label">CPF</label>
+        <input type="text" id="filter_cpf" class="form-control" name="filter_cpf" 
+               placeholder="Digite o CPF"
+               value="{{ active_filters.cpf }}">
+      </div>
+      
+      {# Status removido dos filtros avançados conforme solicitado #}
+      
+      <!-- Seção do Animal -->
+      <hr class="my-4">
+      <h5 class="mb-3">Filtros do Animal</h5>
+      
+      <!-- Campo Nome do Animal -->
+      <div class="mb-3">
+        <label class="form-label">Nome do Animal</label>
+        <input type="text" class="form-control" name="filter_pet_nome" 
+               placeholder="Digite o nome do animal"
+               value="{{ active_filters.pet_nome }}">
+      </div>
+      
+      <!-- Campo Sexo do Animal -->
+      <div class="mb-3">
+        <label class="form-label">Sexo do Animal</label>
+        <select class="form-select" name="filter_pet_sexo">
+          <option value="">Todos</option>
+          <option value="M" {% if active_filters.pet_sexo == 'M' %}selected{% endif %}>Macho</option>
+          <option value="F" {% if active_filters.pet_sexo == 'F' %}selected{% endif %}>Fêmea</option>
+          <option value="I" {% if active_filters.pet_sexo == 'I' %}selected{% endif %}>Indeterminado</option>
+        </select>
+      </div>
+      
+      <!-- Campo Espécie -->
+      <div class="mb-3">
+        <label class="form-label">Espécie</label>
+        <select class="form-select" name="filter_pet_especie">
+          <option value="">Todas</option>
+          {% for especie in especies %}
+          <option value="{{ especie.id }}" {% if active_filters.pet_especie == especie.id|stringformat:'s' %}selected{% endif %}>{{ especie.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <!-- Campo Raça -->
+      <div class="mb-3">
+        <label class="form-label">Raça</label>
+        <select class="form-select" name="filter_pet_raca">
+          <option value="">Todas</option>
+          {% for raca in racas %}
+          <option value="{{ raca.id }}" {% if active_filters.pet_raca == raca.id|stringformat:'s' %}selected{% endif %}>{{ raca.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<style>
+.client-row {
+  cursor: pointer;
+}
+
+.client-row:hover {
+  background-color: #f8f9fa;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Aplicar máscara no campo de filtro CPF
+  document.getElementById('filter_cpf')?.addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d)/, '$1.$2');
+      value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+      e.target.value = value;
+    }
+  });
+  
+  // Tornar linhas clicáveis
+  document.querySelectorAll('.client-row').forEach(row => {
+    row.addEventListener('click', function() {
+      const clientId = this.dataset.clientId;
+      window.location.href = `/clientes/${clientId}/`;
+    });
+  });
+});
+</script>
+
+{% endblock %}
