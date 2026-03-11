@@ -410,6 +410,30 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.show();
     }
     
+    // Helper para gerar avatar com iniciais
+    function getAvatarHTML(avatarUrl, userName, size = '') {
+        if (avatarUrl) {
+            return `<span class="avatar ${size} me-2" style="background-image: url(${avatarUrl})"></span>`;
+        }
+        
+        // Gerar iniciais do nome
+        const nameParts = userName.trim().split(' ');
+        let initials = '';
+        
+        if (nameParts.length >= 2) {
+            // Primeiro e último nome
+            initials = nameParts[0].charAt(0).toUpperCase() + nameParts[nameParts.length - 1].charAt(0).toUpperCase();
+        } else if (nameParts.length === 1 && nameParts[0].length >= 2) {
+            // Primeiras 2 letras do nome
+            initials = nameParts[0].substring(0, 2).toUpperCase();
+        } else if (nameParts[0].length === 1) {
+            // Apenas 1 letra disponível
+            initials = nameParts[0].toUpperCase();
+        }
+        
+        return `<span class="avatar ${size} me-2 bg-primary text-white">${initials}</span>`;
+    }
+    
     // Helper para formatar range de dias
     function formatDiasRange(horarios) {
         if (horarios.length === 0) return '';
@@ -563,7 +587,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     tr.innerHTML = `
                         <td>
                             <div class="d-flex align-items-center">
-                                <span class="avatar me-2" style="background-image: url(${config.usuario_avatar || 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(config.usuario_nome)})"></span>
+                                ${getAvatarHTML(config.usuario_avatar, config.usuario_nome)}
                                 <div>
                                     <div><strong>${config.usuario_nome}</strong></div>
                                 </div>
@@ -873,13 +897,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     data.forEach(config => {
                         const tr = document.createElement('tr');
                         
-                        const avatarUrl = config.usuario_avatar || 
-                            `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(config.usuario_nome)}`;
-                        
                         tr.innerHTML = `
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <span class="avatar me-2" style="background-image: url(${avatarUrl})"></span>
+                                    ${getAvatarHTML(config.usuario_avatar, config.usuario_nome)}
                                     <div><strong>${config.usuario_nome}</strong></div>
                                 </div>
                             </td>

@@ -497,8 +497,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Initialize perfil options on page load
   const initialPerfil = '{{ editing_user.userprofile.perfil }}';
   if (perfilSelect) {
-    perfilSelect.value = initialPerfil;
-    updatePerfilOptions();
+    updatePerfilOptions();  // Primeiro popula as opções
+    perfilSelect.value = initialPerfil;  // Depois define o valor
   }
   
   // Update perfil options when sexo changes
