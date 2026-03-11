@@ -1,0 +1,146 @@
+<!-- Formulário de Receita -->
+<div id="form-receita" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-edit form-record-icon" style="color: #9370DB;"></i>
+        <h4 class="form-record-title" style="color: #9370DB;">Receita em</h4>
+        <span id="receita-datetime" class="form-record-datetime" style="color: #9370DB;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('receita-datetime')" title="Editar data/hora" style="color: #9370DB;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Tipo de Receita <span class="text-danger">*</span></label>
+      <select class="form-select" id="tipo-receita" required>
+        <option value="">Selecione...</option>
+        <option value="simples">Receita Simples</option>
+        <option value="controle-especial">Controle Especial</option>
+        <option value="antimicrobiano">Antimicrobiano</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Validade</label>
+      <input type="date" class="form-control" id="validade-receita">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Medicamentos / Prescrição <span class="text-danger">*</span></label>
+    <textarea class="form-control" id="prescricao-receita" rows="6" required placeholder="Liste os medicamentos prescritos"></textarea>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea class="form-control" id="obs-receita" rows="2" placeholder="Observações adicionais"></textarea>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-receita">Salvar Receita</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  
+  document.getElementById('save-receita')?.addEventListener('click', function() {
+    const tipo = document.getElementById('tipo-receita').value;
+    const prescricao = document.getElementById('prescricao-receita').value;
+    
+    if (!tipo || !prescricao) {
+      showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('tipo', tipo);
+    formData.append('prescricao', prescricao);
+    formData.append('validade', document.getElementById('validade-receita').value);
+    formData.append('observacoes', document.getElementById('obs-receita').value);
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/receita/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const isoDate = now.toISOString();
+        
+        adicionarItemTimeline('receita', `Receita: ${tipo}`, isoDate, prescricao.substring(0, 100), usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Receita salva com sucesso!');
+        
+        // Resetar
+        document.getElementById('tipo-receita').value = '';
+        document.getElementById('validade-receita').value = '';
+        document.getElementById('prescricao-receita').value = '';
+        document.getElementById('obs-receita').value = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a receita');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    document.getElementById('prescricao-receita').value = '';
+    document.getElementById('obs-receita').value = '';
+  });
+</script>

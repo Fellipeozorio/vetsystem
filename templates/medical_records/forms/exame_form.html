@@ -1,0 +1,175 @@
+<!-- Formulário de Exame -->
+<div id="form-exame" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-test-pipe form-record-icon" style="color: #FA8072;"></i>
+        <h4 class="form-record-title" style="color: #FA8072;">Exame em</h4>
+        <span id="exame-datetime" class="form-record-datetime" style="color: #FA8072;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('exame-datetime')" title="Editar data/hora" style="color: #FA8072;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Tipo de Exame <span class="text-danger">*</span></label>
+      <select class="form-select" id="tipo-exame" required>
+        <option value="">Selecione...</option>
+        <option value="sangue">Exame de Sangue</option>
+        <option value="urina">Exame de Urina</option>
+        <option value="fezes">Exame de Fezes</option>
+        <option value="imagem">Imagem (Raio-X, Ultrassom)</option>
+        <option value="biopsia">Biópsia</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Nome do Exame <span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="nome-exame" required placeholder="Ex: Hemograma completo">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Resultado / Observações</label>
+    <textarea class="form-control" id="resultado-exame" rows="4" placeholder="Resultado do exame ou observações"></textarea>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Anexar Resultados</label>
+    <input type="file" class="form-control" id="file-exame" accept=".pdf,.jpg,.jpeg,.png" multiple>
+    <div id="file-badges-exame" class="file-badges mt-2"></div>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-exame">Salvar Exame</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  let uploadedFilesExame = [];
+  const fileInputExame = document.getElementById('file-exame');
+  const fileBadgesExame = document.getElementById('file-badges-exame');
+  
+  fileInputExame?.addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!uploadedFilesExame.find(f => f.name === file.name)) {
+        uploadedFilesExame.push(file);
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-secondary';
+        badge.innerHTML = `${file.name} <i class="ti ti-x"></i>`;
+        badge.onclick = () => {
+          uploadedFilesExame = uploadedFilesExame.filter(f => f.name !== file.name);
+          badge.remove();
+        };
+        fileBadgesExame.appendChild(badge);
+      }
+    });
+    fileInputExame.value = '';
+  });
+  
+  document.getElementById('save-exame')?.addEventListener('click', function() {
+    const tipo = document.getElementById('tipo-exame').value;
+    const nome = document.getElementById('nome-exame').value;
+    
+    if (!tipo || !nome) {
+      showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('tipo', tipo);
+    formData.append('nome', nome);
+    formData.append('resultado', document.getElementById('resultado-exame').value);
+    
+    uploadedFilesExame.forEach(file => {
+      formData.append('arquivos', file);
+    });
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/exame/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const isoDate = now.toISOString();
+        
+        adicionarItemTimeline('exame', nome, isoDate, `Tipo: ${tipo}`, usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Exame salvo com sucesso!');
+        
+        // Resetar
+        document.getElementById('tipo-exame').value = '';
+        document.getElementById('nome-exame').value = '';
+        document.getElementById('resultado-exame').value = '';
+        uploadedFilesExame = [];
+        fileBadgesExame.innerHTML = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o exame');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    uploadedFilesExame = [];
+    fileBadgesExame.innerHTML = '';
+  });
+</script>

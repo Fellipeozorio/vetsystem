@@ -47,6 +47,7 @@ urlpatterns = [
     path('', dashboard_view, name='dashboard'),
     path('clientes/', include('clients.urls')),
     path('cadastros/', include('cadastros.urls')),
+    path('scheduling/', include('scheduling.urls')),
     path('animais/', include('patients.urls')),
     path('atendimento/', include('medical_records.urls')),
 ]

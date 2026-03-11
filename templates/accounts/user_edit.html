@@ -85,6 +85,36 @@
             <label class="form-label">Usuário</label>
             <input type="text" class="form-control" value="{{ editing_user.username }}" disabled>
           </div>
+
+          <div class="row">
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Nome</label>
+                {{ form.first_name }}
+              </div>
+            </div>
+            <div class="col-6">
+              <div class="mb-3">
+                <label class="form-label">Sobrenome</label>
+                {{ form.last_name }}
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Sexo <span class="text-danger">*</span></label>
+            <select class="form-select" name="sexo" id="id_sexo" required>
+              <option value="M" {% if editing_user.userprofile.sexo == 'M' %}selected{% endif %}>Masculino</option>
+              <option value="F" {% if editing_user.userprofile.sexo == 'F' %}selected{% endif %}>Feminino</option>
+            </select>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Perfil do Usuário <span class="text-danger">*</span></label>
+            <select class="form-select" name="perfil" id="id_perfil" required>
+              <!-- Options will be populated by JavaScript based on sexo -->
+            </select>
+          </div>
           
           <div class="mb-3">
             <label class="form-label">CPF <span class="text-danger">*</span></label>
@@ -99,21 +129,6 @@
           <div class="mb-3">
             <label class="form-label">E-mail <span class="text-danger">*</span></label>
             {{ form.email }}
-          </div>
-          
-          <div class="row">
-            <div class="col-6">
-              <div class="mb-3">
-                <label class="form-label">Nome</label>
-                {{ form.first_name }}
-              </div>
-            </div>
-            <div class="col-6">
-              <div class="mb-3">
-                <label class="form-label">Sobrenome</label>
-                {{ form.last_name }}
-              </div>
-            </div>
           </div>
           
           <div class="mb-3">
@@ -431,6 +446,57 @@ document.addEventListener('DOMContentLoaded', function() {
       document.getElementById('remove-permission').click();
     }
   });
+  
+  // Perfil options based on sexo
+  const perfilMasculino = [
+    {value: 'veterinario', label: 'Veterinário'},
+    {value: 'veterinario_plantonista', label: 'Veterinário Plantonista'},
+    {value: 'veterinario_especialista', label: 'Veterinário Especialista'},
+    {value: 'consultor', label: 'Consultor'},
+    {value: 'administrador', label: 'Administrador'},
+    {value: 'recepcionista', label: 'Recepcionista'}
+  ];
+  
+  const perfilFeminino = [
+    {value: 'veterinario', label: 'Veterinária'},
+    {value: 'veterinario_plantonista', label: 'Veterinária Plantonista'},
+    {value: 'veterinario_especialista', label: 'Veterinária Especialista'},
+    {value: 'consultor', label: 'Consultora'},
+    {value: 'administrador', label: 'Administradora'},
+    {value: 'recepcionista', label: 'Recepcionista'}
+  ];
+  
+  const sexoSelect = document.getElementById('id_sexo');
+  const perfilSelect = document.getElementById('id_perfil');
+  
+  function updatePerfilOptions() {
+    const sexo = sexoSelect.value;
+    const currentPerfil = perfilSelect.value;
+    const options = sexo === 'F' ? perfilFeminino : perfilMasculino;
+    
+    perfilSelect.innerHTML = '';
+    options.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      if (opt.value === currentPerfil) {
+        option.selected = true;
+      }
+      perfilSelect.appendChild(option);
+    });
+  }
+  
+  // Initialize perfil options on page load
+  const initialPerfil = '{{ editing_user.userprofile.perfil }}';
+  if (perfilSelect) {
+    perfilSelect.value = initialPerfil;
+    updatePerfilOptions();
+  }
+  
+  // Update perfil options when sexo changes
+  if (sexoSelect) {
+    sexoSelect.addEventListener('change', updatePerfilOptions);
+  }
 });
 </script>
 {% endblock %}

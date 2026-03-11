@@ -18,6 +18,31 @@ def validate_cpf(value):
 class UserProfile(models.Model):
     """Perfil estendido do usuário com informações adicionais"""
     
+    SEXO_CHOICES = [
+        ('M', 'Masculino'),
+        ('F', 'Feminino'),
+    ]
+    
+    PERFIL_MASCULINO_CHOICES = [
+        ('veterinario', 'Veterinário'),
+        ('veterinario_plantonista', 'Veterinário Plantonista'),
+        ('veterinario_especialista', 'Veterinário Especialista'),
+        ('consultor', 'Consultor'),
+        ('administrador', 'Administrador'),
+        ('recepcionista', 'Recepcionista'),
+    ]
+    
+    PERFIL_FEMININO_CHOICES = [
+        ('veterinario', 'Veterinária'),
+        ('veterinario_plantonista', 'Veterinária Plantonista'),
+        ('veterinario_especialista', 'Veterinária Especialista'),
+        ('consultor', 'Consultora'),
+        ('administrador', 'Administradora'),
+        ('recepcionista', 'Recepcionista'),
+    ]
+    
+    PERFIL_CHOICES = PERFIL_MASCULINO_CHOICES  # Default para compatibilidade
+    
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='userprofile')
     cpf = models.CharField(
         max_length=14,
@@ -26,6 +51,20 @@ class UserProfile(models.Model):
         null=False,
         verbose_name="CPF",
         help_text="Formato: 000.000.000-00"
+    )
+    sexo = models.CharField(
+        max_length=1,
+        choices=SEXO_CHOICES,
+        blank=True,
+        default='M',
+        verbose_name="Sexo"
+    )
+    perfil = models.CharField(
+        max_length=50,
+        choices=PERFIL_CHOICES,
+        blank=True,
+        default='recepcionista',
+        verbose_name="Perfil do Usuário"
     )
     celular = models.CharField(
         max_length=15,
@@ -74,6 +113,17 @@ class UserProfile(models.Model):
     def get_display_name(self):
         """Retorna o nome completo ou username"""
         return self.user.get_full_name() or self.user.username
+    
+    def get_perfil_display(self):
+        """Retorna o nome do perfil formatado de acordo com o sexo"""
+        if not self.perfil:
+            return ""
+        
+        choices = self.PERFIL_FEMININO_CHOICES if self.sexo == 'F' else self.PERFIL_MASCULINO_CHOICES
+        for value, label in choices:
+            if value == self.perfil:
+                return label
+        return self.perfil.replace('_', ' ').title()
     
     def get_primary_group(self):
         """Retorna o primeiro grupo do usuário ou None"""

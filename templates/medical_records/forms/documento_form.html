@@ -1,0 +1,176 @@
+<!-- Formulário de Documento -->
+<div id="form-documento" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-file-text form-record-icon" style="color: #90EE90;"></i>
+        <h4 class="form-record-title" style="color: #90EE90;">Documento em</h4>
+        <span id="documento-datetime" class="form-record-datetime" style="color: #90EE90;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('documento-datetime')" title="Editar data/hora" style="color: #90EE90;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
+      <select class="form-select" id="tipo-documento" required>
+        <option value="">Selecione...</option>
+        <option value="atestado">Atestado</option>
+        <option value="laudo">Laudo</option>
+        <option value="declaracao">Declaração</option>
+        <option value="guia">Guia</option>
+        <option value="outro">Outro</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Título do Documento <span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="titulo-documento" required placeholder="Título ou identificação">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Descrição</label>
+    <textarea class="form-control" id="desc-documento" rows="3" placeholder="Descrição do documento"></textarea>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Anexar Arquivo</label>
+    <input type="file" class="form-control" id="file-documento" accept=".pdf,.doc,.docx" multiple>
+    <div id="file-badges-documento" class="file-badges mt-2"></div>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-documento">Salvar Documento</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  let uploadedFilesDoc = [];
+  const fileInputDoc = document.getElementById('file-documento');
+  const fileBadgesDoc = document.getElementById('file-badges-documento');
+  
+  fileInputDoc?.addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!uploadedFilesDoc.find(f => f.name === file.name)) {
+        uploadedFilesDoc.push(file);
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-secondary';
+        badge.innerHTML = `${file.name} <i class="ti ti-x"></i>`;
+        badge.onclick = () => {
+          uploadedFilesDoc = uploadedFilesDoc.filter(f => f.name !== file.name);
+          badge.remove();
+        };
+        fileBadgesDoc.appendChild(badge);
+      }
+    });
+    fileInputDoc.value = '';
+  });
+  
+  document.getElementById('save-documento')?.addEventListener('click', function() {
+    const tipo = document.getElementById('tipo-documento').value;
+    const titulo = document.getElementById('titulo-documento').value;
+    
+    if (!tipo || !titulo) {
+      showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
+      return;
+    }
+    
+    if (uploadedFilesDoc.length === 0) {
+      showDangerModal('Erro de Validação', 'Por favor, anexe ao menos um arquivo');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('tipo', tipo);
+    formData.append('titulo', titulo);
+    formData.append('descricao', document.getElementById('desc-documento').value);
+    formData.append('arquivo', uploadedFilesDoc[0]);
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/documento/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const isoDate = now.toISOString();
+        
+        adicionarItemTimeline('documento', titulo, isoDate, `Tipo: ${tipo}`, usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Documento salvo com sucesso!');
+        
+        // Resetar
+        document.getElementById('tipo-documento').value = '';
+        document.getElementById('titulo-documento').value = '';
+        document.getElementById('desc-documento').value = '';
+        uploadedFilesDoc = [];
+        fileBadgesDoc.innerHTML = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o documento');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    uploadedFilesDoc = [];
+    fileBadgesDoc.innerHTML = '';
+  });
+</script>

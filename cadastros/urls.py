@@ -4,11 +4,22 @@ from . import views
 app_name = 'cadastros'
 
 urlpatterns = [
+    # ===== API ENDPOINTS =====
+    path('api/tipos-atendimento/', views.api_tipos_atendimento_list, name='api_tipos_atendimento_list'),
+    path('api/tipos-atendimento/<int:pk>/template/', views.api_tipo_atendimento_template, name='api_tipo_atendimento_template'),
+    
     # URLs específicas para tipos de atendimento (devem vir antes das genéricas)
     path('tipos-atendimento/', views.tipos_atendimento_list, name='tipos_atendimento_list'),
     path('tipos-atendimento/criar/', views.tipo_atendimento_create, name='tipo_atendimento_create'),
     path('tipos-atendimento/<int:pk>/editar/', views.tipo_atendimento_edit, name='tipo_atendimento_edit'),
     path('tipos-atendimento/<int:pk>/excluir/', views.tipo_atendimento_delete, name='tipo_atendimento_delete'),
+    
+    # URLs específicas para filas de atendimento
+    path('filas-atendimento/', views.filas_atendimento_list, name='filas_atendimento_list'),
+    path('filas-atendimento/criar/', views.fila_atendimento_create, name='fila_atendimento_create'),
+    path('filas-atendimento/<int:pk>/', views.fila_atendimento_detail, name='fila_atendimento_detail'),
+    path('filas-atendimento/<int:pk>/editar/', views.fila_atendimento_update, name='fila_atendimento_update'),
+    path('filas-atendimento/<int:pk>/excluir/', views.fila_atendimento_delete, name='fila_atendimento_delete'),
     
     # URLs específicas para exames
     path('exames/', views.exames_list, name='exames_list'),

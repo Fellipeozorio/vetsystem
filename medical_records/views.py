@@ -141,4 +141,494 @@ def animal_records(request, pet_id):
         'cliente': pet.tutor,
     }
     
-    return render(request, 'medical_records/animal_records.html', context)
+    return render(request, 'medical_records/atendimento_clinico_form.html', context)
+
+
+# API Views para registros da timeline
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from datetime import datetime
+import json
+from .models import (
+    Atendimento, Peso, Patologia, Documento, Exame, ExameArquivo,
+    Foto, FotoArquivo, VacinaRegistro, Receita, Observacao, Video, Internacao
+)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_atendimento(request, pet_id):
+    """Salvar novo atendimento clínico"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        # Parse data e hora
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        # Criar atendimento
+        atendimento = Atendimento.objects.create(
+            pet=pet,
+            tipo_atendimento_id=request.POST.get('tipo_atendimento_id'),
+            data_hora=data_hora,
+            observacoes=request.POST.get('observacoes', ''),
+            detalhes=request.POST.get('detalhes', ''),
+            obs_retorno=request.POST.get('obs_retorno', ''),
+            usuario=request.user
+        )
+        
+        # Processar datas de retorno
+        if request.POST.get('data_retorno'):
+            atendimento.data_retorno = request.POST.get('data_retorno')
+        if request.POST.get('hora_retorno'):
+            atendimento.hora_retorno = request.POST.get('hora_retorno')
+        
+        # Processar arquivo se enviado
+        if 'arquivo' in request.FILES:
+            atendimento.arquivo = request.FILES['arquivo']
+        
+        atendimento.save()
+        
+        return JsonResponse({
+            'success': True,
+            'id': atendimento.id,
+            'message': 'Atendimento salvo com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_peso(request, pet_id):
+    """Salvar registro de peso"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        peso = Peso.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            peso=request.POST.get('peso'),
+            condicao_corporal=request.POST.get('condicao_corporal', ''),
+            observacoes=request.POST.get('observacoes', ''),
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'id': peso.id,
+            'message': 'Peso salvo com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_patologia(request, pet_id):
+    """Salvar registro de patologia"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        patologia = Patologia.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            diagnostico=request.POST.get('diagnostico'),
+            cid=request.POST.get('cid', ''),
+            gravidade=request.POST.get('gravidade', ''),
+            observacoes=request.POST.get('observacoes', ''),
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'id': patologia.id,
+            'message': 'Patologia salva com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_documento(request, pet_id):
+    """Salvar documento"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        documento = Documento.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            tipo=request.POST.get('tipo', ''),
+            titulo=request.POST.get('titulo'),
+            descricao=request.POST.get('descricao', ''),
+            arquivo=request.FILES.get('arquivo'),
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'id': documento.id,
+            'message': 'Documento salvo com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_exame(request, pet_id):
+    """Salvar exame"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        exame = Exame.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            tipo=request.POST.get('tipo', ''),
+            nome=request.POST.get('nome'),
+            resultado=request.POST.get('resultado', ''),
+            usuario=request.user
+        )
+        
+        # Processar arquivos múltiplos
+        arquivos = request.FILES.getlist('arquivos')
+        for arquivo in arquivos:
+            ExameArquivo.objects.create(
+                exame=exame,
+                arquivo=arquivo
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'id': exame.id,
+            'message': 'Exame salvo com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_fotos(request, pet_id):
+    """Salvar fotos"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        foto = Foto.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            titulo=request.POST.get('titulo'),
+            descricao=request.POST.get('descricao', ''),
+            usuario=request.user
+        )
+        
+        # Processar múltiplas fotos
+        arquivos = request.FILES.getlist('arquivos')
+        for arquivo in arquivos:
+            FotoArquivo.objects.create(
+                foto=foto,
+                arquivo=arquivo
+            )
+        
+        return JsonResponse({
+            'success': True,
+            'id': foto.id,
+            'message': 'Fotos salvas com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_vacina(request, pet_id):
+    """Salvar vacina"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        vacina = VacinaRegistro.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            nome=request.POST.get('nome'),
+            lote=request.POST.get('lote', ''),
+            fabricante=request.POST.get('fabricante', ''),
+            observacoes=request.POST.get('observacoes', ''),
+            usuario=request.user
+        )
+        
+        if request.POST.get('proxima_dose'):
+            vacina.proxima_dose = request.POST.get('proxima_dose')
+            vacina.save()
+        
+        return JsonResponse({
+            'success': True,
+            'id': vacina.id,
+            'message': 'Vacina salva com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_receita(request, pet_id):
+    """Salvar receita"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        receita = Receita.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            tipo=request.POST.get('tipo', ''),
+            prescricao=request.POST.get('prescricao'),
+            observacoes=request.POST.get('observacoes', ''),
+            usuario=request.user
+        )
+        
+        if request.POST.get('validade'):
+            receita.validade = request.POST.get('validade')
+            receita.save()
+        
+        return JsonResponse({
+            'success': True,
+            'id': receita.id,
+            'message': 'Receita salva com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_observacao(request, pet_id):
+    """Salvar observação"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        observacao = Observacao.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            titulo=request.POST.get('titulo'),
+            texto=request.POST.get('texto'),
+            categoria=request.POST.get('categoria', ''),
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'id': observacao.id,
+            'message': 'Observação salva com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_video(request, pet_id):
+    """Salvar vídeo"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        video = Video.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            titulo=request.POST.get('titulo'),
+            descricao=request.POST.get('descricao', ''),
+            arquivo=request.FILES.get('arquivo'),
+            usuario=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'id': video.id,
+            'message': 'Vídeo salvo com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_internacao(request, pet_id):
+    """Salvar internação"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        data_hora_str = request.POST.get('data_hora')
+        if data_hora_str:
+            data_hora = datetime.strptime(data_hora_str, '%Y-%m-%dT%H:%M')
+        else:
+            data_hora = timezone.now()
+        
+        internacao = Internacao.objects.create(
+            pet=pet,
+            data_hora=data_hora,
+            status=request.POST.get('status'),
+            gravidade=request.POST.get('gravidade', ''),
+            motivo=request.POST.get('motivo'),
+            data_entrada=request.POST.get('data_entrada'),
+            observacoes=request.POST.get('observacoes', ''),
+            usuario=request.user
+        )
+        
+        if request.POST.get('previsao_alta'):
+            internacao.previsao_alta = request.POST.get('previsao_alta')
+            internacao.save()
+        
+        return JsonResponse({
+            'success': True,
+            'id': internacao.id,
+            'message': 'Internação salva com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["DELETE"])
+@login_required
+def deletar_registro(request, pet_id, tipo, registro_id):
+    """Deletar registro da timeline"""
+    try:
+        # Mapear tipo para modelo
+        modelos = {
+            'atendimento': Atendimento,
+            'peso': Peso,
+            'patologia': Patologia,
+            'documento': Documento,
+            'exame': Exame,
+            'fotos': Foto,
+            'vacina': VacinaRegistro,
+            'receita': Receita,
+            'observacoes': Observacao,
+            'video': Video,
+            'internacao': Internacao
+        }
+        
+        modelo = modelos.get(tipo)
+        if not modelo:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tipo de registro inválido'
+            }, status=400)
+        
+        # Buscar e deletar
+        registro = get_object_or_404(modelo, id=registro_id, pet_id=pet_id)
+        registro.delete()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Registro excluído com sucesso!'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+

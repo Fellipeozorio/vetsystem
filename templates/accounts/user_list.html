@@ -3,6 +3,17 @@
 
 {% block title %}Gerenciar Usuários - VetSystem{% endblock %}
 
+{% block extra_css %}
+<style>
+  .table-vcenter tbody tr:hover {
+    background-color: #f6f6f6;
+  }
+  .table-vcenter tbody tr {
+    transition: background-color .15s ease-in-out;
+  }
+</style>
+{% endblock %}
+
 {% block page_header %}
 <div class="page-header d-print-none">
   <div class="container-xl">
@@ -45,14 +56,14 @@
         <tr>
           <th>Usuário</th>
           <th>CPF</th>
-          <th>Grupo</th>
+          <th>Perfil</th>
           <th>Status</th>
           <th class="w-1"></th>
         </tr>
       </thead>
       <tbody>
         {% for u in users %}
-        <tr>
+        <tr onclick="window.location='{% url 'accounts:user_edit' u.id %}'" style="cursor:pointer">
           <td>
             <div class="d-flex py-1 align-items-center">
               {% if u.userprofile.avatar %}
@@ -90,13 +101,11 @@
           </td>
           <td class="text-secondary">{{ u.userprofile.get_cpf_formatted|default:"-" }}</td>
           <td class="text-secondary">
-            {% with u.groups.first as group %}
-              {% if group %}
-                <span class="badge bg-blue-lt">{{ group.name }}</span>
-              {% else %}
-                <span class="text-muted">-</span>
-              {% endif %}
-            {% endwith %}
+            {% if u.userprofile.perfil %}
+              <span class="badge bg-blue-lt">{{ u.userprofile.get_perfil_display }}</span>
+            {% else %}
+              <span class="text-muted">-</span>
+            {% endif %}
           </td>
           <td>
             {% if u.is_active %}
@@ -110,10 +119,10 @@
           </td>
           <td>
             <div class="btn-list" style="flex-wrap: nowrap;">
-              <a href="{% url 'accounts:user_edit' u.id %}" class="btn btn-ghost-primary btn-icon" title="Editar">
+              <a href="{% url 'accounts:user_edit' u.id %}" class="btn btn-ghost-primary btn-icon" title="Editar" onclick="event.stopPropagation();">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
               </a>
-              <a href="#" class="btn btn-ghost-danger btn-icon" title="Excluir" onclick="confirmDelete({{ u.id }}, '{{ u.username }}'); return false;">
+              <a href="#" class="btn btn-ghost-danger btn-icon" title="Excluir" onclick="event.stopPropagation(); confirmDelete({{ u.id }}, '{{ u.username }}'); return false;">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
               </a>
             </div>
@@ -181,9 +190,30 @@
               <input type="text" class="form-control" name="cpf" id="cpf" required placeholder="000.000.000-00" maxlength="14">
             </div>
             <div class="col-md-6">
+              <label class="form-label">Nome</label>
+              <input type="text" class="form-control" name="first_name" id="first_name" placeholder="Nome">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Sobrenome</label>
+              <input type="text" class="form-control" name="last_name" id="last_name" placeholder="Sobrenome">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Sexo <span class="text-danger">*</span></label>
+              <select class="form-select" name="sexo" id="sexo_modal" required>
+                <option value="M">Masculino</option>
+                <option value="F">Feminino</option>
+              </select>
+            </div>
+            <div class="col-md-6">
               <label class="form-label">Email <span class="text-danger">*</span></label>
               <input type="email" class="form-control" name="email" id="email" required placeholder="email@exemplo.com">
               <small class="form-hint">Será enviado link para criar senha.</small>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Perfil do Usuário <span class="text-danger">*</span></label>
+              <select class="form-select" name="perfil" id="perfil_modal" required>
+                <!-- Options will be populated by JavaScript -->
+              </select>
             </div>
             <div class="col-md-6">
               <label class="form-label">Grupo <span class="text-danger">*</span></label>
@@ -193,14 +223,6 @@
                 <option value="{{ group.id }}">{{ group.name }}</option>
                 {% endfor %}
               </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Nome</label>
-              <input type="text" class="form-control" name="first_name" id="first_name" placeholder="Nome">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Sobrenome</label>
-              <input type="text" class="form-control" name="last_name" id="last_name" placeholder="Sobrenome">
             </div>
           </div>
           <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
@@ -246,6 +268,51 @@
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // Perfil options based on sexo for modal
+  const perfilMasculino = [
+    {value: 'veterinario', label: 'Veterinário'},
+    {value: 'veterinario_plantonista', label: 'Veterinário Plantonista'},
+    {value: 'veterinario_especialista', label: 'Veterinário Especialista'},
+    {value: 'consultor', label: 'Consultor'},
+    {value: 'administrador', label: 'Administrador'},
+    {value: 'recepcionista', label: 'Recepcionista'}
+  ];
+  
+  const perfilFeminino = [
+    {value: 'veterinario', label: 'Veterinária'},
+    {value: 'veterinario_plantonista', label: 'Veterinária Plantonista'},
+    {value: 'veterinario_especialista', label: 'Veterinária Especialista'},
+    {value: 'consultor', label: 'Consultora'},
+    {value: 'administrador', label: 'Administradora'},
+    {value: 'recepcionista', label: 'Recepcionista'}
+  ];
+  
+  const sexoModalSelect = document.getElementById('sexo_modal');
+  const perfilModalSelect = document.getElementById('perfil_modal');
+  
+  function updateModalPerfilOptions() {
+    const sexo = sexoModalSelect.value;
+    const options = sexo === 'F' ? perfilFeminino : perfilMasculino;
+    
+    perfilModalSelect.innerHTML = '';
+    options.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.value;
+      option.textContent = opt.label;
+      perfilModalSelect.appendChild(option);
+    });
+  }
+  
+  // Initialize perfil options on page load
+  if (perfilModalSelect) {
+    updateModalPerfilOptions();
+  }
+  
+  // Update perfil options when sexo changes
+  if (sexoModalSelect) {
+    sexoModalSelect.addEventListener('change', updateModalPerfilOptions);
+  }
+  
   // Máscara de CPF
   document.getElementById('cpf').addEventListener('input', function(e) {
     let value = e.target.value.replace(/\D/g, '');

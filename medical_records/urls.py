@@ -6,4 +6,21 @@ app_name = 'medical_records'
 urlpatterns = [
     path('atendimento/', views.atendimento_list, name='atendimento_list'),
     path('animal/<int:pet_id>/', views.animal_records, name='animal_records'),
+    
+    # API endpoints para salvar registros
+    path('api/<int:pet_id>/atendimento/', views.salvar_atendimento, name='salvar_atendimento'),
+    path('api/<int:pet_id>/peso/', views.salvar_peso, name='salvar_peso'),
+    path('api/<int:pet_id>/patologia/', views.salvar_patologia, name='salvar_patologia'),
+    path('api/<int:pet_id>/documento/', views.salvar_documento, name='salvar_documento'),
+    path('api/<int:pet_id>/exame/', views.salvar_exame, name='salvar_exame'),
+    path('api/<int:pet_id>/fotos/', views.salvar_fotos, name='salvar_fotos'),
+    path('api/<int:pet_id>/vacina/', views.salvar_vacina, name='salvar_vacina'),
+    path('api/<int:pet_id>/receita/', views.salvar_receita, name='salvar_receita'),
+    path('api/<int:pet_id>/observacao/', views.salvar_observacao, name='salvar_observacao'),
+    path('api/<int:pet_id>/video/', views.salvar_video, name='salvar_video'),
+    path('api/<int:pet_id>/internacao/', views.salvar_internacao, name='salvar_internacao'),
+    
+    # API endpoint para deletar registros
+    path('api/<int:pet_id>/<str:tipo>/<int:registro_id>/', views.deletar_registro, name='deletar_registro'),
 ]
+

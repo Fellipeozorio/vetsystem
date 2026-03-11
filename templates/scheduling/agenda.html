@@ -1,0 +1,2396 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Agenda - VetSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.4.1/dist/event-calendar.min.css">
+<style>
+    .ec {
+        max-width: 100%;
+        width: 100%;
+        font-size: 0.875rem;
+        height: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 560px;
+    }
+
+    /* Corpo do calendário cresce para preencher */
+    .ec .ec-body,
+    .ec .ec-day-grid {
+        flex: 1 !important;
+    }
+
+    /* Células dos dias se expandem */
+    .ec .ec-day {
+        min-height: 80px;
+    }
+    
+    /* Bot\u00e3o de lixeira no header do card de fila */
+    .card-header .btn-ghost-danger {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .card-header .btn-ghost-danger:hover {
+        background-color: rgba(214, 57, 57, 0.1);
+    }
+    
+    /* Botão de adicionar agendamento no header do card de fila */
+    .card-header .btn-ghost-success {
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .card-header .btn-ghost-success:hover {
+        background-color: rgba(47, 179, 68, 0.1);
+    }
+
+    /* Botão de Adicionar fila: outline do Tabler e maior largura */
+    #dropdown-add-fila .btn,
+    #dropdown-add-fila .form-select {
+        min-width: 240px; /* aproximadamente 3x largura padrão */
+        height: 40px; /* aproximar altura dos botões */
+        display: inline-block;
+        vertical-align: middle;
+    }
+    /* Popover específico para eventos: remover espaçamento do header e ajustar body */
+    .event-popover .popover-header {
+        padding: 0; /* deixar o conteúdo do título colado às bordas */
+        border-bottom: 0; /* evitar linha separadora */
+        overflow: hidden;
+        border-top-left-radius: .5rem;
+        border-top-right-radius: .5rem;
+    }
+    .event-popover .popover-header > * {
+        padding: 6px 8px;
+        margin: 0;
+        line-height: 1;
+    }
+    .event-popover .popover-body {
+        padding: 8px 10px;
+        margin: 0;
+    }
+
+
+    /* Garantir que o calendário preencha a área interna do card respeitando padding */
+    #calendar > .ec {
+        height: 100%;
+        width: 100%;
+        box-sizing: border-box;
+    }
+    
+    /* Eventos na agenda diária customizada */
+    .event-item {
+        cursor: pointer;
+        transition: all 0.3s ease, opacity 0.2s;
+    }
+    
+    .event-item:hover {
+        opacity: 0.8;
+    }
+    
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    /* Cards de fila sem moldura, apenas linha no header */
+    #agenda-content .card {
+        border: none;
+        box-shadow: none;
+        margin-bottom: 0.5rem;
+        min-height: auto;
+    }
+    
+    #agenda-content .card-header {
+        border-bottom: 1px solid #dee2e6;
+        padding: 0.25rem 0.5rem;
+        background: transparent;
+    }
+    
+    #agenda-content .card-body {
+        padding: 0.25rem 0.5rem !important;
+    }
+
+    /* Agendamento cancelado: riscar texto do conteúdo do card */
+    .event-item.event-cancelado .flex-fill {
+        text-decoration: line-through;
+        color: #6c757d;
+        opacity: 0.85;
+    }
+
+    /* Handle do drag: cursor de movimentação quando passar sobre o ícone */
+    .event-item .event-handle {
+        cursor: move;
+    }
+    .event-item .event-handle:hover {
+        cursor: move;
+    }
+    
+    /* Status button colors */
+    .status-btn {
+        font-size: 0.75rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+    #status-agendado:checked + .status-btn { background-color: #3788d8; border-color: #3788d8; color: white; }
+    .status-btn.btn-primary { background-color: #3788d8; border-color: #3788d8; color: white; }
+    .status-btn.btn-warning { background-color: #f59f00; border-color: #f59f00; color: white; }
+    .status-btn.btn-info { background-color: #206bc4; border-color: #206bc4; color: white; }
+    .status-btn.btn-success { background-color: #2fb344; border-color: #2fb344; color: white; }
+    .status-btn.btn-danger { background-color: #d63939; border-color: #d63939; color: white; }
+    .status-btn.btn-purple { background-color: #ae3ec9; border-color: #ae3ec9; color: white; }
+
+    /* Ajuste do botão-ícone WhatsApp: maior e ícone proporcional */
+    #btn-whatsapp {
+        width: 44px;
+        height: 44px;
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        padding: 0.35rem;
+        border-radius: 0 4px 4px 0; /* top-left, top-right, bottom-right, bottom-left */;
+    }
+    #btn-whatsapp .icon {
+        width: 20px;
+        height: 20px;
+    }
+    
+    /* Autocomplete dropdown */
+    #cliente-autocomplete-results {
+        position: absolute;
+        width: 200%;
+        z-index: 1050;
+        top: 100%;
+        left: 0;
+    }
+    #cliente-autocomplete-results.show {
+        display: block;
+    }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title" id="page-title">Agenda diária</h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasAgendamento">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                        Agendar
+                    </button>
+                    
+                    <!-- Dropdown para adicionar fila (somente em modo timeline) -->
+                    <div id="dropdown-add-fila" style="display: none;">
+                        <select id="select-add-fila" class="form-select" aria-label="Adicionar fila">
+                            <option value="">Adicionar fila...</option>
+                            {% for fila in filas %}
+                            <option value="{{ fila.id }}">{{ fila.nome }} ({{ fila.codigo }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <button type="button" class="btn btn-purple" id="btn-toggle-mode">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="5" width="16" height="16" rx="2" /><line x1="16" y1="3" x2="16" y2="7" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="4" y1="11" x2="20" y2="11" /><rect x="8" y="15" width="2" height="2" /></svg>
+                        Modo calendário
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+<!-- Modal de Feedback Sucesso -->
+<div class="modal modal-blur fade" id="modalFeedbackSuccess" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-success"></div>
+            <div class="modal-body text-center py-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
+                <h3>Sucesso</h3>
+                <div class="text-muted"><span class="feedback-text"></span></div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <button type="button" class="btn btn-success w-100" data-bs-dismiss="modal">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Feedback Danger -->
+<div class="modal modal-blur fade" id="modalFeedbackDanger" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /></svg>
+                <h3>Removido</h3>
+                <div class="text-muted"><span class="feedback-text"></span></div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+                <div class="card-body">
+                    <div id="calendar"></div>
+                </div>
+        </div>
+    </div>
+</div>
+
+<!-- Offcanvas para Novo/Editar Agendamento -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasAgendamento" style="width: 600px;">
+    <div class="offcanvas-header">
+        <h2 class="offcanvas-title" id="offcanvas-title">Novo Agendamento</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <form id="form-agendamento">
+            <input type="hidden" id="agendamento-id">
+            
+            <!-- Botões de ação (apenas visível na edição) -->
+            <div id="botoes-acao-topo" class="row mb-3 d-none">
+                <div class="col-6">
+                    <button type="button" class="btn btn-info w-100" id="btn-acessar-ficha">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
+                        Acessar Ficha
+                    </button>
+                </div>
+                <div class="col-6">
+                    <button type="button" class="btn btn-success w-100" id="btn-iniciar-atendimento">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 4v16l13 -8z" /></svg>
+                        Iniciar Atendimento
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Linha 1: Fila -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label class="form-label required">Fila</label>
+                    <select class="form-select" id="fila" required>
+                        <option value="">Selecione...</option>
+                        {% for fila in filas %}
+                        <option value="{{ fila.id }}">{{ fila.nome }} ({{ fila.codigo }})</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Linha 2: Veterinário (se aplicável) -->
+            <div class="row mb-3" id="row-veterinario" style="display: none;">
+                <div class="col-12">
+                    <label class="form-label">Quem atenderá</label>
+                    <select class="form-select" id="veterinario" disabled>
+                        <option value="">Veterinário da fila</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Linha 3: Tipo de Atendimento -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label class="form-label required">Tipo de Atendimento</label>
+                    <select class="form-select" id="tipo_atendimento" required>
+                        <option value="">Selecione...</option>
+                        {% for tipo in tipos_atendimento %}
+                        <option value="{{ tipo.id }}" data-duracao="{{ tipo.duracao_padrao }}">{{ tipo.nome }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Linha 2: Data, Horário, Duração (1 col cada) -->
+            <div class="row mb-3">
+                <div class="col-4">
+                    <label class="form-label required">Data</label>
+                    <input type="date" class="form-control" id="data" required>
+                </div>
+                <div class="col-4">
+                    <label class="form-label required">Horário</label>
+                    <select class="form-select" id="horario" required>
+                        <option value="">Selecione...</option>
+                        <option value="sem-horario">Sem horário definido</option>
+                        <option value="00:00">00:00</option>
+                        <option value="00:15">00:15</option>
+                        <option value="00:30">00:30</option>
+                        <option value="00:45">00:45</option>
+                        <option value="01:00">01:00</option>
+                        <option value="01:15">01:15</option>
+                        <option value="01:30">01:30</option>
+                        <option value="01:45">01:45</option>
+                        <option value="02:00">02:00</option>
+                        <option value="02:15">02:15</option>
+                        <option value="02:30">02:30</option>
+                        <option value="02:45">02:45</option>
+                        <option value="03:00">03:00</option>
+                        <option value="03:15">03:15</option>
+                        <option value="03:30">03:30</option>
+                        <option value="03:45">03:45</option>
+                        <option value="04:00">04:00</option>
+                        <option value="04:15">04:15</option>
+                        <option value="04:30">04:30</option>
+                        <option value="04:45">04:45</option>
+                        <option value="05:00">05:00</option>
+                        <option value="05:15">05:15</option>
+                        <option value="05:30">05:30</option>
+                        <option value="05:45">05:45</option>
+                        <option value="06:00">06:00</option>
+                        <option value="06:15">06:15</option>
+                        <option value="06:30">06:30</option>
+                        <option value="06:45">06:45</option>
+                        <option value="07:00">07:00</option>
+                        <option value="07:15">07:15</option>
+                        <option value="07:30">07:30</option>
+                        <option value="07:45">07:45</option>
+                        <option value="08:00">08:00</option>
+                        <option value="08:15">08:15</option>
+                        <option value="08:30">08:30</option>
+                        <option value="08:45">08:45</option>
+                        <option value="09:00">09:00</option>
+                        <option value="09:15">09:15</option>
+                        <option value="09:30">09:30</option>
+                        <option value="09:45">09:45</option>
+                        <option value="10:00">10:00</option>
+                        <option value="10:15">10:15</option>
+                        <option value="10:30">10:30</option>
+                        <option value="10:45">10:45</option>
+                        <option value="11:00">11:00</option>
+                        <option value="11:15">11:15</option>
+                        <option value="11:30">11:30</option>
+                        <option value="11:45">11:45</option>
+                        <option value="12:00">12:00</option>
+                        <option value="12:15">12:15</option>
+                        <option value="12:30">12:30</option>
+                        <option value="12:45">12:45</option>
+                        <option value="13:00">13:00</option>
+                        <option value="13:15">13:15</option>
+                        <option value="13:30">13:30</option>
+                        <option value="13:45">13:45</option>
+                        <option value="14:00">14:00</option>
+                        <option value="14:15">14:15</option>
+                        <option value="14:30">14:30</option>
+                        <option value="14:45">14:45</option>
+                        <option value="15:00">15:00</option>
+                        <option value="15:15">15:15</option>
+                        <option value="15:30">15:30</option>
+                        <option value="15:45">15:45</option>
+                        <option value="16:00">16:00</option>
+                        <option value="16:15">16:15</option>
+                        <option value="16:30">16:30</option>
+                        <option value="16:45">16:45</option>
+                        <option value="17:00">17:00</option>
+                        <option value="17:15">17:15</option>
+                        <option value="17:30">17:30</option>
+                        <option value="17:45">17:45</option>
+                        <option value="18:00">18:00</option>
+                        <option value="18:15">18:15</option>
+                        <option value="18:30">18:30</option>
+                        <option value="18:45">18:45</option>
+                        <option value="19:00">19:00</option>
+                        <option value="19:15">19:15</option>
+                        <option value="19:30">19:30</option>
+                        <option value="19:45">19:45</option>
+                        <option value="20:00">20:00</option>
+                        <option value="20:15">20:15</option>
+                        <option value="20:30">20:30</option>
+                        <option value="20:45">20:45</option>
+                        <option value="21:00">21:00</option>
+                        <option value="21:15">21:15</option>
+                        <option value="21:30">21:30</option>
+                        <option value="21:45">21:45</option>
+                        <option value="22:00">22:00</option>
+                        <option value="22:15">22:15</option>
+                        <option value="22:30">22:30</option>
+                        <option value="22:45">22:45</option>
+                        <option value="23:00">23:00</option>
+                        <option value="23:15">23:15</option>
+                        <option value="23:30">23:30</option>
+                        <option value="23:45">23:45</option>
+                    </select>
+                </div>
+                <div class="col-4">
+                    <label class="form-label required">Duração</label>
+                    <input type="text" class="form-control" id="duracao_minutos" required readonly>
+                    <input type="hidden" id="duracao_minutos_valor">
+                </div>
+            </div>
+            
+            <!-- Linha 4: Pesquisar, Cliente, Animal -->
+            <div class="row mb-3">
+                <div class="col-2">
+                    <label class="form-label">Pesquisar</label>
+                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalPesquisarCliente">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                    </button>
+                </div>
+                <div class="col-5">
+                    <label class="form-label required">Cliente</label>
+                    <div style="position: relative;">
+                        <input type="text" class="form-control" id="cliente-search" placeholder="Digite..." autocomplete="off">
+                        <input type="hidden" id="cliente">
+                        <div id="cliente-autocomplete-results" class="dropdown-menu" style="max-height: 200px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+                <div class="col-5">
+                    <label class="form-label required">Animal</label>
+                    <select class="form-select" id="animal" required disabled>
+                        <option value="">Selecione cliente</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Linha 5: Celular (1 coluna) -->
+            <div class="row mb-3">
+                <div class="col-4">
+                    <label class="form-label">Celular</label>
+                    <div class="input-group">
+                        <input type="tel" class="form-control" id="celular_cliente" readonly>
+                        <a href="#" id="btn-whatsapp" class="btn btn-icon btn-outline-success" style="display: none;" target="_blank" title="Abrir WhatsApp">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9"/><path d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1"/></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Linha 6: Status (3 colunas) -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label class="form-label">Status</label>
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="status-radio" id="status-agendado" value="agendado" checked>
+                        <label class="btn btn-outline-secondary status-btn" for="status-agendado" data-color="primary">Agendado</label>
+                        
+                        <input type="radio" class="btn-check" name="status-radio" id="status-espera" value="espera">
+                        <label class="btn btn-outline-secondary status-btn" for="status-espera" data-color="warning">Espera</label>
+                        
+                        <input type="radio" class="btn-check" name="status-radio" id="status-em_atendimento" value="em_atendimento">
+                        <label class="btn btn-outline-secondary status-btn" for="status-em_atendimento" data-color="info">Em atendimento</label>
+                        
+                        <input type="radio" class="btn-check" name="status-radio" id="status-atendido" value="atendido">
+                        <label class="btn btn-outline-secondary status-btn" for="status-atendido" data-color="success">Atendido</label>
+                        
+                        <input type="radio" class="btn-check" name="status-radio" id="status-cancelado" value="cancelado">
+                        <label class="btn btn-outline-secondary status-btn" for="status-cancelado" data-color="danger">Cancelado</label>
+                        
+                        <input type="radio" class="btn-check" name="status-radio" id="status-atrasado" value="atrasado">
+                        <label class="btn btn-outline-secondary status-btn" for="status-atrasado" data-color="purple">Atrasado</label>
+                    </div>
+                    <input type="hidden" id="status" value="agendado">
+                </div>
+            </div>
+            
+            <!-- Linha 7: Observações (3 colunas) -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <label class="form-label">Observações</label>
+                    <textarea class="form-control" id="observacoes" rows="3"></textarea>
+                </div>
+            </div>
+            
+            <!-- Seção de Tempos (apenas visível no modo edição) -->
+            <div id="secao-tempos" style="display: none;">
+                <hr>
+                <h5>Tempos de Atendimento</h5>
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <small class="text-muted"><strong>Tempo em Espera:</strong> <span id="tempo-espera">-</span></small>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <small class="text-muted"><strong>Tempo em Atraso:</strong> <span id="tempo-atraso">-</span></small>
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-12">
+                        <small class="text-muted"><strong>Tempo em Atendimento:</strong> <span id="tempo-atendimento">-</span></small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 mt-4" id="botoes-novo">
+                <button type="submit" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+                    Salvar
+                </button>
+                <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+            </div>
+            
+            <div class="d-grid gap-2 mt-4 d-none" id="botoes-edicao">
+                <button type="submit" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+                    Salvar Alterações
+                </button>
+                <button type="button" class="btn btn-danger" id="btn-deletar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                    Excluir Agendamento
+                </button>
+                <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Pesquisar Cliente -->
+<div class="modal modal-blur fade" id="modalPesquisarCliente" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Pesquisar Cliente/Animal</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Filtros -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Cliente</label>
+                        <input type="text" class="form-control" id="filtro-cliente" placeholder="Nome do cliente...">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Animal</label>
+                        <input type="text" class="form-control" id="filtro-animal" placeholder="Nome do animal...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Celular</label>
+                        <input type="text" class="form-control" id="filtro-telefone" placeholder="Celular...">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">&nbsp;</label>
+                        <div>
+                            <button type="button" class="btn btn-primary" onclick="buscarClientes()">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                                Buscar
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="limparFiltros()">Limpar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tabela de Resultados -->
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Cliente</th>
+                                <th>Animal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="resultados-pesquisa">
+                            <tr>
+                                <td colspan="2" class="text-center text-muted py-4">
+                                    Digite nos campos acima e clique em Buscar
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Adicionar Fila -->
+<div class="modal modal-blur fade" id="modalConfirmarAdicionarFila" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-success"></div>
+            <div class="modal-body text-center py-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="12" x2="12" y2="16" /></svg>
+                <h3>Adicionar fila ao dia?</h3>
+                <div class="text-muted" id="modal-adicionar-fila-texto">A fila "<span id="modal-adicionar-fila-nome"></span>" não existe para o dia <span id="modal-adicionar-fila-data"></span>, deseja adicioná-la?</div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <div class="row">
+                        <div class="col">
+                            <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                        <div class="col">
+                            <button type="button" class="btn btn-success w-100" id="btn-confirmar-adicionar-fila">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Confirmação para Remover Fila -->
+<div class="modal modal-blur fade" id="modalConfirmarRemoverFila" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75" /></svg>
+                <h3>Remover fila do dia?</h3>
+                <div class="text-muted" id="modal-remover-fila-texto">Deseja remover a fila "<span id="modal-remover-fila-nome"></span>" da agenda do dia <span id="modal-remover-fila-data"></span>?</div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <div class="row">
+                        <div class="col">
+                            <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                        <div class="col">
+                            <button type="button" class="btn btn-danger w-100" id="btn-confirmar-remover-fila">Confirmar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Erro - Fila Duplicada -->
+<div class="modal modal-blur fade" id="modalFilaDuplicada" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75" /></svg>
+                <h3>Fila já está na agenda</h3>
+                <div class="text-muted">A fila "<span id="modal-fila-duplicada-nome"></span>" já está presente na agenda diária.</div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+            <!-- Modal Confirmar Excluir Agendamento -->
+            <div class="modal modal-blur fade" id="modalConfirmarExcluirAgendamento" tabindex="-1" role="dialog" aria-hidden="true">
+                <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+                    <div class="modal-content">
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        <div class="modal-status bg-danger"></div>
+                        <div class="modal-body text-center py-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+                            <h3>Confirmar exclusão?</h3>
+                            <div class="text-muted" id="modal-confirmar-excluir-text">Deseja excluir este agendamento?</div>
+                        </div>
+                        <div class="modal-footer">
+                            <div class="w-100">
+                                <div class="row">
+                                    <div class="col">
+                                        <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+                                    </div>
+                                    <div class="col">
+                                        <button type="button" class="btn btn-danger w-100" id="btn-confirmar-excluir-agendamento">Excluir</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% endblock %}
+
+{% block extra_js %}
+<!-- Event Calendar - Open Source (MIT License) -->
+<script src="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.4.1/dist/event-calendar.min.js"></script>
+
+<script>
+function showSuccessModal(mensagem) {
+    let modal = document.getElementById('modalFeedbackSuccess');
+    if (!modal) {
+        const html = `
+        <div class="modal modal-blur fade" id="modalFeedbackSuccess" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-status bg-success"></div>
+                    <div class="modal-body text-center py-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10" /></svg>
+                        <h3>Sucesso</h3>
+                        <div class="text-muted"><span class="feedback-text"></span></div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="w-100">
+                            <button type="button" class="btn btn-success w-100" data-bs-dismiss="modal">Ok</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+        modal = document.getElementById('modalFeedbackSuccess');
+    }
+    const el = modal.querySelector('.modal-body .feedback-text');
+    if (el) el.textContent = mensagem || '';
+    new bootstrap.Modal(modal).show();
+}
+
+function showDangerModal(mensagem) {
+    let modal = document.getElementById('modalFeedbackDanger');
+    if (!modal) {
+        const html = `
+        <div class="modal modal-blur fade" id="modalFeedbackDanger" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+                <div class="modal-content">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-status bg-danger"></div>
+                    <div class="modal-body text-center py-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /></svg>
+                        <h3>Removido</h3>
+                        <div class="text-muted"><span class="feedback-text"></span></div>
+                    </div>
+                    <div class="modal-footer">
+                        <div class="w-100">
+                            <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Ok</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', html);
+        modal = document.getElementById('modalFeedbackDanger');
+    }
+    const el = modal.querySelector('.modal-body .feedback-text');
+    if (el) el.textContent = mensagem || '';
+    new bootstrap.Modal(modal).show();
+}
+
+let calendar;
+let currentMode = 'timeline';
+let dataAtual = new Date().toISOString().split('T')[0];
+let currentResources = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Definir data padrão como hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('data').value = hoje;
+    dataAtual = hoje;
+    
+    initCalendar().catch(error => {
+        console.error('Erro ao inicializar calendário:', error);
+        document.getElementById('calendar').innerHTML = '<div class="alert alert-danger m-3">Erro ao carregar calendário. Verifique o console.</div>';
+    });
+    
+    // Botão toggle mode
+    document.getElementById('btn-toggle-mode').addEventListener('click', function() {
+        currentMode = currentMode === 'timeline' ? 'calendar' : 'timeline';
+        initCalendar().catch(error => console.error('Erro ao alternar modo:', error));
+    });
+    
+    // Status radio buttons
+    document.querySelectorAll('input[name="status-radio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            document.getElementById('status').value = this.value;
+            // Atualizar cores dos botões
+            document.querySelectorAll('.status-btn').forEach(btn => {
+                btn.className = 'btn btn-outline-secondary status-btn';
+            });
+            const label = document.querySelector(`label[for="${this.id}"]`);
+            const color = label.dataset.color;
+            label.className = `btn btn-${color} status-btn`;
+        });
+    });
+    
+    // Tipo de atendimento - auto preencher duração
+    document.getElementById('tipo_atendimento').addEventListener('change', function() {
+        const option = this.options[this.selectedIndex];
+        const duracao = option.dataset.duracao;
+        if (duracao) {
+            const duracaoInt = parseInt(duracao);
+            document.getElementById('duracao_minutos').value = formatarDuracao(duracaoInt);
+            document.getElementById('duracao_minutos_valor').value = duracaoInt;
+        }
+    });
+    
+    // Fila - exibir campo veterinário
+    document.getElementById('fila').addEventListener('change', function() {
+        const filaId = this.value;
+        const rowVet = document.getElementById('row-veterinario');
+        const selectVet = document.getElementById('veterinario');
+        
+        if (!filaId) {
+            rowVet.style.display = 'none';
+            return;
+        }
+        
+        // Buscar informações da fila
+        fetch(`/scheduling/api/fila/${filaId}/detalhes/`)
+            .then(r => r.json())
+            .then(fila => {
+                rowVet.style.display = 'block';
+                
+                if (fila.atribuido_a) {
+                    // Fila tem veterinário fixo
+                    selectVet.innerHTML = `<option value="${fila.atribuido_a.id}">${fila.atribuido_a.nome}</option>`;
+                    selectVet.disabled = true;
+                } else {
+                    // Fila sem veterinário, carregar lista
+                    fetch('/scheduling/api/veterinarios/')
+                        .then(r => r.json())
+                        .then(vets => {
+                            selectVet.innerHTML = '<option value="">Selecione...</option>';
+                            vets.forEach(v => {
+                                selectVet.innerHTML += `<option value="${v.id}">${v.nome}</option>`;
+                            });
+                            selectVet.disabled = false;
+                        });
+                }
+            });
+    });
+    
+    // Select adicionar fila - evento change
+    document.getElementById('select-add-fila').addEventListener('change', function() {
+        const filaId = this.value;
+        if (filaId) {
+            const filaNome = this.options[this.selectedIndex].text;
+            confirmarAdicionarFila(parseInt(filaId), filaNome);
+            this.value = ''; // Resetar select
+        }
+    });
+    
+    // Popular modal de pesquisa ao abrir
+    const modalPesquisar = document.getElementById('modalPesquisarCliente');
+    if (modalPesquisar) {
+        modalPesquisar.addEventListener('shown.bs.modal', function() {
+            // Buscar todos os clientes ao abrir o modal
+            buscarClientes();
+        });
+    }
+    
+    // Cliente autocomplete
+    let timeoutId;
+    document.getElementById('cliente-search').addEventListener('input', function() {
+        clearTimeout(timeoutId);
+        const query = this.value;
+        
+        if (query.length < 2) {
+            document.getElementById('cliente-autocomplete-results').classList.remove('show');
+            return;
+        }
+        
+        timeoutId = setTimeout(() => {
+            console.log('Buscando clientes com query:', query);
+            fetch(`/scheduling/api/clientes/?q=${encodeURIComponent(query)}`)
+                .then(r => {
+                    console.log('Resposta recebida:', r.status);
+                    if (!r.ok) throw new Error('Erro na busca de clientes');
+                    return r.json();
+                })
+                .then(data => {
+                    console.log('Clientes encontrados:', data.length, data);
+                    const results = document.getElementById('cliente-autocomplete-results');
+                    results.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        const item = document.createElement('div');
+                        item.className = 'dropdown-item text-muted';
+                        item.textContent = 'Nenhum cliente encontrado';
+                        results.appendChild(item);
+                    } else {
+                        data.forEach(cliente => {
+                            const item = document.createElement('a');
+                            item.className = 'dropdown-item';
+                            item.href = '#';
+                            item.textContent = cliente.nome_completo;
+                            item.onclick = (e) => {
+                                e.preventDefault();
+                                selecionarCliente(cliente);
+                            };
+                            results.appendChild(item);
+                        });
+                    }
+                    
+                    results.classList.add('show');
+                })
+                .catch(error => {
+                    console.error('Erro ao buscar clientes:', error);
+                });
+        }, 300);
+    });
+    
+    // Listener para quando o offcanvas for aberto - limpar formulário
+    document.getElementById('offcanvasAgendamento').addEventListener('show.bs.offcanvas', function() {
+        // Só limpar se for um novo agendamento (título = "Novo Agendamento")
+        const titulo = document.getElementById('offcanvas-title').textContent;
+        if (titulo === 'Novo Agendamento') {
+            limparFormularioAgendamento();
+        }
+    });
+    
+    // Listener para quando o offcanvas for fechado
+    document.getElementById('offcanvasAgendamento').addEventListener('hidden.bs.offcanvas', function() {
+        limparFormularioAgendamento();
+    });
+
+    
+    // Submit form
+    document.getElementById('form-agendamento').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const id = document.getElementById('agendamento-id').value;
+        const filaId = document.getElementById('fila').value;
+        const dataAgendamento = document.getElementById('data').value;
+        
+        // Validar se a fila está na agenda do dia (apenas ao criar novo agendamento)
+        if (!id && filaId && dataAgendamento) {
+            // Buscar filas do dia selecionado
+            fetch(`/scheduling/api/filas/${dataAgendamento}/`)
+                .then(r => r.json())
+                .then(filas => {
+                    const filasDisponiveis = Array.isArray(filas) ? filas.map(f => String(f.id)) : [];
+                    const filaExisteNaAgenda = filasDisponiveis.includes(String(filaId));
+                    
+                    if (!filaExisteNaAgenda) {
+                        // Mostrar modal perguntando se deseja adicionar a fila
+                        const selectFila = document.getElementById('fila');
+                        const filaNome = selectFila.options[selectFila.selectedIndex].text;
+                        const dataFormatada = formatarDataExtenso(dataAgendamento);
+                        
+                        document.getElementById('modal-adicionar-fila-nome').textContent = filaNome;
+                        document.getElementById('modal-adicionar-fila-data').textContent = dataFormatada;
+                        
+                        const btnConfirmar = document.getElementById('btn-confirmar-adicionar-fila');
+                        btnConfirmar.onclick = function() {
+                            // Adicionar a fila
+                            fetch('/scheduling/api/fila-dia/adicionar/', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': getCookie('csrftoken')
+                                },
+                                body: JSON.stringify({
+                                    fila_id: filaId,
+                                    data: dataAgendamento
+                                })
+                            })
+                            .then(r => r.json())
+                            .then(data => {
+                                if (data.success) {
+                                    // Fila adicionada, fechar modal e criar agendamento
+                                    bootstrap.Modal.getInstance(document.getElementById('modalConfirmarAdicionarFila')).hide();
+                                    
+                                    // Criar o agendamento
+                                    criarOuEditarAgendamento(id);
+                                    
+                                    // Recarregar agenda se estiver no modo timeline e na mesma data
+                                    if (currentMode === 'timeline' && dataAgendamento === dataAtual) {
+                                        setTimeout(() => initCalendar(), 500);
+                                    }
+                                } else {
+                                    alert('Erro ao adicionar fila: ' + (data.error || 'Erro desconhecido'));
+                                }
+                            })
+                            .catch(err => {
+                                alert('Erro ao adicionar fila: ' + err.message);
+                            });
+                        };
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('modalConfirmarAdicionarFila'));
+                        modal.show();
+                        return;
+                    }
+                    
+                    // Fila já existe na agenda, prosseguir com criação
+                    criarOuEditarAgendamento(id);
+                })
+                .catch(err => {
+                    console.error('Erro ao verificar filas:', err);
+                    // Em caso de erro, prosseguir com criação
+                    criarOuEditarAgendamento(id);
+                });
+            return;
+        }
+        
+        // Sem validação necessária (editando ou sem fila)
+        criarOuEditarAgendamento(id);
+    });
+    
+    function criarOuEditarAgendamento(id) {
+        const url = id ? `/scheduling/api/agendamento/${id}/editar/` : '/scheduling/api/agendamento/criar/';
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                tipo_atendimento_id: document.getElementById('tipo_atendimento').value,
+                fila_id: document.getElementById('fila').value || null,
+                veterinario_id: document.getElementById('veterinario').value || null,
+                data: document.getElementById('data').value,
+                horario: document.getElementById('horario').value,
+                duracao_minutos: document.getElementById('duracao_minutos_valor').value || document.getElementById('duracao_minutos').value,
+                cliente_id: document.getElementById('cliente').value,
+                animal_id: document.getElementById('animal').value,
+                celular_cliente: document.getElementById('celular_cliente').value,
+                status: document.getElementById('status').value,
+                observacoes: document.getElementById('observacoes').value
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Recarregar eventos ou agenda
+                if (currentMode === 'timeline') {
+                    initCalendar();
+                } else {
+                    carregarEventos({ startStr: calendar.getOption('date'), endStr: new Date(calendar.getOption('date').getTime() + 86400000 * 7).toISOString() });
+                }
+                bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento')).hide();
+                // Mostrar modal de sucesso (criado ou editado)
+                const mensagem = id ? 'Agendamento atualizado com sucesso.' : 'Agendamento criado com sucesso.';
+                showSuccessModal(mensagem);
+            } else {
+                alert('Erro: ' + (data.error || 'Erro desconhecido'));
+            }
+        });
+    };
+    
+    // Deletar - abrir modal de confirmação e excluir ao confirmar
+    document.getElementById('btn-deletar').addEventListener('click', function() {
+        const id = document.getElementById('agendamento-id').value;
+        if (!id) return;
+
+        const modalEl = document.getElementById('modalConfirmarExcluirAgendamento');
+        const confirmBtn = document.getElementById('btn-confirmar-excluir-agendamento');
+
+        // Update confirmation text (optional)
+        const texto = document.getElementById('modal-confirmar-excluir-text');
+        if (texto) texto.textContent = 'Deseja realmente excluir este agendamento?';
+
+        // Avoid duplicate handlers
+        confirmBtn.onclick = function() {
+            fetch(`/scheduling/api/agendamento/${id}/deletar/`, {
+                method: 'POST',
+                headers: {'X-CSRFToken': getCookie('csrftoken')}
+            })
+            .then(r => r.json())
+            .then(data => {
+                    if (data.success) {
+                        if (currentMode === 'timeline') {
+                            initCalendar();
+                        } else {
+                            carregarEventos({ startStr: calendar.getOption('date'), endStr: new Date(calendar.getOption('date').getTime() + 86400000 * 7).toISOString() });
+                        }
+                        bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento')).hide();
+                    } else {
+                        mostrarModalErro('Erro ao excluir: ' + (data.error || 'Erro desconhecido'));
+                    }
+            })
+            .catch(err => mostrarModalErro('Erro ao excluir: ' + (err.message || err)));
+
+            // Esconder modal de confirmação
+            const bsModal = bootstrap.Modal.getInstance(modalEl);
+            if (bsModal) bsModal.hide();
+        };
+
+        new bootstrap.Modal(modalEl).show();
+    });
+    
+    // Event listener para Acessar Ficha
+    document.getElementById('btn-acessar-ficha').addEventListener('click', function() {
+        const animalId = document.getElementById('animal').value;
+        if (animalId) {
+            window.location.href = `/medical_records/prontuario/${animalId}/`;
+        } else {
+            alert('Selecione um animal para acessar a ficha');
+        }
+    });
+    
+    // Event listener para Iniciar Atendimento
+    document.getElementById('btn-iniciar-atendimento').addEventListener('click', function() {
+        const id = document.getElementById('agendamento-id').value;
+        const animalId = document.getElementById('animal').value;
+        
+        if (!animalId) {
+            alert('Selecione um animal');
+            return;
+        }
+        
+        // Atualizar status para em_atendimento
+        fetch(`/scheduling/api/agendamento/${id}/editar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                status: 'em_atendimento'
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                // Redirecionar para prontuário
+                window.location.href = `/medical_records/prontuario/${animalId}/`;
+            }
+        })
+        .catch(err => {
+            console.error('Erro ao iniciar atendimento:', err);
+            alert('Erro ao iniciar atendimento');
+        });
+    });
+});
+
+async function initCalendar() {
+    console.log('initCalendar chamado, modo:', currentMode);
+    const calendarDiv = document.getElementById('calendar');
+    
+    // Destruir calendário se existir
+    if (calendar) {
+        try {
+            if (typeof calendar.destroy === 'function') {
+                calendar.destroy();
+            }
+        } catch (error) {
+            console.warn('Erro ao destruir calendário:', error);
+        }
+        calendar = null;
+    }
+    
+    // Limpar conteúdo do calendário
+    calendarDiv.innerHTML = '';
+    
+    if (currentMode === 'timeline') {
+        console.log('Modo timeline - carregando filas...');
+        // Carregar filas e eventos para agenda diária customizada
+        const hoje = dataAtual || new Date().toISOString().split('T')[0];
+        let resources = [];
+        
+        try {
+            const response = await fetch(`/scheduling/api/filas/${hoje}/`);
+            console.log('Resposta API filas:', response.status);
+            if (response.ok) {
+                const filas = await response.json();
+                console.log('Filas recebidas:', filas);
+                // Incluir todas as filas retornadas (permanentes e adicionadas)
+                resources = Array.isArray(filas) ? filas.map(f => ({
+                    id: String(f.id),
+                    nome: f.nome,
+                    permanente: f.permanente,
+                    removable: !f.permanente
+                })).sort((a, b) => {
+                    // Ordenar: permanentes primeiro, depois alfabético
+                    if (a.permanente && !b.permanente) return -1;
+                    if (!a.permanente && b.permanente) return 1;
+                    return a.nome.localeCompare(b.nome);
+                }) : [];
+                console.log('Resources processados:', resources);
+            } else {
+                console.error('Erro na resposta da API:', await response.text());
+            }
+        } catch (error) {
+            console.error('Erro ao carregar filas:', error);
+        }
+        
+        // Armazenar resources globalmente para verificação de duplicatas
+        currentResources = resources;
+        
+        // Renderizar visualização customizada de agenda diária (filas incluídas)
+        console.log('Renderizando agenda diária...');
+        await renderizarAgendaDiaria(hoje, resources);
+        
+        document.getElementById('page-title').textContent = 'Agenda diária';
+        document.getElementById('btn-toggle-mode').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="5" width="16" height="16" rx="2" /><line x1="16" y1="3" x2="16" y2="7" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="4" y1="11" x2="20" y2="11" /><rect x="8" y="15" width="2" height="2" /></svg> Modo calendário';
+        document.getElementById('dropdown-add-fila').style.display = 'inline-block';
+        console.log('Timeline renderizado com sucesso');
+        
+    } else {
+        console.log('Modo calendário - criando EventCalendar...');
+        // Modo Grid (Calendário) com opção de lista
+        calendar = EventCalendar.create(document.getElementById('calendar'), {
+            view: 'dayGridWeek',
+            locale: 'pt-BR',
+            editable: false,
+            selectable: true,
+            buttonText: {
+                today: 'Hoje',
+                dayGridMonth: 'Mês',
+                dayGridWeek: 'Semana',
+                dayGridDay: 'Dia',
+                listWeek: 'Lista'
+            },
+            headerToolbar: {
+                start: 'prev,next today',
+                center: 'title',
+                end: 'dayGridMonth,dayGridWeek,dayGridDay,listWeek'
+            },
+            events: [],
+            // Renderiza cada evento como: hh:mm PrimeiroNome - Animal
+            // (usa extendedProps.horario para exibir a hora original antes da normalização)
+            eventContent: function(info) {
+                const ep = info.event.extendedProps || {};
+                const clienteNome = ep.cliente || info.event.title || '';
+                const primeiroNome = clienteNome.split(' ')[0];
+                const animalNome = ep.animal || '';
+                const statusCancelado = ep.status === 'cancelado';
+                let horaStr = '';
+                if (!info.event.allDay) {
+                    const h = ep.horario && ep.horario !== 'sem-horario' ? ep.horario : '';
+                    if (h) horaStr = h + ' ';
+                }
+                const textDecoration = statusCancelado ? 'text-decoration:line-through;' : '';
+                return {html: '<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.8rem;padding:1px 3px;line-height:1.4;cursor:pointer;' + textDecoration + '">' + horaStr + '<strong>' + primeiroNome + '</strong> - ' + animalNome + '</div>'};
+            },
+            // Ao clicar no evento, abre o offcanvas de edição
+            eventClick: (info) => editarAgendamentoPorId(info.event.id),
+            // Popover no hover – mesma estrutura da agenda diária
+            eventMouseEnter: function(info) {
+                const e = info.event;
+                const ep = e.extendedProps || {};
+                const corTipo = e.backgroundColor || '#6c757d';
+                const clienteNome = ep.cliente || '';
+                const animalNome = ep.animal || '';
+                const tipoAtendimento = ep.tipoAtendimento || 'Atendimento';
+                const statusRaw = ep.status || '';
+                const statusLabel = statusRaw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                const horario = ep.horario && ep.horario !== 'sem-horario' ? ep.horario : '--:--';
+                const observacoes = ep.observacoes || '';
+                const veterinarioNome = ep.veterinario || '';
+                const tipoComVet = veterinarioNome ? tipoAtendimento + ' (' + veterinarioNome + ')' : tipoAtendimento;
+                let horarioFim = '';
+                if (ep.horario && ep.horario !== 'sem-horario' && ep.duracaoMinutos) {
+                    const [hh, mm] = ep.horario.split(':');
+                    const ini = new Date(); ini.setHours(parseInt(hh), parseInt(mm));
+                    ini.setMinutes(ini.getMinutes() + ep.duracaoMinutos);
+                    horarioFim = ini.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+                }
+                const titleHtml = '<div style="display:flex;flex-direction:column;width:100%;background-color:' + corTipo + ';color:white;"><div style="font-weight:700;font-size:0.95rem;line-height:1;">' + tipoComVet + '</div><div style="font-size:0.75rem;opacity:0.95;margin-top:2px;text-align:right;line-height:1;">' + statusLabel + '</div></div>';
+                const bodyHtml = '<div style="text-align:left;max-width:360px;">'
+                    + '<div style="margin-bottom:4px;"><strong>Cliente:</strong> ' + clienteNome + '</div>'
+                    + '<div style="margin-bottom:4px;"><strong>Animal:</strong> ' + animalNome + '</div>'
+                    + '<div style="margin-bottom:4px;"><strong>Horário de início:</strong> ' + horario + '</div>'
+                    + (horarioFim ? '<div style="margin-bottom:4px;"><strong>Horário de término:</strong> ' + horarioFim + '</div>' : '')
+                    + (observacoes ? '<div style="margin-top:6px;"><strong>Observações:</strong><br>' + observacoes + '</div>' : '')
+                    + '</div>';
+                const pop = new bootstrap.Popover(info.el, {
+                    title: titleHtml, content: bodyHtml,
+                    html: true, sanitize: false,
+                    placement: 'right', trigger: 'manual',
+                    customClass: 'event-popover'
+                });
+                pop.show();
+                info.el._calPop = pop;
+            },
+            eventMouseLeave: function(info) {
+                if (info.el._calPop) { info.el._calPop.dispose(); info.el._calPop = null; }
+            },
+            select: (info) => novoAgendamento(info),
+            datesSet: (info) => carregarEventos(info)
+        });
+        
+        document.getElementById('page-title').textContent = 'Calendário';
+        document.getElementById('btn-toggle-mode').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="4" width="16" height="4" rx="1" /><rect x="4" y="12" width="6" height="8" rx="1" /><line x="14" y1="12" x2="20" y2="12" /><line x1="14" y1="16" x2="20" y2="16" /><line x1="14" y1="20" x2="20" y2="20" /></svg> Modo agenda diária';
+        document.getElementById('dropdown-add-fila').style.display = 'none';
+    }
+}
+
+
+async function renderizarAgendaDiaria(data, resources) {
+    console.log('renderizarAgendaDiaria chamado com data:', data, 'resources:', resources);
+    const calendarDiv = document.getElementById('calendar');
+    
+    // Criar header customizado com navegação
+    const headerHTML = `
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
+            <button class="btn btn-outline-secondary" onclick="navegarData(-1)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="15 6 9 12 15 18" /></svg>
+            </button>
+            <h3 class="m-0" id="data-titulo">${formatarDataExtenso(data)}</h3>
+            <button class="btn btn-outline-secondary" onclick="navegarData(1)">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="9 6 15 12 9 18" /></svg>
+            </button>
+        </div>
+        <div id="agenda-content" class="p-2"></div>
+    `;
+    
+    calendarDiv.innerHTML = headerHTML;
+    console.log('Header HTML inserido');
+    
+    // Carregar e renderizar eventos
+    await carregarEventosAgendaDiaria(data, resources);
+    console.log('carregarEventosAgendaDiaria concluído');
+}
+
+async function carregarEventosAgendaDiaria(data, resources) {
+    console.log('carregarEventosAgendaDiaria chamado com data:', data, 'resources:', resources);
+    try {
+        const startDate = new Date(data);
+        const endDate = new Date(data);
+        endDate.setDate(endDate.getDate() + 1);
+        
+        console.log('Buscando eventos de', startDate.toISOString(), 'até', endDate.toISOString());
+        const response = await fetch(`/scheduling/api/eventos/?start=${startDate.toISOString()}&end=${endDate.toISOString()}`);
+        console.log('Resposta API eventos:', response.status);
+        if (!response.ok) {
+            console.error('Erro ao buscar eventos:', await response.text());
+            return;
+        }
+        
+        const eventos = await response.json();
+        console.log('Eventos recebidos:', eventos);
+        
+        // Agrupar eventos por fila
+        const eventosPorFila = {};
+        resources.forEach(r => {
+            eventosPorFila[r.id] = [];
+        });
+        
+        eventos.forEach(e => {
+            const filaId = e.resourceId || (e.resourceIds && e.resourceIds[0]);
+            if (filaId && eventosPorFila[filaId]) {
+                eventosPorFila[filaId].push(e);
+            }
+        });
+        console.log('Eventos agrupados por fila:', eventosPorFila);
+        
+        // Ordenar eventos por horário
+        Object.keys(eventosPorFila).forEach(filaId => {
+            eventosPorFila[filaId].sort((a, b) => new Date(a.start) - new Date(b.start));
+        });
+        
+        // Renderizar em grid 4 colunas
+        const contentDiv = document.getElementById('agenda-content');
+        if (!contentDiv) {
+            console.error('Elemento agenda-content não encontrado!');
+            return;
+        }
+        contentDiv.innerHTML = '';
+        
+        const row = document.createElement('div');
+        row.className = 'row g-2';
+        
+        console.log('Renderizando', resources.length, 'filas...');
+        resources.forEach((r, index) => {
+            const col = document.createElement('div');
+            col.className = 'col-md-3';
+            
+            const card = document.createElement('div');
+            card.className = 'card';
+            
+            // Botão de adicionar agendamento
+            const addBtn = `
+                <button class="btn btn-sm btn-ghost-success" onclick="novoAgendamentoFila(${r.id})" title="Adicionar agendamento">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                </button>
+            `;
+            
+            // Botão de remover fila
+            const deleteBtn = `
+                <button class="btn btn-sm btn-ghost-danger" onclick="confirmarRemoverFila(${r.id}, '${(r.nome || r.title).replace(/'/g, "\\'")}')" title="Remover fila">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+                        <line x1="4" y1="7" x2="20" y2="7" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                        <path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" />
+                        <path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" />
+                    </svg>
+                </button>
+            `;
+            
+            card.innerHTML = `
+                <div class="card-header d-flex align-items-center">
+                    <h4 class="card-title m-0">${r.nome || r.title}</h4>
+                    <div class="ms-auto">
+                        ${addBtn}
+                        ${deleteBtn}
+                    </div>
+                </div>
+                <div class="card-body p-2">
+                    ${renderizarEventosFila(eventosPorFila[r.id] || [])}
+                </div>
+            `;
+            
+            col.appendChild(card);
+            row.appendChild(col);
+        });
+        
+        contentDiv.appendChild(row);
+        console.log('Grid renderizado com sucesso');
+        
+        // Inicializar tooltips
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Inicializar popovers
+        const popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+        popoverTriggerList.forEach(function (popoverTriggerEl) {
+            new bootstrap.Popover(popoverTriggerEl, {
+                sanitize: false
+            });
+        });
+        
+        // Inicializar drag and drop
+        inicializarDragDrop();
+        
+    } catch (error) {
+        console.error('Erro ao carregar eventos:', error);
+    }
+}
+
+let draggedElement = null;
+
+function inicializarDragDrop() {
+    const eventItems = document.querySelectorAll('.event-item[draggable="true"]');
+    
+    eventItems.forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+            draggedElement = this;
+            this.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+        });
+        
+        item.addEventListener('dragend', function(e) {
+            this.style.opacity = '1';
+            draggedElement = null;
+        });
+        
+        item.addEventListener('dragover', function(e) {
+            if (e.preventDefault) {
+                e.preventDefault();
+            }
+            e.dataTransfer.dropEffect = 'move';
+            
+            // Verificar se estão na mesma fila (mesmo parent container)
+            if (this !== draggedElement && draggedElement && this.parentNode === draggedElement.parentNode) {
+                const rect = this.getBoundingClientRect();
+                const midpoint = rect.top + rect.height / 2;
+                
+                if (e.clientY < midpoint) {
+                    this.parentNode.insertBefore(draggedElement, this);
+                } else {
+                    this.parentNode.insertBefore(draggedElement, this.nextSibling);
+                }
+            }
+            
+            return false;
+        });
+        
+        item.addEventListener('drop', function(e) {
+            if (e.stopPropagation) {
+                e.stopPropagation();
+            }
+            
+            // Salvar nova ordem no backend
+            salvarOrdemAgendamentos();
+            
+            return false;
+        });
+    });
+}
+
+function salvarOrdemAgendamentos() {
+    // Coletar todos os event-ids na ordem atual
+    const filasColunas = document.querySelectorAll('.fila-coluna');
+    
+    filasColunas.forEach(colunaFila => {
+        const eventItems = colunaFila.querySelectorAll('.event-item');
+        const ordemIds = Array.from(eventItems).map(item => item.dataset.eventId);
+        
+        // Enviar para o backend
+        if (ordemIds.length > 0) {
+            fetch('/scheduling/api/agendamentos/atualizar-ordem/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ ordem_ids: ordemIds })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('Ordem atualizada com sucesso');
+                }
+            })
+            .catch(err => console.error('Erro ao salvar ordem:', err));
+        }
+    });
+}
+
+function renderizarEventosFila(eventos) {
+    if (eventos.length === 0) {
+        return '<div class="text-muted text-center py-2">Sem agendamentos</div>';
+    }
+    
+    // Ordenar: com horário primeiro (por horário), depois sem horário
+    const eventosOrdenados = eventos.slice().sort((a, b) => {
+        const aTemHorario = a.extendedProps?.horario && a.extendedProps.horario !== 'sem-horario';
+        const bTemHorario = b.extendedProps?.horario && b.extendedProps.horario !== 'sem-horario';
+        
+        if (aTemHorario && !bTemHorario) return -1;
+        if (!aTemHorario && bTemHorario) return 1;
+        if (aTemHorario && bTemHorario) {
+            return (a.extendedProps.horario || '').localeCompare(b.extendedProps.horario || '');
+        }
+        return 0;
+    });
+    
+    return eventosOrdenados.map((e, idx) => {
+        const [clienteNome, animalNome] = (e.title || '').split(' - ');
+        const primeiroNome = clienteNome ? clienteNome.split(' ')[0] : '';
+        const tipoAtendimento = e.extendedProps?.tipoAtendimento || 'Atendimento';
+        const horario = e.extendedProps?.horario && e.extendedProps.horario !== 'sem-horario' 
+            ? e.extendedProps.horario 
+            : '--:--';
+        
+        // Calcular horário de término
+        let horarioFim = '';
+        if (e.extendedProps?.horario && e.extendedProps.horario !== 'sem-horario' && e.extendedProps?.duracaoMinutos) {
+            const [h, m] = e.extendedProps.horario.split(':');
+            const inicio = new Date();
+            inicio.setHours(parseInt(h), parseInt(m));
+            inicio.setMinutes(inicio.getMinutes() + e.extendedProps.duracaoMinutos);
+            horarioFim = inicio.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        }
+        
+        // Calcular tempo de espera se status for 'espera'
+        let tempoEspera = '';
+        if (e.extendedProps?.status === 'espera' && e.extendedProps?.dataHoraInicio) {
+            const inicio = new Date(e.extendedProps.dataHoraInicio);
+            const agora = new Date();
+            const diffMs = agora - inicio;
+            const diffMin = Math.floor(diffMs / 60000);
+            if (diffMin > 0) {
+                const horas = Math.floor(diffMin / 60);
+                const minutos = diffMin % 60;
+                tempoEspera = horas > 0 ? `${horas}h ${minutos}min` : `${minutos}min`;
+            }
+        }
+        
+        // Popover: usar título padrão do Bootstrap (data-bs-title) e conteúdo em data-bs-content
+        const observacoes = e.extendedProps?.observacoes || '';
+        const statusRaw = e.extendedProps?.status || '';
+        const statusLabel = statusRaw ? statusRaw.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : '';
+        const corTipo = e.backgroundColor || '#6c757d';
+
+        // tentar extrair nome do profissional que atenderá (veterinario)
+        const veterinarioNome = e.extendedProps?.veterinario_nome || e.extendedProps?.veterinarioNome || (e.extendedProps?.veterinario && (e.extendedProps.veterinario.nome || e.extendedProps.veterinario.name)) || e.extendedProps?.veterinario || '';
+        const tipoComVeterinario = veterinarioNome ? `${tipoAtendimento} (${veterinarioNome})` : tipoAtendimento;
+
+        const popoverTitle = `
+            <div style="display:flex; flex-direction:column; width:100%; background-color: ${corTipo}; color: white;">
+                <div style="font-weight:700; font-size:0.95rem; word-break:break-word; line-height:1;">${tipoComVeterinario}</div>
+                <div style="font-size:0.75rem; opacity:0.95; margin-top:2px; text-align:right; line-height:1;">${statusLabel}</div>
+            </div>
+        `.replace(/"/g, '&quot;');
+
+        const popoverBody = `
+            <div style="text-align:left; width:100%; max-width:360px; ">
+                <div style="margin-bottom:4px; width:100%;"><strong>Cliente:</strong> ${clienteNome}</div>
+                <div style="margin-bottom:4px; width:100%;"><strong>Animal:</strong> ${animalNome || ''}</div>
+                <div style="margin-bottom:4px; width:100%;"><strong>Horário de início:</strong> ${horario}</div>
+                ${horarioFim ? `<div style="margin-bottom:4px; width:100%;"><strong>Horário de término:</strong> ${horarioFim}</div>` : ''}
+                ${observacoes ? `<div style="margin-top:6px; width:100%;"><strong>Observações:</strong><br>${observacoes}</div>` : ''}
+            </div>
+        `.replace(/"/g, '&quot;');
+
+        return `
+            <div class="event-item mb-1 border rounded cursor-pointer d-flex${statusRaw === 'cancelado' ? ' event-cancelado' : ''}" 
+                 data-event-id="${e.id}"
+                 data-event-index="${idx}"
+                 draggable="true"
+                 onclick="editarAgendamentoPorId('${e.id}')" 
+                 style="background-color: white; overflow: hidden;"
+                 data-bs-toggle="popover" 
+                 data-bs-html="true"
+                 data-bs-trigger="hover"
+                 data-bs-placement="right"
+                 data-bs-custom-class="event-popover"
+                 data-bs-title='${popoverTitle}'
+                 data-bs-content='${popoverBody}'>
+                <div class=\"event-handle d-flex align-items-center justify-content-center p-1\" style=\"background-color: ${e.backgroundColor}; width: 32px; flex-shrink: 0;\">
+                    <i class=\"ti ti-arrows-move\" style=\"color: white; font-size: 18px;\"></i>
+                </div>
+                <div class=\"flex-fill p-2\" style=\"color: #333; position: relative;\">
+                    <div class=\"d-flex justify-content-between align-items-start mb-1\">
+                        <div class=\"fw-bold\" style=\"font-size: 0.875rem; padding-right: 50px;\">${primeiroNome} - ${animalNome || ''}</div>
+                        <div class=\"text-muted\" style=\"font-size: 0.875rem; position: absolute; top: 8px; right: 8px;\">${horario}</div>
+                    </div>
+                    <div class=\"text-muted\" style=\"font-size: 0.75rem;\">${tipoAtendimento}</div>
+                    ${observacoes ? `<div class=\"text-info\" style=\"font-size: 0.7rem; margin-top: 4px;\"><i class=\"ti ti-note\"></i> Observações</div>` : ''}
+                    ${tempoEspera ? `<div class=\"text-warning\" style=\"font-size: 0.75rem; font-weight: 600;\">Aguardando há ${tempoEspera}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function formatarDataExtenso(data) {
+    const d = new Date(data + 'T12:00:00');
+    return d.toLocaleDateString('pt-BR', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'});
+}
+
+async function navegarData(direcao) {
+    const d = new Date(dataAtual + 'T12:00:00');
+    d.setDate(d.getDate() + direcao);
+    dataAtual = d.toISOString().split('T')[0];
+    
+    document.getElementById('data-titulo').textContent = formatarDataExtenso(dataAtual);
+    
+    // Recarregar filas e eventos - incluir todas as filas (permanentes e adicionadas)
+    const response = await fetch(`/scheduling/api/filas/${dataAtual}/`);
+    if (response.ok) {
+        const filas = await response.json();
+        const resources = Array.isArray(filas) ? filas.map(f => ({
+            id: String(f.id),
+            nome: f.nome,
+            permanente: f.permanente,
+            removable: !f.permanente
+        })) : [];
+        
+        await carregarEventosAgendaDiaria(dataAtual, resources);
+    }
+}
+
+function editarAgendamentoPorId(id) {
+    // Buscar dados do agendamento
+    fetch(`/scheduling/api/agendamento/${id}/`)
+        .then(r => {
+            if (!r.ok) throw new Error('Erro ao carregar agendamento');
+            return r.json();
+        })
+        .then(agendamento => {
+            // Preencher formulário
+            document.getElementById('agendamento-id').value = agendamento.id;
+            document.getElementById('tipo_atendimento').value = agendamento.tipo_atendimento_id || '';
+            document.getElementById('data').value = agendamento.data || '';
+            
+            // Horário (pode ser null, "sem-horario" ou um horário válido)
+            if (!agendamento.horario || agendamento.horario === 'sem-horario') {
+                document.getElementById('horario').value = 'sem-horario';
+            } else {
+                document.getElementById('horario').value = agendamento.horario;
+            }
+            
+            document.getElementById('duracao_minutos').value = agendamento.duracao_display || '';
+            document.getElementById('duracao_minutos_valor').value = agendamento.duracao_minutos || '';
+            document.getElementById('fila').value = agendamento.fila_id || '';
+            // Mostrar e popular o campo "Quem atenderá" no modo edição
+            const rowVet = document.getElementById('row-veterinario');
+            const selectVet = document.getElementById('veterinario');
+            rowVet.style.display = 'block';
+
+            // Carregar detalhes da fila para decidir comportamento do select de veterinários
+            if (agendamento.fila_id) {
+                fetch(`/scheduling/api/fila/${agendamento.fila_id}/detalhes/`)
+                    .then(r => r.json())
+                    .then(fila => {
+                        if (fila.atribuido_a) {
+                            selectVet.innerHTML = `<option value="${fila.atribuido_a.id}">${fila.atribuido_a.nome}</option>`;
+                            selectVet.disabled = true;
+                            // garantir que o valor do veterinário seja o atribuído à fila
+                            document.getElementById('veterinario').value = fila.atribuido_a.id;
+                        } else {
+                            // Carregar lista de veterinários e selecionar o que já está no agendamento
+                            fetch('/scheduling/api/veterinarios/')
+                                .then(r => r.json())
+                                .then(vets => {
+                                    selectVet.innerHTML = '<option value="">Selecione...</option>';
+                                    vets.forEach(v => {
+                                        selectVet.innerHTML += `<option value="${v.id}">${v.nome}</option>`;
+                                    });
+                                    selectVet.disabled = false;
+                                    if (agendamento.veterinario_id) {
+                                        selectVet.value = agendamento.veterinario_id;
+                                    }
+                                })
+                                .catch(err => {
+                                    console.error('Erro ao carregar veterinários:', err);
+                                });
+                        }
+                    })
+                    .catch(err => {
+                        console.error('Erro ao carregar detalhes da fila:', err);
+                    });
+            } else {
+                // Sem fila: carregar veterinários disponíveis e permitir seleção
+                fetch('/scheduling/api/veterinarios/')
+                    .then(r => r.json())
+                    .then(vets => {
+                        selectVet.innerHTML = '<option value="">Selecione...</option>';
+                        vets.forEach(v => {
+                            selectVet.innerHTML += `<option value="${v.id}">${v.nome}</option>`;
+                        });
+                        selectVet.disabled = false;
+                        if (agendamento.veterinario_id) {
+                            selectVet.value = agendamento.veterinario_id;
+                        }
+                    })
+                    .catch(err => console.error('Erro ao carregar veterinários:', err));
+            }
+            document.getElementById('observacoes').value = agendamento.observacoes || '';
+            
+            // Status
+            const statusRadio = document.getElementById(`status-${agendamento.status}`);
+            if (statusRadio) {
+                statusRadio.checked = true;
+                document.getElementById('status').value = agendamento.status;
+            }
+            
+            // Cliente e animal
+            if (agendamento.cliente_id) {
+                document.getElementById('cliente').value = agendamento.cliente_id;
+                document.getElementById('cliente-search').value = agendamento.cliente_nome || '';
+                document.getElementById('celular_cliente').value = agendamento.celular_cliente || '';
+                
+                // Atualizar botão WhatsApp
+                atualizarBotaoWhatsApp(agendamento.celular_cliente, agendamento.celular_whatsapp);
+                
+                // Carregar animais do cliente
+                fetch(`/scheduling/api/animais/${agendamento.cliente_id}/`)
+                    .then(r => r.json())
+                    .then(animais => {
+                        const select = document.getElementById('animal');
+                        select.innerHTML = '';
+                        
+                        if (animais.length === 0) {
+                            select.innerHTML = '<option value="">Nenhum animal cadastrado</option>';
+                            select.disabled = true;
+                        } else {
+                            animais.forEach(a => {
+                                const option = document.createElement('option');
+                                option.value = a.id;
+                                option.textContent = `${a.nome} - ${a.especie}`;
+                                if (a.id === agendamento.animal_id) {
+                                    option.selected = true;
+                                }
+                                select.appendChild(option);
+                            });
+                            select.disabled = false;
+                        }
+                    })
+                    .catch(err => console.error('Erro ao carregar animais:', err));
+            }
+            
+            // Mostrar botões de edição, esconder de novo
+            document.getElementById('botoes-novo').classList.add('d-none');
+            document.getElementById('botoes-edicao').classList.remove('d-none');
+            document.getElementById('botoes-acao-topo').classList.remove('d-none');
+            
+            // Mostrar seção de tempos se não estiver agendado
+            if (agendamento.status !== 'agendado') {
+                document.getElementById('secao-tempos').classList.remove('d-none');
+                
+                // Calcular tempos
+                const agora = new Date();
+                const dataHoraInicio = agendamento.data_hora_inicio ? new Date(agendamento.data_hora_inicio) : null;
+                
+                // Tempo em espera
+                if (agendamento.status === 'espera' && dataHoraInicio) {
+                    const diffMs = agora - dataHoraInicio;
+                    const horas = Math.floor(diffMs / (1000 * 60 * 60));
+                    const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                    document.getElementById('tempo-espera').textContent = `${horas}h ${minutos}min`;
+                } else {
+                    document.getElementById('tempo-espera').textContent = '-';
+                }
+                
+                // Tempo em atraso (se horário agendado passou e ainda está em espera)
+                document.getElementById('tempo-atraso').textContent = '-';
+                if (agendamento.status === 'espera' && agendamento.horario && agendamento.horario !== 'sem-horario') {
+                    const [horas, minutos] = agendamento.horario.split(':');
+                    const dataAgendada = new Date(agendamento.data);
+                    dataAgendada.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+                    
+                    if (agora > dataAgendada) {
+                        const atrasoMs = agora - dataAgendada;
+                        const horasAtraso = Math.floor(atrasoMs / (1000 * 60 * 60));
+                        const minutosAtraso = Math.floor((atrasoMs % (1000 * 60 * 60)) / (1000 * 60));
+                        document.getElementById('tempo-atraso').textContent = `${horasAtraso}h ${minutosAtraso}min`;
+                    }
+                }
+                
+                // Tempo em atendimento
+                document.getElementById('tempo-atendimento').textContent = '-';
+                
+            } else {
+                document.getElementById('secao-tempos').classList.add('d-none');
+            }
+            
+            // Alterar título ANTES de abrir o modal
+            document.getElementById('offcanvas-title').textContent = 'Editar Agendamento';
+            
+            // Abrir modal
+            new bootstrap.Offcanvas(document.getElementById('offcanvasAgendamento')).show();
+        })
+        .catch(err => {
+            console.error('Erro ao carregar agendamento:', err);
+            alert('Erro ao carregar agendamento');
+        });
+}
+
+async function carregarEventos(info) {
+    try {
+        // Aceitar diferentes formatos de 'info' (EventCalendar pode enviar start/end como Date objects)
+        let startParam = null;
+        let endParam = null;
+
+        if (info) {
+            if (info.startStr) startParam = info.startStr;
+            else if (info.start instanceof Date) startParam = info.start.toISOString();
+            else if (info.start) startParam = new Date(info.start).toISOString();
+
+            if (info.endStr) endParam = info.endStr;
+            else if (info.end instanceof Date) endParam = info.end.toISOString();
+            else if (info.end) endParam = new Date(info.end).toISOString();
+        }
+
+        // Fallback: usar data atual caso não informado
+        if (!startParam) startParam = new Date().toISOString();
+        if (!endParam) {
+            const d = new Date(startParam);
+            d.setDate(d.getDate() + 1);
+            endParam = d.toISOString();
+        }
+
+        // Normalizar quaisquer formatos de data (ex.: "Tue Mar 10 2026 ...") para ISO
+        const normalizeToISO = (val) => {
+            if (!val) return null;
+            if (val instanceof Date) return val.toISOString();
+            // Tentar parsear e converter para ISO
+            const parsed = new Date(val);
+            if (!isNaN(parsed.getTime())) return parsed.toISOString();
+            // Se não for um Date válido, devolver como estava (será codificado na query)
+            return val;
+        };
+
+        startParam = normalizeToISO(startParam) || startParam;
+        endParam = normalizeToISO(endParam) || endParam;
+
+        console.log('carregarEventos requisitando:', startParam, endParam);
+
+        const response = await fetch(`/scheduling/api/eventos/?start=${encodeURIComponent(startParam)}&end=${encodeURIComponent(endParam)}`);
+        if (response.ok) {
+            const eventos = await response.json();
+            if (calendar && Array.isArray(eventos)) {
+                // Normaliza eventos timed: arredonda o start para o INÍCIO da hora
+                // e o end para o fim dessa mesma hora.
+                // Assim TODOS eventos de um mesmo slot cobrem exatamente 12:00–13:00,
+                // o que faz slotEventOverlap:false empilhá-los verticalmente.
+                const eventosNormalizados = eventos.map(e => {
+                    if (e.allDay || !e.start) return e;
+                    const horaInicio = new Date(e.start);
+                    horaInicio.setMinutes(0, 0, 0);
+                    const horaFim = new Date(horaInicio);
+                    horaFim.setHours(horaFim.getHours() + 1);
+                    return Object.assign({}, e, {
+                        start: horaInicio.toISOString(),
+                        end: horaFim.toISOString()
+                    });
+                });
+                calendar.setOption('events', eventosNormalizados);
+            }
+        } else {
+            console.error('Erro ao carregar eventos: status', response.status);
+        }
+    } catch (error) {
+        console.error('Erro ao carregar eventos:', error);
+    }
+}
+
+function novoAgendamento(info = null) {
+    limparFormularioAgendamento();
+    
+    // Alterar título
+    document.getElementById('offcanvas-title').textContent = 'Novo Agendamento';
+    
+    // Mostrar botões de novo, esconder de edição
+    document.getElementById('botoes-novo').classList.remove('d-none');
+    document.getElementById('botoes-edicao').classList.add('d-none');
+    document.getElementById('secao-tempos').classList.add('d-none');
+    document.getElementById('botoes-acao-topo').classList.add('d-none');
+    
+    document.getElementById('status-agendado').checked = true;
+    document.getElementById('status').value = 'agendado';
+    
+    // Definir data padrão como hoje
+    const hoje = new Date().toISOString().split('T')[0];
+    document.getElementById('data').value = hoje;
+    
+    if (info) {
+        // Event Calendar usa start/end como Date objects
+        const start = info.start;
+        if (start) {
+            document.getElementById('data').value = start.toISOString().split('T')[0];
+
+            // Quando o usuário clica na área do dia (click em celula do dia),
+            // o start geralmente vem com hora 00:00 e/ou selection com duração >= 24h.
+            // Nesses casos não preenchermos o horário automaticamente — deixar em "Selecione...".
+            const hours = start.getHours();
+            const minutes = start.getMinutes();
+            let preencherHorario = true;
+
+            try {
+                if (hours === 0 && minutes === 0) {
+                    if (info.end) {
+                        const durationMs = (new Date(info.end)) - (new Date(start));
+                        if (durationMs >= 24 * 60 * 60 * 1000) {
+                            preencherHorario = false;
+                        }
+                    } else {
+                        // Sem end informado, assumir clique no dia inteiro -> não preencher
+                        preencherHorario = false;
+                    }
+                }
+            } catch (err) {
+                console.warn('Erro ao avaliar seleção de data:', err);
+            }
+
+            if (preencherHorario) {
+                const hh = String(hours).padStart(2, '0');
+                const mm = String(minutes).padStart(2, '0');
+                document.getElementById('horario').value = `${hh}:${mm}`;
+            } else {
+                // Manter opção padrão "Selecione..." (valor vazio)
+                document.getElementById('horario').value = '';
+            }
+        }
+
+        // Resource disponível diretamente no info
+        if (info.resource) {
+            document.getElementById('fila').value = info.resource.id;
+        }
+    }
+    
+    new bootstrap.Offcanvas(document.getElementById('offcanvasAgendamento')).show();
+}
+
+function novoAgendamentoFila(filaId) {
+    limparFormularioAgendamento();
+    
+    // Alterar título
+    document.getElementById('offcanvas-title').textContent = 'Novo Agendamento';
+    
+    // Mostrar botões de novo, esconder de edição
+    document.getElementById('botoes-novo').classList.remove('d-none');
+    document.getElementById('botoes-edicao').classList.add('d-none');
+    document.getElementById('secao-tempos').classList.add('d-none');
+    document.getElementById('botoes-acao-topo').classList.add('d-none');
+    
+    document.getElementById('status-agendado').checked = true;
+    document.getElementById('status').value = 'agendado';
+    
+    // Usar a data da agenda diária atual
+    document.getElementById('data').value = dataAtual;
+    
+    // Pré-selecionar a fila
+    document.getElementById('fila').value = filaId;
+    
+    // Disparar evento change para carregar veterinário se necessário
+    const event = new Event('change', { bubbles: true });
+    document.getElementById('fila').dispatchEvent(event);
+    
+    // Abrir modal
+    new bootstrap.Offcanvas(document.getElementById('offcanvasAgendamento')).show();
+}
+
+function buscarClientes() {
+    const cliente = document.getElementById('filtro-cliente').value;
+    const animal = document.getElementById('filtro-animal').value;
+    const telefone = document.getElementById('filtro-telefone').value;
+    
+    const params = new URLSearchParams();
+    if (cliente) params.append('cliente', cliente);
+    if (animal) params.append('animal', animal);
+    if (telefone) params.append('telefone', telefone);
+    
+    console.log('Buscando clientes com filtros:', {cliente, animal, telefone});
+    
+    fetch(`/scheduling/api/buscar-clientes/?${params.toString()}`)
+        .then(r => {
+            console.log('Resposta da busca:', r.status);
+            if (!r.ok) throw new Error('Erro na busca de clientes');
+            return r.json();
+        })
+        .then(data => {
+            console.log('Resultados da busca:', data.length, data);
+            const tbody = document.getElementById('resultados-pesquisa');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" class="text-center text-muted py-4">Nenhum resultado encontrado</td></tr>';
+                return;
+            }
+            
+            data.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = 'cursor-pointer';
+                tr.innerHTML = `
+                    <td><strong>${item.cliente_nome}</strong><br><small class="text-muted">${item.telefone || ''}</small></td>
+                    <td>${item.animal_nome}<br><small class="text-muted">${item.especie || ''}</small></td>
+                `;
+                
+                // Click no nome do cliente
+                tr.querySelector('td:first-child').onclick = () => {
+                    selecionarClienteDaPesquisa(item.cliente_id, item.cliente_nome, item.telefone, item.celular_whatsapp);
+                };
+                
+                // Click no nome do animal
+                tr.querySelector('td:nth-child(2)').onclick = () => {
+                    selecionarClienteEAnimalDaPesquisa(item.cliente_id, item.cliente_nome, item.animal_id, item.animal_nome, item.telefone, item.celular_whatsapp);
+                };
+                
+                tbody.appendChild(tr);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao buscar clientes:', error);
+            const tbody = document.getElementById('resultados-pesquisa');
+            tbody.innerHTML = '<tr><td colspan="2" class="text-center text-danger py-4">Erro ao buscar clientes. Verifique o console.</td></tr>';
+        });
+}
+
+function limparFiltros() {
+    document.getElementById('filtro-cliente').value = '';
+    document.getElementById('filtro-animal').value = '';
+    document.getElementById('filtro-telefone').value = '';
+    // Recarregar todos os clientes
+    buscarClientes();
+}
+
+function selecionarClienteDaPesquisa(clienteId, clienteNome, telefone, celularWhatsapp) {
+    document.getElementById('cliente').value = clienteId;
+    document.getElementById('cliente-search').value = clienteNome;
+    document.getElementById('celular_cliente').value = telefone || '';
+    
+    // Atualizar botão WhatsApp
+    atualizarBotaoWhatsApp(telefone, celularWhatsapp);
+    
+    fetch(`/scheduling/api/animais/${clienteId}/`)
+        .then(r => r.json())
+        .then(animais => {
+            const select = document.getElementById('animal');
+            select.innerHTML = '';
+            
+            if (animais.length === 0) {
+                select.innerHTML = '<option value="">Nenhum animal cadastrado</option>';
+                select.disabled = true;
+            } else {
+                animais.forEach(a => {
+                    const option = document.createElement('option');
+                    option.value = a.id;
+                    option.textContent = `${a.nome} - ${a.especie}`;
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            }
+        });
+    
+    bootstrap.Modal.getInstance(document.getElementById('modalPesquisarCliente')).hide();
+}
+
+function selecionarClienteEAnimalDaPesquisa(clienteId, clienteNome, animalId, animalNome, telefone, celularWhatsapp) {
+    document.getElementById('cliente').value = clienteId;
+    document.getElementById('cliente-search').value = clienteNome;
+    document.getElementById('celular_cliente').value = telefone || '';
+    
+    // Atualizar botão WhatsApp
+    atualizarBotaoWhatsApp(telefone, celularWhatsapp);
+    
+    const select = document.getElementById('animal');
+    select.innerHTML = `<option value="${animalId}" selected>${animalNome}</option>`;
+    select.disabled = false;
+    
+    bootstrap.Modal.getInstance(document.getElementById('modalPesquisarCliente')).hide();
+}
+
+function editarAgendamento(event) {
+    document.getElementById('agendamento-id').value = event.id;
+    document.getElementById('btn-deletar').style.display = 'block';
+    // TODO: preencher campos
+    new bootstrap.Offcanvas(document.getElementById('offcanvasAgendamento')).show();
+}
+
+function atualizarAgendamento(event) {
+    const startDate = event.start;
+    const endDate = event.end;
+    
+    // Obter resource ID se disponível
+    let filaId = null;
+    if (event.resourceIds && event.resourceIds.length > 0) {
+        filaId = event.resourceIds[0];
+    }
+    
+    fetch(`/scheduling/api/agendamento/${event.id}/editar/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            data: startDate.toISOString().split('T')[0],
+            horario: startDate.toTimeString().substring(0, 5),
+            duracao_minutos: Math.round((endDate - startDate) / 60000),
+            fila_id: filaId
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) {
+            alert('Erro: ' + (data.error || 'Erro desconhecido'));
+            calendar.refetchEvents();
+        }
+    });
+}
+
+function selecionarCliente(cliente) {
+    document.getElementById('cliente').value = cliente.id;
+    document.getElementById('cliente-search').value = cliente.nome_completo;
+    document.getElementById('celular_cliente').value = cliente.celular || '';
+    document.getElementById('cliente-autocomplete-results').classList.remove('show');
+    
+    // Atualizar botão WhatsApp
+    atualizarBotaoWhatsApp(cliente.celular, cliente.celular_whatsapp);
+    
+    console.log('Buscando animais do cliente:', cliente.id);
+    fetch(`/scheduling/api/animais/${cliente.id}/`)
+        .then(r => {
+            console.log('Resposta animais:', r.status);
+            if (!r.ok) throw new Error('Erro ao buscar animais');
+            return r.json();
+        })
+        .then(animais => {
+            console.log('Animais encontrados:', animais.length, animais);
+            const select = document.getElementById('animal');
+            select.innerHTML = '';
+            
+            if (animais.length === 0) {
+                select.innerHTML = '<option value="">Nenhum animal cadastrado</option>';
+                select.disabled = true;
+            } else {
+                animais.forEach(a => {
+                    const option = document.createElement('option');
+                    option.value = a.id;
+                    option.textContent = `${a.nome} - ${a.especie}`;
+                    select.appendChild(option);
+                });
+                select.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar animais:', error);
+            const select = document.getElementById('animal');
+            select.innerHTML = '<option value="">Erro ao carregar animais</option>';
+            select.disabled = true;
+        });
+}
+
+function formatarDuracao(minutos) {
+    if (minutos < 60) {
+        return minutos + 'min';
+    } else if (minutos === 60) {
+        return '1h';
+    } else if (minutos % 60 === 0) {
+        return (minutos / 60) + 'h';
+    } else {
+        const horas = Math.floor(minutos / 60);
+        const mins = minutos % 60;
+        return horas + 'h' + mins + 'min';
+    }
+}
+
+function confirmarAdicionarFila(filaId, filaNome) {
+    // Verificar se a fila já está na agenda
+    const filaJaExiste = currentResources.some(r => String(r.id) === String(filaId));
+    
+    if (filaJaExiste) {
+        // Mostrar modal de erro Tabler informando que a fila já está na agenda
+        document.getElementById('modal-fila-duplicada-nome').textContent = filaNome;
+        const modal = new bootstrap.Modal(document.getElementById('modalFilaDuplicada'));
+        modal.show();
+        return;
+    }
+    
+    // Formatar data para exibição
+    const dataFormatada = formatarDataExtenso(dataAtual);
+    
+    // Preencher modal
+    document.getElementById('modal-adicionar-fila-nome').textContent = filaNome;
+    document.getElementById('modal-adicionar-fila-data').textContent = dataFormatada;
+    
+    // Configurar botão de confirmação
+    const btnConfirmar = document.getElementById('btn-confirmar-adicionar-fila');
+    btnConfirmar.onclick = function() {
+        adicionarFila(filaId);
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmarAdicionarFila')).hide();
+    };
+    
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmarAdicionarFila'));
+    modal.show();
+}
+
+function adicionarFila(filaId) {
+    const data = dataAtual || new Date().toISOString().split('T')[0];
+    
+    fetch('/scheduling/api/fila-dia/adicionar/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({fila_id: filaId, data: data})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            // Recarregar calendário
+            initCalendar();
+        } else {
+            mostrarModalErro('Erro ao adicionar fila: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(err => {
+        mostrarModalErro('Erro ao adicionar fila: ' + err.message);
+    });
+}
+
+function confirmarRemoverFila(filaId, filaNome) {
+    // Formatar data para exibição
+    const dataFormatada = formatarDataExtenso(dataAtual);
+    
+    // Preencher modal
+    document.getElementById('modal-remover-fila-nome').textContent = filaNome;
+    document.getElementById('modal-remover-fila-data').textContent = dataFormatada;
+    
+    // Configurar botão de confirmação
+    const btnConfirmar = document.getElementById('btn-confirmar-remover-fila');
+    btnConfirmar.onclick = function() {
+        removerFila(filaId);
+        bootstrap.Modal.getInstance(document.getElementById('modalConfirmarRemoverFila')).hide();
+    };
+    
+    // Abrir modal
+    const modal = new bootstrap.Modal(document.getElementById('modalConfirmarRemoverFila'));
+    modal.show();
+}
+
+function removerFila(filaId) {
+    const data = dataAtual || new Date().toISOString().split('T')[0];
+    
+    fetch('/scheduling/api/fila-dia/remover/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({fila_id: filaId, data: data})
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            initCalendar();
+        } else {
+            mostrarModalErro('Erro ao remover fila: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(err => {
+        mostrarModalErro('Erro ao remover fila: ' + err.message);
+    });
+}
+
+function mostrarModalSucesso(mensagem) {
+    // Reuse modal-based feedback
+    showSuccessModal(mensagem);
+}
+
+function mostrarModalErro(mensagem) {
+    // Reuse modal-based feedback for errors
+    showDangerModal(mensagem);
+}
+
+function limparFormularioAgendamento() {
+    document.getElementById('form-agendamento').reset();
+    document.getElementById('agendamento-id').value = '';
+    document.getElementById('cliente').value = '';
+    document.getElementById('cliente-search').value = '';
+    document.getElementById('celular_cliente').value = '';
+    document.getElementById('horario').disabled = false;
+    
+    // Limpar select de animal
+    const animalSelect = document.getElementById('animal');
+    animalSelect.innerHTML = '<option value="">Selecione cliente</option>';
+    animalSelect.disabled = true;
+    
+    // Limpar autocomplete
+    document.getElementById('cliente-autocomplete-results').classList.remove('show');
+    
+    // Resetar título
+    document.getElementById('offcanvas-title').textContent = 'Novo Agendamento';
+    
+    // Resetar visibilidade dos botões para estado inicial (novo agendamento)
+    document.getElementById('botoes-novo').classList.remove('d-none');
+    document.getElementById('botoes-edicao').classList.add('d-none');
+    document.getElementById('secao-tempos').classList.add('d-none');
+    document.getElementById('botoes-acao-topo').classList.add('d-none');
+    
+    // Garantir que status volte para agendado
+    document.getElementById('status-agendado').checked = true;
+    
+    // Esconder botão WhatsApp
+    document.getElementById('btn-whatsapp').style.display = 'none';
+}
+
+function atualizarBotaoWhatsApp(celular, celularWhatsapp) {
+    const btnWhatsApp = document.getElementById('btn-whatsapp');
+    
+    if (celular && celularWhatsapp) {
+        // Formatar número removendo caracteres especiais
+        const numeroFormatado = celular.replace(/\D/g, '');
+        // URL do WhatsApp com código do Brasil (55)
+        btnWhatsApp.href = `https://wa.me/55${numeroFormatado}`;
+        btnWhatsApp.style.display = 'block';
+    } else {
+        btnWhatsApp.style.display = 'none';
+    }
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie) {
+        const cookies = document.cookie.split(';');
+        for (let cookie of cookies) {
+            cookie = cookie.trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>
+{% endblock %}

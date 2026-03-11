@@ -49,60 +49,76 @@
           <div class="col-auto">
             <h3 class="mb-0">{{ user.get_full_name|default:user.username }}</h3>
             <div class="text-secondary">
-              {% with user.groups.first as primary_group %}
-                {% if primary_group %}{{ primary_group.name }}{% elif user.is_superuser %}Administrador{% else %}Usuário{% endif %}
-              {% endwith %}
+              {% if user.userprofile.perfil %}
+                {{ user.userprofile.get_perfil_display }}
+              {% elif user.is_superuser %}
+                Administrador
+              {% else %}
+                Usuário
+              {% endif %}
             </div>
           </div>
         </div>
 
         <div class="row g-3">
+          <!-- Linha 1: Usuário e Perfil (readonly) -->
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Usuário</label>
-              <input type="text" class="form-control" value="{{ user.username }}" readonly>
+              <input type="text" class="form-control" value="{{ user.username }}" disabled>
             </div>
           </div>
           <div class="col-md-6">
-            <div class="mb-3">
-              <label class="form-label">E-mail</label>
-              <input type="text" class="form-control" value="{{ user.email|default:"-" }}" readonly>
-            </div>
+              <label class="form-label">Perfil do Usuário</label>
+              <input type="text" class="form-control" value="{{ user.userprofile.get_perfil_display }}" disabled>
           </div>
+          
+          <!-- Linha 2: Nome e Sobrenome -->
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Nome</label>
-              <input type="text" class="form-control" value="{{ user.first_name|default:"-" }}" readonly>
+              <input type="text" class="form-control" value="{{ user.first_name|default:"-" }}" disabled>
             </div>
           </div>
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Sobrenome</label>
-              <input type="text" class="form-control" value="{{ user.last_name|default:"-" }}" readonly>
+              <input type="text" class="form-control" value="{{ user.last_name|default:"-" }}" disabled>
             </div>
           </div>
+          
+          <!-- Linha 3: CPF (ocupando apenas uma coluna) -->
+          <div class="col-md-6">
+              <label class="form-label">CPF</label>
+              <input type="text" class="form-control" value="{{ profile.get_cpf_formatted|default:"-" }}" disabled>
+          </div> 
+          <div class="col-md-6"></div>
+
+          <!-- Linha 4: Email e Celular -->
           <div class="col-md-6">
             <div class="mb-3">
-              <label class="form-label">CPF</label>
-              <input type="text" class="form-control" value="{{ profile.get_cpf_formatted|default:"-" }}" readonly>
+              <label class="form-label">E-mail</label>
+              <input type="text" class="form-control" value="{{ user.email|default:"-" }}" disabled>
             </div>
           </div>
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Celular</label>
-              <input type="text" class="form-control" value="{{ profile.celular|default:"-" }}" readonly>
+              <input type="text" class="form-control" value="{{ profile.celular|default:"-" }}" disabled>
             </div>
           </div>
+
+          <!-- Linha 5: CRMV e MAPA -->
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">CRMV</label>
-              <input type="text" class="form-control" value="{{ profile.crmv|default:"-" }}" readonly>
+              <input type="text" class="form-control" value="{{ profile.crmv|default:"-" }}" disabled>
             </div>
           </div>
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">MAPA</label>
-              <input type="text" class="form-control" value="{{ profile.mapa|default:"-" }}" readonly>
+              <input type="text" class="form-control" value="{{ profile.mapa|default:"-" }}" disabled>
             </div>
           </div>
         </div>

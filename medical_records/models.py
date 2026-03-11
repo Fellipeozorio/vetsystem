@@ -1,7 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
 from patients.models import Pet
-from scheduling.models import Appointment
+from scheduling.models import Agendamento
 
 
 class MedicalRecord(models.Model):
@@ -12,7 +12,7 @@ class MedicalRecord(models.Model):
     )
 
     appointment = models.OneToOneField(
-        Appointment,
+        Agendamento,
         on_delete=models.CASCADE,
         related_name='prontuario'
     )
@@ -81,3 +81,255 @@ class Attachment(models.Model):
 
     def __str__(self):
         return self.descricao
+
+
+# Novos modelos para a timeline de histórico médico
+
+class Atendimento(models.Model):
+    """Registro de atendimento clínico"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='atendimentos')
+    tipo_atendimento = models.ForeignKey('cadastros.TipoAtendimento', on_delete=models.PROTECT)
+    data_hora = models.DateTimeField()
+    observacoes = models.TextField(blank=True)
+    detalhes = models.TextField(blank=True)
+    arquivo = models.FileField(upload_to='atendimentos/', blank=True, null=True)
+    data_retorno = models.DateField(blank=True, null=True)
+    hora_retorno = models.TimeField(blank=True, null=True)
+    obs_retorno = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Atendimento'
+        verbose_name_plural = 'Atendimentos'
+
+    def __str__(self):
+        return f"{self.tipo_atendimento.nome} - {self.pet.nome} ({self.data_hora.strftime('%d/%m/%Y %H:%M')})"
+
+
+class Peso(models.Model):
+    """Registro de peso do animal"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='pesos')
+    data_hora = models.DateTimeField()
+    peso = models.DecimalField(max_digits=6, decimal_places=2)
+    condicao_corporal = models.CharField(max_length=50, blank=True)
+    observacoes = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Peso'
+        verbose_name_plural = 'Pesos'
+
+    def __str__(self):
+        return f"{self.pet.nome} - {self.peso}kg ({self.data_hora.strftime('%d/%m/%Y')})"
+
+
+class Patologia(models.Model):
+    """Registro de patologia/diagnóstico"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='patologias')
+    data_hora = models.DateTimeField()
+    diagnostico = models.CharField(max_length=200)
+    cid = models.CharField(max_length=20, blank=True)
+    gravidade = models.CharField(max_length=50, blank=True)
+    observacoes = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Patologia'
+        verbose_name_plural = 'Patologias'
+
+    def __str__(self):
+        return f"{self.diagnostico} - {self.pet.nome}"
+
+
+class Documento(models.Model):
+    """Registro de documentos"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='documentos')
+    data_hora = models.DateTimeField()
+    tipo = models.CharField(max_length=100)
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True)
+    arquivo = models.FileField(upload_to='documentos/')
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Documento'
+        verbose_name_plural = 'Documentos'
+
+    def __str__(self):
+        return f"{self.titulo} - {self.pet.nome}"
+
+
+class Exame(models.Model):
+    """Registro de exames"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='exames')
+    data_hora = models.DateTimeField()
+    tipo = models.CharField(max_length=100)
+    nome = models.CharField(max_length=200)
+    resultado = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Exame'
+        verbose_name_plural = 'Exames'
+
+    def __str__(self):
+        return f"{self.nome} - {self.pet.nome}"
+
+
+class ExameArquivo(models.Model):
+    """Arquivos de resultados de exames"""
+    exame = models.ForeignKey(Exame, on_delete=models.CASCADE, related_name='arquivos')
+    arquivo = models.FileField(upload_to='exames/')
+    
+    def __str__(self):
+        return f"Arquivo de {self.exame.nome}"
+
+
+class Foto(models.Model):
+    """Registro de fotos"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='fotos')
+    data_hora = models.DateTimeField()
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Foto'
+        verbose_name_plural = 'Fotos'
+
+    def __str__(self):
+        return f"{self.titulo} - {self.pet.nome}"
+
+
+class FotoArquivo(models.Model):
+    """Arquivos de imagens"""
+    foto = models.ForeignKey(Foto, on_delete=models.CASCADE, related_name='arquivos')
+    arquivo = models.ImageField(upload_to='fotos/')
+    
+    def __str__(self):
+        return f"Imagem de {self.foto.titulo}"
+
+
+class VacinaRegistro(models.Model):
+    """Registro de vacinas aplicadas"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='vacinas_aplicadas')
+    data_hora = models.DateTimeField()
+    nome = models.CharField(max_length=200)
+    lote = models.CharField(max_length=100, blank=True)
+    fabricante = models.CharField(max_length=200, blank=True)
+    proxima_dose = models.DateField(blank=True, null=True)
+    observacoes = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Vacina'
+        verbose_name_plural = 'Vacinas'
+
+    def __str__(self):
+        return f"{self.nome} - {self.pet.nome}"
+
+
+class Receita(models.Model):
+    """Registro de receitas médicas"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='receitas')
+    data_hora = models.DateTimeField()
+    tipo = models.CharField(max_length=100, blank=True)
+    validade = models.DateField(blank=True, null=True)
+    prescricao = models.TextField()
+    observacoes = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Receita'
+        verbose_name_plural = 'Receitas'
+
+    def __str__(self):
+        return f"Receita - {self.pet.nome} ({self.data_hora.strftime('%d/%m/%Y')})"
+
+
+class Observacao(models.Model):
+    """Registro de observações gerais"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='observacoes')
+    data_hora = models.DateTimeField()
+    titulo = models.CharField(max_length=200)
+    texto = models.TextField()
+    categoria = models.CharField(max_length=100, blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Observação'
+        verbose_name_plural = 'Observações'
+
+    def __str__(self):
+        return f"{self.titulo} - {self.pet.nome}"
+
+
+class Video(models.Model):
+    """Registro de vídeos"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='videos')
+    data_hora = models.DateTimeField()
+    titulo = models.CharField(max_length=200)
+    descricao = models.TextField(blank=True)
+    arquivo = models.FileField(upload_to='videos/')
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Vídeo'
+        verbose_name_plural = 'Vídeos'
+
+    def __str__(self):
+        return f"{self.titulo} - {self.pet.nome}"
+
+
+class Internacao(models.Model):
+    """Registro de internações"""
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='internacoes')
+    data_hora = models.DateTimeField()
+    status = models.CharField(max_length=50)
+    gravidade = models.CharField(max_length=50, blank=True)
+    motivo = models.TextField()
+    data_entrada = models.DateField()
+    previsao_alta = models.DateField(blank=True, null=True)
+    observacoes = models.TextField(blank=True)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_hora']
+        verbose_name = 'Internação'
+        verbose_name_plural = 'Internações'
+
+    def __str__(self):
+        return f"Internação - {self.pet.nome} ({self.data_entrada.strftime('%d/%m/%Y')})"
+

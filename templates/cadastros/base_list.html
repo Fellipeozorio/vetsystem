@@ -74,6 +74,12 @@
               Status: {% if value == 'True' or value == '1' %}Ativo{% else %}Inativo{% endif %}
             {% elif key == 'nome' %}
               Nome: "{{ value }}"
+            {% elif key == 'codigo' %}
+              Código: "{{ value }}"
+            {% elif key == 'permanente' %}
+              Permanente: {{ value }}
+            {% elif key == 'atribuido_a' %}
+              Atribuído a: {{ value }}
             {% else %}
               {{ key|title }}: "{{ value }}"
             {% endif %}

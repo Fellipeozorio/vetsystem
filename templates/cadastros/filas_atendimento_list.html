@@ -1,0 +1,426 @@
+{% extends 'cadastros/base_list.html' %}
+
+{% block extra_head %}
+<style>
+  /* Tooltips para ícones */
+  [data-bs-toggle="tooltip"] {
+    cursor: help;
+  }
+</style>
+{% endblock %}
+
+{% block table_header %}
+<th>Nome da Fila</th>
+<th class="text-center">Permanente</th>
+<th class="text-center">Quem atenderá</th>
+<th class="text-center">Status</th>
+<th class="w-1">Ações</th>
+{% endblock %}
+
+{% block table_row %}
+<td>
+  <strong>{{ item.nome }}</strong>
+  {% if item.codigo %}
+  <span class="text-muted">({{ item.codigo }})</span>
+  {% endif %}
+</td>
+<td class="text-center">
+  {% if item.permanente %}
+  Sim
+  {% else %}
+  Não
+  {% endif %}
+</td>
+<td class="text-center">
+  {% if item.atribuido_a %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user text-primary" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" data-bs-toggle="tooltip" data-bs-placement="top" title="Atribuído a: {{ item.atribuido_a.get_full_name|default:item.atribuido_a.username }}">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+    <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"></path>
+    <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path>
+  </svg>
+  {% else %}
+  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users text-secondary" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" data-bs-toggle="tooltip" data-bs-placement="top" title="Qualquer pessoa">
+    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+    <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path>
+    <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+    <path d="M21 21v-2a4 4 0 0 0 -3 -3.85"></path>
+  </svg>
+  {% endif %}
+</td>
+<td class="text-center">
+  {% if item.ativo %}
+  <span class="badge bg-success text-white">Ativo</span>
+  {% else %}
+  <span class="badge bg-danger text-white">Inativo</span>
+  {% endif %}
+</td>
+<td onclick="event.stopPropagation()">
+  <div class="btn-list flex-nowrap">
+    <button class="btn btn-sm btn-icon btn-ghost-secondary" onclick="editItem({{ item.id }})" title="Editar">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+    </button>
+    <button class="btn btn-sm btn-icon btn-ghost-danger" onclick="deleteItem({{ item.id }}, '{{ item.nome|escapejs }}')" title="Excluir">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+    </button>
+  </div>
+</td>
+{% endblock %}
+
+<!-- Sobrescrever formulário de criação -->
+{% block form_fields %}
+<div class="mb-3">
+  <label class="form-label required">Nome da Fila</label>
+  <input type="text" class="form-control" name="nome" id="create-nome" placeholder="Ex: Alta da internação, Emergência, Nome do Veterinári@..." required autofocus>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Aparece todos os dias na agenda?</label>
+  <div class="btn-group w-50" role="group">
+    <input type="radio" class="btn-check" name="permanente" id="create-permanente-sim" value="true">
+    <label class="btn btn-outline-primary" for="create-permanente-sim">Sim</label>
+    
+    <input type="radio" class="btn-check" name="permanente" id="create-permanente-nao" value="false" checked>
+    <label class="btn btn-outline-primary" for="create-permanente-nao">Não</label>
+  </div>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">
+    Quem atenderá 
+    <span class="form-help" data-bs-toggle="tooltip" data-bs-placement="top" title="A lista exibe apenas usuários cadastrados no grupo de veterinários">?</span>
+  </label>
+  <select class="form-select" name="atribuido_a" id="create-atribuido-a">
+    <option value="">Selecione...</option>
+    {% for vet in veterinarios %}
+    <option value="{{ vet.id }}">{{ vet.get_full_name|default:vet.username }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Status</label>
+  <div class="btn-group w-50" role="group">
+    <input type="radio" class="btn-check" name="ativo" id="create-ativo-sim" value="true" checked>
+    <label class="btn btn-outline-success" for="create-ativo-sim">Ativo</label>
+    
+    <input type="radio" class="btn-check" name="ativo" id="create-ativo-nao" value="false">
+    <label class="btn btn-outline-danger" for="create-ativo-nao">Inativo</label>
+  </div>
+</div>
+{% endblock %}
+
+<!-- Sobrescrever formulário de edição -->
+{% block form_fields_edit %}
+<div class="mb-3">
+  <label class="form-label required">Nome da Fila</label>
+  <input type="text" class="form-control" name="nome" id="edit-nome" placeholder="Ex: Alta da internação, Emergência, Nome do Veterinári@..." required autofocus>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Aparece todos os dias na agenda?</label>
+  <div class="btn-group w-50" role="group">
+    <input type="radio" class="btn-check" name="permanente" id="edit-permanente-sim" value="true">
+    <label class="btn btn-outline-primary" for="edit-permanente-sim">Sim</label>
+    
+    <input type="radio" class="btn-check" name="permanente" id="edit-permanente-nao" value="false">
+    <label class="btn btn-outline-primary" for="edit-permanente-nao">Não</label>
+  </div>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">
+    Quem atenderá 
+    <span class="form-help" data-bs-toggle="tooltip" data-bs-placement="top" title="A lista exibe apenas usuários cadastrados no grupo de veterinários">?</span>
+  </label>
+  <select class="form-select" name="atribuido_a" id="edit-atribuido-a">
+    <option value="">Selecione...</option>
+    {% for vet in veterinarios %}
+    <option value="{{ vet.id }}">{{ vet.get_full_name|default:vet.username }}</option>
+    {% endfor %}
+  </select>
+</div>
+
+<div class="mb-3">
+  <label class="form-label">Status</label>
+  <div class="btn-group w-50" role="group">
+    <input type="radio" class="btn-check" name="ativo" id="edit-ativo-sim" value="true">
+    <label class="btn btn-outline-success" for="edit-ativo-sim">Ativo</label>
+    
+    <input type="radio" class="btn-check" name="ativo" id="edit-ativo-nao" value="false">
+    <label class="btn btn-outline-danger" for="edit-ativo-nao">Inativo</label>
+  </div>
+</div>
+
+<div class="mb-4 mt-4">
+  <button type="button" class="btn btn-danger w-100" onclick="confirmDeleteCurrent()">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+    Excluir Fila
+  </button>
+</div>
+{% endblock %}
+
+<!-- Sobrescrever offcanvas de filtros avançados -->
+{% block offcanvas_filters %}
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filters" style="width: 600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      <input type="hidden" name="q" value="{{ query }}">
+      
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+      
+      <!-- Campo Nome -->
+      <div class="mb-3">
+        <label class="form-label">Nome da Fila</label>
+        <input type="text" class="form-control" name="filter_nome" 
+               placeholder="Digite o nome"
+               value="{{ active_filters.nome }}">
+      </div>
+      
+      <!-- Campo Código -->
+      <div class="mb-3">
+        <label class="form-label">Código</label>
+        <input type="text" class="form-control" name="filter_codigo" 
+               placeholder="Digite o código"
+               value="{{ active_filters.codigo }}">
+      </div>
+      
+      <!-- Campo Permanente -->
+      <div class="mb-3">
+        <label class="form-label">Permanente (todos os dias)</label>
+        <select class="form-select" name="filter_permanente">
+          <option value="">Todos</option>
+          <option value="True" {% if active_filters.permanente == 'True' %}selected{% endif %}>Sim</option>
+          <option value="False" {% if active_filters.permanente == 'False' %}selected{% endif %}>Não</option>
+        </select>
+      </div>
+      
+      <!-- Campo Atribuído a -->
+      <div class="mb-3">
+        <label class="form-label">Atribuído a</label>
+        <select class="form-select" name="filter_atribuido_a">
+          <option value="">Todos</option>
+          {% for vet in veterinarios %}
+          <option value="{{ vet.id }}" {% if active_filters.atribuido_a == vet.id|stringformat:"s" %}selected{% endif %}>
+            {{ vet.get_full_name|default:vet.username }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <!-- Campo Status -->
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="filter_ativo">
+          <option value="">Todos</option>
+          <option value="True" {% if active_filters.ativo == 'True' %}selected{% endif %}>Ativo</option>
+          <option value="False" {% if active_filters.ativo == 'False' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+      
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Função customizada para popular o formulário de edição
+function populateEditForm(data) {
+  // Permanente
+  if (data.permanente) {
+    document.getElementById('edit-permanente-sim').checked = true;
+  } else {
+    document.getElementById('edit-permanente-nao').checked = true;
+  }
+  
+  // Atribuído a
+  const atribuidoSelect = document.getElementById('edit-atribuido-a');
+  if (atribuidoSelect) {
+    atribuidoSelect.value = data.atribuido_a || '';
+  }
+  
+  // Status
+  if (data.ativo) {
+    document.getElementById('edit-ativo-sim').checked = true;
+  } else {
+    document.getElementById('edit-ativo-nao').checked = true;
+  }
+}
+
+// Função para confirmar exclusão do item atual em edição
+function confirmDeleteCurrent() {
+  const itemId = document.getElementById('edit-id').value;
+  const itemNome = document.getElementById('edit-nome').value;
+  
+  if (itemId) {
+    // Fechar offcanvas de edição
+    const editOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit'));
+    if (editOffcanvas) editOffcanvas.hide();
+    
+    // Chamar função de exclusão
+    deleteItem(itemId, itemNome);
+  }
+}
+
+// Sobrescrever envio do formulário de criação
+document.getElementById('form-create').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const submitBtn = this.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  
+  fetch("{% url 'cadastros:fila_atendimento_create' %}", {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    submitBtn.disabled = false;
+    if (data.success) {
+      // Fechar offcanvas
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-add'));
+      offcanvas.hide();
+      
+      // Mostrar modal de sucesso
+      showSuccessModal(data.message);
+    } else {
+      showErrorModal(data.error || 'Erro ao salvar registro');
+    }
+  })
+  .catch(error => {
+    submitBtn.disabled = false;
+    console.error('Erro:', error);
+    showErrorModal('Erro ao salvar registro');
+  });
+});
+
+// Sobrescrever envio do formulário de edição
+document.getElementById('form-edit').addEventListener('submit', function(e) {
+  e.preventDefault();
+  
+  const formData = new FormData(this);
+  const submitBtn = this.querySelector('button[type="submit"]');
+  const itemId = document.getElementById('edit-id').value;
+  submitBtn.disabled = true;
+  
+  fetch(`{% url 'cadastros:fila_atendimento_update' 0 %}`.replace('/0/', `/${itemId}/`), {
+    method: 'POST',
+    body: formData,
+    headers: {
+      'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+    }
+  })
+  .then(response => response.json())
+  .then(data => {
+    submitBtn.disabled = false;
+    if (data.success) {
+      // Fechar offcanvas
+      const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit'));
+      offcanvas.hide();
+      
+      // Recarregar página
+      location.reload();
+    } else {
+      showErrorModal(data.error || 'Erro ao atualizar registro');
+    }
+  })
+  .catch(error => {
+    submitBtn.disabled = false;
+    console.error('Erro:', error);
+    showErrorModal('Erro ao atualizar registro');
+  });
+});
+
+// Sobrescrever função de buscar detalhes do item
+function editItem(id) {
+  fetch(`{% url 'cadastros:fila_atendimento_detail' 0 %}`.replace('/0/', `/${id}/`))
+    .then(response => response.json())
+    .then(result => {
+      if (result.success) {
+        const data = result.data;
+        
+        // Preencher formulário
+        document.getElementById('edit-id').value = data.id;
+        document.getElementById('edit-nome').value = data.nome || '';
+        
+        // Campos específicos
+        populateEditForm(data);
+        
+        // Abrir offcanvas
+        const offcanvas = new bootstrap.Offcanvas(document.getElementById('offcanvas-edit'));
+        offcanvas.show();
+      } else {
+        showErrorModal('Erro ao carregar dados do registro');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showErrorModal('Erro ao carregar dados do registro');
+    });
+}
+
+// Sobrescrever confirmação de exclusão
+document.getElementById('btn-confirm-delete').addEventListener('click', function() {
+  if (!deleteItemId) return;
+  
+  const formData = new FormData();
+  formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+  
+  fetch(`{% url 'cadastros:fila_atendimento_delete' 0 %}`.replace('/0/', `/${deleteItemId}/`), {
+    method: 'POST',
+    body: formData
+  })
+  .then(response => response.json())
+  .then(data => {
+    // Fechar modal de confirmação
+    const confirmModal = bootstrap.Modal.getInstance(document.getElementById('modal-confirm-delete'));
+    confirmModal.hide();
+    
+    if (data.success) {
+      // Mostrar modal de sucesso e recarregar
+      showSuccessModal(data.message);
+    } else {
+      showErrorModal(data.error || 'Erro ao excluir registro');
+    }
+    
+    deleteItemId = null;
+    deleteItemName = null;
+  })
+  .catch(error => {
+    console.error('Erro:', error);
+    
+    const confirmModal = bootstrap.Modal.getInstance(document.getElementById('modal-confirm-delete'));
+    if (confirmModal) confirmModal.hide();
+    
+    showErrorModal('Erro ao excluir registro');
+    
+    deleteItemId = null;
+    deleteItemName = null;
+  });
+});
+
+// Inicializar tooltips
+document.addEventListener('DOMContentLoaded', function() {
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+  });
+});
+</script>
+{% endblock %}

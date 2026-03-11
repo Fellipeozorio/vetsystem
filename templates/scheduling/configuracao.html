@@ -1,0 +1,927 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Configuração da Agenda - VetSystem{% endblock %}
+
+{% block extra_css %}
+<style>
+  .table tbody tr:hover {
+    background-color: #f6f6f6;
+    cursor: pointer;
+  }
+  .table tbody tr {
+    transition: background-color .15s ease-in-out;
+  }
+  .escala-variavel {
+    font-weight: bold;
+    color: #d63939;
+  }
+  /* Garantir bordas completas nas tabs */
+  .nav-tabs-alt {
+    border-bottom: 1px solid #e6e7e9;
+  }
+  .tab-content {
+    border: 1px solid #e6e7e9;
+    border-top: none;
+    padding: 1rem;
+  }
+  /* Modal de sucesso customizado */
+  .modal-success .modal-content {
+    background-color: #2fb344;
+    color: white;
+  }
+  .modal-success .btn-close {
+    filter: brightness(0) invert(1);
+  }
+</style>
+{% endblock %}
+
+{% block page_header %}
+<div class="page-header d-print-none">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <h2 class="page-title">Configuração da Agenda</h2>
+            </div>
+            {% if user.is_staff or user.is_superuser %}
+            <div class="col-auto ms-auto d-print-none">
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-usuarios">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"></path></svg>
+                    Usuários
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<!-- Card de Horário de Funcionamento (Full Width) -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">Horário de Funcionamento</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+            <thead>
+                <tr>
+                    <th>Dia</th>
+                    <th>Horário de Início</th>
+                    <th>Horário de Término</th>
+                </tr>
+            </thead>
+            <tbody id="horarios-tbody">
+                <!-- Preenchido via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Card de Usuários que Possuem Agenda (Full Width) -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h3 class="card-title">Usuários que Possuem Agenda</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+            <thead>
+                <tr>
+                    <th>Usuário</th>
+                    <th>Perfil</th>
+                    <th>Informações de Atendimento</th>
+                </tr>
+            </thead>
+            <tbody id="usuarios-tbody">
+                <!-- Preenchido via JS -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal de Horário de Funcionamento -->
+<div class="modal modal-blur fade" id="modal-horario" tabindex="-1" aria-modal="true" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Horário de Funcionamento</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-horario">
+                <div class="modal-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Dia</th>
+                                    <th>Horário de Início</th>
+                                    <th>Horário de Término</th>
+                                    <th class="text-center">Empresa Fechada</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Segunda-feira</strong></td>
+                                    <td><input type="time" class="form-control" name="horario_inicio_1" id="horario_inicio_1"></td>
+                                    <td><input type="time" class="form-control" name="horario_fim_1" id="horario_fim_1"></td>
+                                    <td class="text-center"><input type="checkbox" class="form-check-input" name="fechado_1" id="fechado_1"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Terça-feira</strong></td>
+                                    <td><input type="time" class="form-control" name="horario_inicio_2" id="horario_inicio_2"></td>
+                                    <td><input type="time" class="form-control" name="horario_fim_2" id="horario_fim_2"></td>
+                                    <td class="text-center"><input type="checkbox" class="form-check-input" name="fechado_2" id="fechado_2"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Quarta-feira</strong></td>
+                                    <td><input type="time" class="form-control" name="horario_inicio_3" id="horario_inicio_3"></td>
+                                    <td><input type="time" class="form-control" name="horario_fim_3" id="horario_fim_3"></td>
+                                    <td class="text-center"><input type="checkbox" class="form-check-input" name="fechado_3" id="fechado_3"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Quinta-feira</strong></td>
+                                    <td><input type="time" class="form-control" name="horario_inicio_4" id="horario_inicio_4"></td>
+                                    <td><input type="time" class="form-control" name="horario_fim_4" id="horario_fim_4"></td>
+                                    <td class="text-center"><input type="checkbox" class="form-check-input" name="fechado_4" id="fechado_4"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sexta-feira</strong></td>
+                                    <td><input type="time" class="form-control" name="horario_inicio_5" id="horario_inicio_5"></td>
+                                    <td><input type="time" class="form-control" name="horario_fim_5" id="horario_fim_5"></td>
+                                    <td class="text-center"><input type="checkbox" class="form-check-input" name="fechado_5" id="fechado_5"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Sábado</strong></td>
+                                    <td><input type="time" class="form-control" name="horario_inicio_6" id="horario_inicio_6"></td>
+                                    <td><input type="time" class="form-control" name="horario_fim_6" id="horario_fim_6"></td>
+                                    <td class="text-center"><input type="checkbox" class="form-check-input" name="fechado_6" id="fechado_6"></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Domingo</strong></td>
+                                    <td><input type="time" class="form-control" name="horario_inicio_0" id="horario_inicio_0"></td>
+                                    <td><input type="time" class="form-control" name="horario_fim_0" id="horario_fim_0"></td>
+                                    <td class="text-center"><input type="checkbox" class="form-check-input" name="fechado_0" id="fechado_0"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Configuração de Usuário -->
+<div class="modal modal-blur fade" id="modal-usuario" tabindex="-1" aria-modal="true" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modal-usuario-title">Configurar Usuário</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-usuario">
+                <input type="hidden" id="usuario-config-id">
+                <div class="modal-body">
+                    <!-- Tabs -->
+                    <ul class="nav nav-tabs nav-tabs-alt" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <a href="#tab-info-gerais" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">Informações Gerais</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a href="#tab-horario-atendimento" class="nav-link" data-bs-toggle="tab" aria-selected="false" role="tab" tabindex="-1">Horário de Atendimento</a>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content">
+                        <!-- Tab 1: Informações Gerais -->
+                        <div class="tab-pane fade active show" id="tab-info-gerais" role="tabpanel">
+                            <div class="mt-3">
+                                <label class="form-label">Este usuário realiza atendimentos?</label>
+                                <div>
+                                    <label class="form-check">
+                                        <input type="checkbox" name="tipo_atendimento" value="nao_realiza" class="form-check-input tipo-atendimento-checkbox">
+                                        <span class="form-check-label">Não, este usuário não realiza atendimentos</span>
+                                    </label>
+                                    <label class="form-check mt-2">
+                                        <input type="checkbox" name="tipo_atendimento" value="escala_fixa" class="form-check-input tipo-atendimento-checkbox" id="checkbox-escala-fixa">
+                                        <span class="form-check-label">Sim, este usuário realiza atendimentos e possui escala semanal fixa</span>
+                                    </label>
+                                    <label class="form-check mt-2">
+                                        <input type="checkbox" name="tipo_atendimento" value="escala_variavel" class="form-check-input tipo-atendimento-checkbox">
+                                        <span class="form-check-label">Sim, este usuário realiza atendimentos e possui escala variável (Exemplo: Plantonistas)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <label class="form-label">Quais agendas este usuário pode ver e alterar?</label>
+                                <div>
+                                    <label class="form-check">
+                                        <input type="checkbox" name="permissao_agenda" value="todas" class="form-check-input permissao-agenda-checkbox">
+                                        <span class="form-check-label">Este usuário pode ver e alterar a agenda de outros usuários</span>
+                                    </label>
+                                    <label class="form-check mt-2">
+                                        <input type="checkbox" name="permissao_agenda" value="propria" class="form-check-input permissao-agenda-checkbox">
+                                        <span class="form-check-label">Este usuário pode ver e alterar apenas a própria agenda</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Tab 2: Horário de Atendimento -->
+                        <div class="tab-pane fade" id="tab-horario-atendimento" role="tabpanel">
+                            <div class="mt-3">
+                                <div class="table-responsive">
+                                    <table class="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Dia</th>
+                                                <th>Horário de Início</th>
+                                                <th>Horário de Término</th>
+                                                <th class="text-center">Não Trabalha</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><strong>Segunda-feira</strong></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_inicio_1" id="usuario_horario_inicio_1"></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_fim_1" id="usuario_horario_fim_1"></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" name="usuario_nao_trabalha_1" id="usuario_nao_trabalha_1"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Terça-feira</strong></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_inicio_2" id="usuario_horario_inicio_2"></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_fim_2" id="usuario_horario_fim_2"></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" name="usuario_nao_trabalha_2" id="usuario_nao_trabalha_2"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Quarta-feira</strong></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_inicio_3" id="usuario_horario_inicio_3"></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_fim_3" id="usuario_horario_fim_3"></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" name="usuario_nao_trabalha_3" id="usuario_nao_trabalha_3"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Quinta-feira</strong></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_inicio_4" id="usuario_horario_inicio_4"></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_fim_4" id="usuario_horario_fim_4"></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" name="usuario_nao_trabalha_4" id="usuario_nao_trabalha_4"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Sexta-feira</strong></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_inicio_5" id="usuario_horario_inicio_5"></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_fim_5" id="usuario_horario_fim_5"></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" name="usuario_nao_trabalha_5" id="usuario_nao_trabalha_5"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Sábado</strong></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_inicio_6" id="usuario_horario_inicio_6"></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_fim_6" id="usuario_horario_fim_6"></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" name="usuario_nao_trabalha_6" id="usuario_nao_trabalha_6"></td>
+                                            </tr>
+                                            <tr>
+                                                <td><strong>Domingo</strong></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_inicio_0" id="usuario_horario_inicio_0"></td>
+                                                <td><input type="time" class="form-control" name="usuario_horario_fim_0" id="usuario_horario_fim_0"></td>
+                                                <td class="text-center"><input type="checkbox" class="form-check-input" name="usuario_nao_trabalha_0" id="usuario_nao_trabalha_0"></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Lista de Usuários com Permissão de Agenda -->
+<div class="modal modal-blur fade" id="modal-usuarios" tabindex="-1" aria-modal="true" role="dialog" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gerenciar Permissões de Agenda</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="form-usuarios-permissoes">
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Selecione quais usuários podem ter seus nomes exibidos na agenda.</p>
+                    <div class="table-responsive">
+                        <table class="table table-vcenter">
+                            <thead>
+                                <tr>
+                                    <th>Usuário</th>
+                                    <th>Perfil</th>
+                                    <th class="text-center">Exibir na Agenda</th>
+                                </tr>
+                            </thead>
+                            <tbody id="usuarios-permissoes-tbody">
+                                <!-- Preenchido via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Alterações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Sucesso (igual ao cadastros/base_list) -->
+<div class="modal modal-blur fade" id="modal-success" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <div class="modal-status bg-success"></div>
+            <div class="modal-body text-center py-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /><path d="M9 12l2 2l4 -4" /></svg>
+                <h3>Sucesso!</h3>
+                <div class="text-secondary" id="success-message">Operação realizada com sucesso.</div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <div class="row">
+                        <div class="col">
+                            <button type="button" class="btn w-100" onclick="location.reload()">Fechar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    carregarHorarios();
+    carregarUsuarios();
+    
+    // Função para mostrar modal de sucesso
+    function showSuccessModal(message) {
+        document.getElementById('success-message').textContent = message;
+        const modal = new bootstrap.Modal(document.getElementById('modal-success'));
+        modal.show();
+    }
+    
+    // Helper para formatar range de dias
+    function formatDiasRange(horarios) {
+        if (horarios.length === 0) return '';
+        
+        const diasOrdenados = horarios.sort((a, b) => a.dia_semana - b.dia_semana);
+        const grupos = [];
+        let grupoAtual = null;
+        
+        diasOrdenados.forEach(h => {
+            if (!grupoAtual) {
+                grupoAtual = {
+                    inicio: h.dia_semana,
+                    fim: h.dia_semana,
+                    horario_inicio: h.horario_inicio,
+                    horario_fim: h.horario_fim,
+                    dias_display: [h.dia_semana_display]
+                };
+            } else if (
+                h.dia_semana === grupoAtual.fim + 1 &&
+                h.horario_inicio === grupoAtual.horario_inicio &&
+                h.horario_fim === grupoAtual.horario_fim
+            ) {
+                grupoAtual.fim = h.dia_semana;
+                grupoAtual.dias_display.push(h.dia_semana_display);
+            } else {
+                grupos.push(grupoAtual);
+                grupoAtual = {
+                    inicio: h.dia_semana,
+                    fim: h.dia_semana,
+                    horario_inicio: h.horario_inicio,
+                    horario_fim: h.horario_fim,
+                    dias_display: [h.dia_semana_display]
+                };
+            }
+        });
+        
+        if (grupoAtual) grupos.push(grupoAtual);
+        
+        return grupos.map(g => {
+            let diasTexto = '';
+            if (g.inicio === g.fim) {
+                diasTexto = g.dias_display[0];
+            } else {
+                diasTexto = `${g.dias_display[0]} a ${g.dias_display[g.dias_display.length - 1]}`;
+            }
+            return `${diasTexto}, ${g.horario_inicio} - ${g.horario_fim}`;
+        }).join(' | ');
+    }
+    
+    // Carregar horários
+    function carregarHorarios() {
+        fetch('/scheduling/api/horarios/')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('horarios-tbody');
+                tbody.innerHTML = '';
+                
+                // Filtrar apenas dias ativos e agrupar horários iguais
+                const diasAtivos = data.filter(h => h.ativo);
+                const horarioMap = {};
+                diasAtivos.forEach(h => {
+                    const key = `${h.horario_inicio}-${h.horario_fim}`;
+                    if (!horarioMap[key]) {
+                        horarioMap[key] = {
+                            inicio: h.horario_inicio,
+                            fim: h.horario_fim,
+                            dias: []
+                        };
+                    }
+                    horarioMap[key].dias.push(h.dia_semana_display);
+                });
+                
+                // Renderizar linhas
+                Object.values(horarioMap).forEach(horario => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = () => abrirModalHorario();
+                    
+                    // Contar dias ativos para comparação
+                    const totalDiasAtivos = diasAtivos.length;
+                    const diasTexto = totalDiasAtivos === 7 ? 'Segunda a Domingo' : horario.dias.join(', ');
+                    
+                    tr.innerHTML = `
+                        <td><strong>${diasTexto}</strong></td>
+                        <td>${horario.inicio}</td>
+                        <td>${horario.fim}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                // Se não houver dados, mostrar placeholder
+                if (Object.keys(horarioMap).length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = () => abrirModalHorario();
+                    tr.innerHTML = `
+                        <td><strong>Segunda a Domingo</strong></td>
+                        <td>--:--</td>
+                        <td>--:--</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar horários:', error);
+                // Mostrar linha padrão em caso de erro
+                const tbody = document.getElementById('horarios-tbody');
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => abrirModalHorario();
+                tr.innerHTML = `
+                    <td><strong>Segunda a Domingo</strong></td>
+                    <td>09:00</td>
+                    <td>18:00</td>
+                `;
+                tbody.appendChild(tr);
+            });
+    }
+    
+    // Carregar usuários
+    function carregarUsuarios() {
+        fetch('/scheduling/api/usuarios-config/')
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('usuarios-tbody');
+                tbody.innerHTML = '';
+                
+                // Filtrar apenas usuários ativos
+                const usuariosAtivos = data.filter(config => config.ativo);
+                
+                usuariosAtivos.forEach(config => {
+                    const tr = document.createElement('tr');
+                    tr.style.cursor = 'pointer';
+                    tr.onclick = () => abrirModalUsuario(config.id, config.usuario_nome);
+                    
+                   // Determinar texto de atendimento
+                    let infoAtendimento = '';
+                    if (config.tipo_atendimento === 'escala_variavel') {
+                        infoAtendimento = '<span class="escala-variavel">Profissional com escala variável</span>';
+                    } else if (config.tipo_atendimento === 'nao_realiza') {
+                        infoAtendimento = 'Não realiza atendimentos';
+                    } else if (config.tipo_atendimento === 'escala_fixa') {
+                        // Para escala fixa, mostrar os horários semanais
+                        if (config.horarios_semanais && config.horarios_semanais.length > 0) {
+                            infoAtendimento = formatDiasRange(config.horarios_semanais);
+                        } else {
+                            infoAtendimento = 'Escala semanal fixa (horários não configurados)';
+                        }
+                    }
+                    
+                    tr.innerHTML = `
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="avatar me-2" style="background-image: url(${config.usuario_avatar || 'https://api.dicebear.com/7.x/initials/svg?seed=' + encodeURIComponent(config.usuario_nome)})"></span>
+                                <div>
+                                    <div><strong>${config.usuario_nome}</strong></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>${config.usuario_perfil || 'Usuário'}</td>
+                        <td>${infoAtendimento}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                
+                // Se não houver usuários
+                if (usuariosAtivos.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td colspan="3" class="text-center text-muted">Nenhum usuário com agenda ativa</td>`;
+                    tbody.appendChild(tr);
+                }
+            })
+            .catch(error => {
+                console.error('Erro ao carregar usuários:', error);
+            });
+    }
+    
+    // Abrir modal de horário
+    function abrirModalHorario() {
+        // Carregar dados atuais
+        fetch('/scheduling/api/horarios/')
+            .then(response => response.json())
+            .then(data => {
+                // Preencher campos do modal
+                data.forEach(h => {
+                    const diaNum = h.dia_semana; // 0=domingo, 1=segunda, etc
+                    document.getElementById(`horario_inicio_${diaNum}`).value = h.horario_inicio || '';
+                    document.getElementById(`horario_fim_${diaNum}`).value = h.horario_fim || '';
+                    document.getElementById(`fechado_${diaNum}`).checked = !h.ativo;
+                });
+                
+                const modal = new bootstrap.Modal(document.getElementById('modal-horario'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                const modal = new bootstrap.Modal(document.getElementById('modal-horario'));
+                modal.show();
+            });
+    }
+    
+    // Abrir modal de usuário
+    function abrirModalUsuario(usuarioId, usuarioNome) {
+        document.getElementById('usuario-config-id').value = usuarioId;
+        document.getElementById('modal-usuario-title').textContent = `Configurar - ${usuarioNome}`;
+        
+        // Limpar formulário antes de carregar
+        document.querySelectorAll('.tipo-atendimento-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.permissao-agenda-checkbox').forEach(cb => cb.checked = false);
+        
+        // Limpar e desbloquear horários
+        for (let dia = 0; dia <= 6; dia++) {
+            const inicioInput = document.getElementById(`usuario_horario_inicio_${dia}`);
+            const fimInput = document.getElementById(`usuario_horario_fim_${dia}`);
+            const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${dia}`);
+            if (inicioInput) {
+                inicioInput.value = '';
+                inicioInput.disabled = false;
+            }
+            if (fimInput) {
+                fimInput.value = '';
+                fimInput.disabled = false;
+            }
+            if (naoTrabalhaCheckbox) {
+                naoTrabalhaCheckbox.checked = false;
+                naoTrabalhaCheckbox.disabled = false;
+            }
+        }
+        
+        // Carregar dados do usuário
+        fetch(`/scheduling/api/usuario-config/${usuarioId}/`)
+            .then(response => response.json())
+            .then(config => {
+                // Tab 1: Informações Gerais
+                const tipoAtendimentoCheckbox = document.querySelector(`input[name="tipo_atendimento"][value="${config.tipo_atendimento || 'nao_realiza'}"]`);
+                if (tipoAtendimentoCheckbox) tipoAtendimentoCheckbox.checked = true;
+                
+                const permissaoAgendaCheckbox = document.querySelector(`input[name="permissao_agenda"][value="${config.permissao_agenda || 'propria'}"]`);
+                if (permissaoAgendaCheckbox) permissaoAgendaCheckbox.checked = true;
+                
+                // Bloquear campos se escala variável ou não realiza
+                const isEscalaVariavel = config.tipo_atendimento === 'escala_variavel';
+                const isNaoRealiza = config.tipo_atendimento === 'nao_realiza';
+                
+                // Tab 2: Horário de Atendimento
+                if (config.horarios_semanais) {
+                    config.horarios_semanais.forEach(h => {
+                        const inicioInput = document.getElementById(`usuario_horario_inicio_${h.dia_semana}`);
+                        const fimInput = document.getElementById(`usuario_horario_fim_${h.dia_semana}`);
+                        const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${h.dia_semana}`);
+                        
+                        if (inicioInput) {
+                            inicioInput.value = h.horario_inicio || '';
+                            inicioInput.disabled = isEscalaVariavel || isNaoRealiza;
+                        }
+                        if (fimInput) {
+                            fimInput.value = h.horario_fim || '';
+                            fimInput.disabled = isEscalaVariavel || isNaoRealiza;
+                        }
+                        if (naoTrabalhaCheckbox) {
+                            naoTrabalhaCheckbox.checked = !h.trabalha;
+                            naoTrabalhaCheckbox.disabled = isEscalaVariavel || isNaoRealiza;
+                        }
+                    });
+                } else if (isEscalaVariavel || isNaoRealiza) {
+                    // Se não tem horários e é escala variável ou não realiza, bloquear todos
+                    for (let dia = 0; dia <= 6; dia++) {
+                        const inicioInput = document.getElementById(`usuario_horario_inicio_${dia}`);
+                        const fimInput = document.getElementById(`usuario_horario_fim_${dia}`);
+                        const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${dia}`);
+                        if (inicioInput) inicioInput.disabled = true;
+                        if (fimInput) fimInput.disabled = true;
+                        if (naoTrabalhaCheckbox) naoTrabalhaCheckbox.disabled = true;
+                    }
+                }
+                
+                const modal = new bootstrap.Modal(document.getElementById('modal-usuario'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                const modal = new bootstrap.Modal(document.getElementById('modal-usuario'));
+                modal.show();
+            });
+    }
+    
+    // Tornar funções globais
+    window.abrirModalHorario = abrirModalHorario;
+    window.abrirModalUsuario = abrirModalUsuario;
+    
+    // Submit form horário
+    document.getElementById('form-horario').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const horarios = [];
+        
+        for (let dia = 0; dia <= 6; dia++) {
+            horarios.push({
+                dia_semana: dia,
+                horario_inicio: formData.get(`horario_inicio_${dia}`),
+                horario_fim: formData.get(`horario_fim_${dia}`),
+                ativo: !formData.get(`fechado_${dia}`)
+            });
+        }
+        
+        fetch('/scheduling/api/horarios/salvar/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ horarios })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                carregarHorarios();
+                bootstrap.Modal.getInstance(document.getElementById('modal-horario')).hide();
+                showSuccessModal('Horários de funcionamento salvos com sucesso!');
+            } else {
+                alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao salvar alterações');
+        });
+    });
+    
+    // Submit form usuário
+    document.getElementById('form-usuario').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const usuarioId = document.getElementById('usuario-config-id').value;
+        const formData = new FormData(this);
+        
+        const horarios = [];
+        for (let dia = 0; dia <= 6; dia++) {
+            horarios.push({
+                dia_semana: dia,
+                horario_inicio: formData.get(`usuario_horario_inicio_${dia}`) || null,
+                horario_fim: formData.get(`usuario_horario_fim_${dia}`) || null,
+                trabalha: !formData.get(`usuario_nao_trabalha_${dia}`)
+            });
+        }
+        
+        const payload = {
+            tipo_atendimento: formData.get('tipo_atendimento'),
+            permissao_agenda: formData.get('permissao_agenda'),
+            horarios_semanais: horarios
+        };
+        
+        fetch(`/scheduling/api/usuario-config/${usuarioId}/salvar/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                carregarUsuarios();
+                bootstrap.Modal.getInstance(document.getElementById('modal-usuario')).hide();
+                showSuccessModal('Configuração do usuário salva com sucesso!');
+            } else {
+                alert('Erro ao salvar: ' + (data.error || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao salvar alterações');
+        });
+    });
+    
+    // Controlar checkboxes para permitir apenas uma seleção por grupo
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('tipo-atendimento-checkbox')) {
+            document.querySelectorAll('.tipo-atendimento-checkbox').forEach(cb => {
+                if (cb !== e.target) cb.checked = false;
+            });
+            
+            // Bloquear/desbloquear campos de horário
+            const isEscalaVariavel = e.target.checked && e.target.value === 'escala_variavel';
+            const isNaoRealiza = e.target.checked && e.target.value === 'nao_realiza';
+            
+            for (let dia = 0; dia <= 6; dia++) {
+                const inicioInput = document.getElementById(`usuario_horario_inicio_${dia}`);
+                const fimInput = document.getElementById(`usuario_horario_fim_${dia}`);
+                const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${dia}`);
+                
+                if (isEscalaVariavel || isNaoRealiza) {
+                    // Bloquear e limpar campos
+                    if (inicioInput) {
+                        inicioInput.disabled = true;
+                        inicioInput.value = '';
+                    }
+                    if (fimInput) {
+                        fimInput.disabled = true;
+                        fimInput.value = '';
+                    }
+                    if (naoTrabalhaCheckbox) {
+                        naoTrabalhaCheckbox.disabled = true;
+                        naoTrabalhaCheckbox.checked = false;
+                    }
+                } else {
+                    // Desbloquear campos
+                    if (inicioInput) inicioInput.disabled = false;
+                    if (fimInput) fimInput.disabled = false;
+                    if (naoTrabalhaCheckbox) naoTrabalhaCheckbox.disabled = false;
+                }
+            }
+            
+            // Se selecionou "escala fixa", auto-preencher horários com os da clínica
+            if (e.target.checked && e.target.value === 'escala_fixa') {
+                fetch('/scheduling/api/horarios/')
+                    .then(response => response.json())
+                    .then(horarios => {
+                        horarios.forEach(h => {
+                            if (h.ativo) {
+                                const diaNum = h.dia_semana;
+                                const inicioInput = document.getElementById(`usuario_horario_inicio_${diaNum}`);
+                                const fimInput = document.getElementById(`usuario_horario_fim_${diaNum}`);
+                                const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${diaNum}`);
+                                
+                                if (inicioInput) inicioInput.value = h.horario_inicio || '';
+                                if (fimInput) fimInput.value = h.horario_fim || '';
+                                if (naoTrabalhaCheckbox) naoTrabalhaCheckbox.checked = false;
+                            } else {
+                                // Se empresa fechada nesse dia, marcar como não trabalha
+                                const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${h.dia_semana}`);
+                                if (naoTrabalhaCheckbox) naoTrabalhaCheckbox.checked = true;
+                            }
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Erro ao carregar horários:', error);
+                    });
+            }
+        }
+        if (e.target.classList.contains('permissao-agenda-checkbox')) {
+            document.querySelectorAll('.permissao-agenda-checkbox').forEach(cb => {
+                if (cb !== e.target) cb.checked = false;
+            });
+        }
+    });
+    
+    // Carregar lista de usuários no modal de permissões
+    const modalUsuarios = document.getElementById('modal-usuarios');
+    if (modalUsuarios) {
+        modalUsuarios.addEventListener('show.bs.modal', function() {
+            fetch('/scheduling/api/usuarios-config/')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('usuarios-permissoes-tbody');
+                    tbody.innerHTML = '';
+                    
+                    // Carregar todos os usuários ativos
+                    data.forEach(config => {
+                        const tr = document.createElement('tr');
+                        
+                        const avatarUrl = config.usuario_avatar || 
+                            `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(config.usuario_nome)}`;
+                        
+                        tr.innerHTML = `
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <span class="avatar me-2" style="background-image: url(${avatarUrl})"></span>
+                                    <div><strong>${config.usuario_nome}</strong></div>
+                                </div>
+                            </td>
+                            <td>${config.usuario_perfil || 'Usuário'}</td>
+                            <td class="text-center">
+                                <input type="checkbox" class="form-check-input usuario-agenda-checkbox" 
+                                    data-usuario-id="${config.usuario_id}" 
+                                    data-config-id="${config.id}"
+                                    ${config.ativo ? 'checked' : ''}>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar usuários:', error);
+                });
+        });
+    }
+    
+    // Submit form de permissões de usuários
+    document.getElementById('form-usuarios-permissoes').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const checkboxes = document.querySelectorAll('.usuario-agenda-checkbox');
+        const updates = [];
+        
+        checkboxes.forEach(cb => {
+            const configId = cb.getAttribute('data-config-id');
+            const ativo = cb.checked;
+            
+            updates.push(
+                fetch(`/scheduling/api/usuario-config/${configId}/salvar/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ ativo: ativo })
+                })
+            );
+        });
+        
+        Promise.all(updates)
+            .then(responses => Promise.all(responses.map(r => r.json())))
+            .then(results => {
+                const allSuccess = results.every(r => r.success);
+                if (allSuccess) {
+                    carregarUsuarios();
+                    bootstrap.Modal.getInstance(document.getElementById('modal-usuarios')).hide();
+                    showSuccessModal('Permissões de agenda atualizadas com sucesso!');
+                } else {
+                    alert('Erro ao salvar algumas permissões');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                alert('Erro ao salvar permissões');
+            });
+    });
+    
+    // Helper function para CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+});
+</script>
+{% endblock %}

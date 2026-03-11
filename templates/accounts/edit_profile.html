@@ -59,18 +59,19 @@
           </div>
 
           <div class="row g-3">
+            <!-- Linha 1: Usuário e Perfil (readonly) -->
             <div class="col-md-6">
               <label class="form-label required">Usuário</label>
               <input type="text" class="form-control" value="{{ user.username }}" disabled>
               <small class="form-hint">O nome de usuário não pode ser alterado.</small>
             </div>
             <div class="col-md-6">
-              <label class="form-label">E-mail <span class="text-danger">*</span></label>
-              {{ form.email }}
-              {% if form.email.errors %}
-                <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
-              {% endif %}
+              <label class="form-label">Perfil do Usuário</label>
+              <input type="text" class="form-control" value="{{ user.userprofile.get_perfil_display }}" disabled>
+              <small class="form-hint">O perfil é definido pelo administrador.</small>
             </div>
+
+            <!-- Linha 2: Nome e Sobrenome -->
             <div class="col-md-6">
               <label class="form-label">Nome</label>
               {{ form.first_name }}
@@ -85,6 +86,8 @@
                 <div class="invalid-feedback d-block">{{ form.last_name.errors.0 }}</div>
               {% endif %}
             </div>
+
+            <!-- Linha 3: CPF (ocupando apenas uma coluna) -->
             <div class="col-md-6">
               <label class="form-label">CPF <span class="text-danger">*</span></label>
               {{ form.cpf }}
@@ -92,6 +95,16 @@
                 <div class="invalid-feedback d-block">{{ form.cpf.errors.0 }}</div>
               {% endif %}
               <small class="form-hint">Apenas números. Ex: 12345678900</small>
+            </div>
+            <div class="col-md-6"></div>
+
+            <!-- Linha 4: Email e Celular -->
+            <div class="col-md-6">
+              <label class="form-label">E-mail <span class="text-danger">*</span></label>
+              {{ form.email }}
+              {% if form.email.errors %}
+                <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+              {% endif %}
             </div>
             <div class="col-md-6">
               <label class="form-label">Celular</label>
@@ -101,6 +114,8 @@
               {% endif %}
               <small class="form-hint">Ex: (11) 99999-9999</small>
             </div>
+
+            <!-- Linha 5: CRMV e MAPA -->
             <div class="col-md-6">
               <label class="form-label">CRMV</label>
               {{ form.crmv }}

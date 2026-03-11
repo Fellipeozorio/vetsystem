@@ -182,8 +182,10 @@ class UserEditForm(forms.ModelForm):
 
     class Meta:
         model = UserProfile
-        fields = ['cpf', 'celular', 'crmv', 'mapa', 'avatar']
+        fields = ['sexo', 'perfil', 'cpf', 'celular', 'crmv', 'mapa', 'avatar']
         widgets = {
+            'sexo': forms.Select(attrs={'class': 'form-select', 'id': 'id_sexo'}),
+            'perfil': forms.Select(attrs={'class': 'form-select', 'id': 'id_perfil'}),
             'cpf': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '000.000.000-00'}),
             'celular': forms.TextInput(attrs={'class': 'form-control', 'placeholder': '(11) 99999-9999'}),
             'crmv': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: CRMV-SP 12345'}),

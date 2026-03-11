@@ -1,0 +1,389 @@
+<!-- Formulário de Atendimento -->
+<div id="form-atendimento" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-first-aid-kit form-record-icon" style="color: #0066CC;"></i>
+        <h4 class="form-record-title" style="color: #0066CC;">Atendimento em</h4>
+        <span id="atendimento-datetime" class="form-record-datetime" style="color: #0066CC;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('atendimento-datetime')" title="Editar data/hora" style="color: #0066CC;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Tipo de Atendimento <span class="text-danger">*</span></label>
+      <select class="form-select" id="tipo-atendimento" required>
+        <option value="">Selecione...</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Observações</label>
+      <input type="text" class="form-control" id="resumo-atendimento" placeholder="Observações do atendimento">
+    </div>
+  </div>
+
+  <!-- Campos condicionais (aparecem após selecionar tipo) -->
+  <div id="campos-condicionais-atendimento" style="display: none;">
+    <!-- Editor de texto HugeRTE -->
+    <div class="mb-3">
+      <label class="form-label">Detalhes</label>
+      <div id="loading-editor-atendimento" style="height: 300px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #64748b; font-size: 14px;">
+        Carregando editor...
+      </div>
+      <textarea id="editor-atendimento" style="display: none;"></textarea>
+    </div>
+
+    <!-- Upload de arquivos -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Anexos</label>
+        <input type="file" class="form-control" id="file-atendimento" multiple>
+        <div id="file-badges-atendimento" class="file-badges mt-2"></div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-3" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="agendamento-tab" data-bs-toggle="tab" data-bs-target="#agendamento" type="button">
+          <i class="ti ti-calendar me-1"></i>
+          Agendamento de Retorno
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content">
+      <div class="tab-pane fade show active" id="agendamento">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Data do Retorno</label>
+            <input type="date" class="form-control" id="data-retorno">
+          </div>
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Hora do Retorno</label>
+            <input type="time" class="form-control" id="hora-retorno">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Observações do Retorno</label>
+          <textarea class="form-control" id="obs-retorno" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botões de ação -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+      <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+        <i class="ti ti-trash"></i>
+        Excluir
+      </button>
+      <div class="d-flex gap-2 ms-auto">
+        <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="save-atendimento">Salvar Atendimento</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  console.log('=== Atendimento form loaded ===');
+  const tipoAtendimentoSelect = document.getElementById('tipo-atendimento');
+  const saveBtn = document.getElementById('save-atendimento');
+  const fileInput = document.getElementById('file-atendimento');
+  const fileBadges = document.getElementById('file-badges-atendimento');
+  let uploadedFiles = [];
+  
+  console.log('Save button found:', saveBtn);
+  
+  // Carregar tipos de atendimento
+  function loadTiposAtendimento() {
+    fetch('/cadastros/api/tipos-atendimento/', {
+      credentials: 'same-origin'
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        tipoAtendimentoSelect.innerHTML = '<option value="">Selecione...</option>';
+        data.forEach(tipo => {
+          const option = document.createElement('option');
+          option.value = tipo.id;
+          option.textContent = tipo.nome;
+          tipoAtendimentoSelect.appendChild(option);
+        });
+      })
+      .catch(error => console.error('Erro ao carregar tipos:', error));
+  }
+  
+  // Ao selecionar tipo, mostrar campos condicionais
+  tipoAtendimentoSelect?.addEventListener('change', function() {
+    const camposCondicionais = document.getElementById('campos-condicionais-atendimento');
+    
+    if (this.value) {
+      camposCondicionais.style.display = 'block';
+      loadHubertEditor(this.value);
+    } else {
+      camposCondicionais.style.display = 'none';
+    }
+  });
+  
+  // Carregar editor HugeRTE
+  function loadHubertEditor(tipoId) {
+    console.log('Carregando template do tipo', tipoId);
+    
+    // Remover editor existente se houver
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('atendimento-editor')) {
+      HugeRTEEditor.remove('atendimento-editor');
+    }
+    
+    const loading = document.getElementById('loading-editor-atendimento');
+    const textarea = document.getElementById('editor-atendimento');
+    if (loading) loading.style.display = 'flex';
+    if (textarea) textarea.style.display = 'none';
+    
+    fetch(`/cadastros/api/tipos-atendimento/${tipoId}/template/`, {
+      credentials: 'same-origin'
+    })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        const templateContent = data.modelo_atendimento || '';
+        textarea.value = templateContent;
+        
+        // Verificar se HugeRTEEditor está disponível
+        if (!window.HugeRTEEditor) {
+          console.warn('HugeRTEEditor não disponível, usando textarea simples');
+          if (loading) loading.style.display = 'none';
+          textarea.style.display = 'block';
+          textarea.rows = 10;
+          textarea.className = 'form-control';
+          return;
+        }
+        
+        console.log('Iniciando HugeRTE...');
+        return HugeRTEEditor.init('#editor-atendimento', {
+          height: 300,
+          min_height: 300
+        }, 'atendimento-editor')
+          .then(() => {
+            console.log('✓ HugeRTE carregado e pronto');
+            if (loading) loading.style.display = 'none';
+            // Garantir que o editor fique visível
+            const editorContainer = document.querySelector('.tox-tinymce');
+            if (editorContainer) {
+              editorContainer.style.display = 'block';
+            }
+          })
+          .catch(error => {
+            console.error('Erro ao inicializar HugeRTE:', error);
+            if (loading) loading.style.display = 'none';
+            textarea.style.display = 'block';
+            textarea.rows = 10;
+            textarea.className = 'form-control';
+          });
+      })
+      .catch(error => {
+        console.error('Erro ao carregar template:', error);
+        if (loading) loading.style.display = 'none';
+        textarea.style.display = 'block';
+        textarea.rows = 10;
+        textarea.className = 'form-control';
+      });
+  }
+  
+  // Upload de arquivos
+  fileInput?.addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!uploadedFiles.find(f => f.name === file.name)) {
+        uploadedFiles.push(file);
+        addFileBadge(file.name);
+      }
+    });
+    fileInput.value = '';
+  });
+  
+  function addFileBadge(fileName) {
+    const badge = document.createElement('span');
+    badge.className = 'badge bg-secondary';
+    badge.innerHTML = `${fileName} <i class="ti ti-x" onclick="removeFileAtendimento('${fileName}')"></i>`;
+    fileBadges.appendChild(badge);
+  }
+  
+  window.removeFileAtendimento = function(fileName) {
+    uploadedFiles = uploadedFiles.filter(f => f.name !== fileName);
+    fileBadges.innerHTML = '';
+    uploadedFiles.forEach(file => addFileBadge(file.name));
+  };
+  
+  // Salvar
+  saveBtn?.addEventListener('click', function() {
+    console.log('=== Save button clicked ===');
+    const tipoId = tipoAtendimentoSelect.value;
+    const resumo = document.getElementById('resumo-atendimento').value;
+    
+    console.log('TipoId:', tipoId, 'Resumo:', resumo);
+    console.log('showDangerModal exists:', typeof showDangerModal !== 'undefined');
+    
+    if (!tipoId) {
+      if (typeof showDangerModal !== 'undefined') {
+        showDangerModal('Erro de Validação', 'Por favor, selecione o tipo de atendimento');
+      } else {
+        alert('Por favor, selecione o tipo de atendimento');
+      }
+      return;
+    }
+    
+    let detalhes = '';
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('atendimento-editor')) {
+      detalhes = HugeRTEEditor.getContent('atendimento-editor') || '';
+    } else {
+      detalhes = document.getElementById('editor-atendimento').value || '';
+    }
+    
+    // Preparar FormData
+    const formData = new FormData();
+    formData.append('tipo_atendimento_id', tipoId);
+    formData.append('observacoes', resumo);
+    formData.append('detalhes', detalhes);
+    
+    // Data e hora atual
+    const now = new Date();
+    const datetimeStr = now.toISOString().slice(0, 16);
+    formData.append('data_hora', datetimeStr);
+    
+    // Dados de retorno se preenchidos
+    const dataRetorno = document.getElementById('data-retorno')?.value;
+    const horaRetorno = document.getElementById('hora-retorno')?.value;
+    const obsRetorno = document.getElementById('obs-retorno')?.value;
+    
+    if (dataRetorno) formData.append('data_retorno', dataRetorno);
+    if (horaRetorno) formData.append('hora_retorno', horaRetorno);
+    if (obsRetorno) formData.append('obs_retorno', obsRetorno);
+    
+    // Arquivo se houver
+    if (uploadedFiles.length > 0) {
+      formData.append('arquivo', uploadedFiles[0]);
+    }
+    
+    // Salvar no backend
+    const petId = window.CURRENT_PET_ID;
+    console.log('Pet ID:', petId);
+    if (!petId) {
+      if (typeof showDangerModal !== 'undefined') {
+        showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      } else {
+        alert('ID do animal não encontrado');
+      }
+      return;
+    }
+    
+    console.log('Sending request to:', `/atendimento/api/${petId}/atendimento/`);
+    fetch(`/atendimento/api/${petId}/atendimento/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      console.log('Response status:', response.status);
+      // Verificar se resposta é JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          console.error('Resposta não é JSON:', text.substring(0, 200));
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique se você está autenticado e a URL está correta.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      console.log('Response data:', data);
+      if (data.success) {
+        // Adicionar à timeline
+        const tipoNome = tipoAtendimentoSelect.options[tipoAtendimentoSelect.selectedIndex].text;
+        const datetime = document.getElementById('atendimento-datetime').textContent;
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+        const isoDate = now.toISOString();
+        
+        console.log('Adding to timeline:', 'atendimento', resumo || tipoNome, isoDate, tipoNome, usuario, usuarioAvatar, data.id);
+        if (typeof adicionarItemTimeline !== 'undefined') {
+          adicionarItemTimeline('atendimento', resumo || tipoNome, isoDate, tipoNome, usuario, usuarioAvatar, data.id);
+        }
+        
+        if (typeof hideAllForms !== 'undefined') {
+          hideAllForms();
+        }
+        
+        if (typeof showSuccessModal !== 'undefined') {
+          showSuccessModal('Sucesso!', 'Atendimento salvo com sucesso!');
+        } else {
+          alert('Atendimento salvo com sucesso!');
+        }
+        
+        // Resetar form
+        tipoAtendimentoSelect.value = '';
+        document.getElementById('resumo-atendimento').value = '';
+        document.getElementById('campos-condicionais-atendimento').style.display = 'none';
+        uploadedFiles = [];
+        fileBadges.innerHTML = '';
+      } else {
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o atendimento');
+        } else {
+          alert(data.error || 'Ocorreu um erro ao salvar o atendimento');
+        }
+      }
+    })
+    .catch(error => {
+      console.error('Fetch error:', error);
+      if (typeof showDangerModal !== 'undefined') {
+        showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+      } else {
+        alert('Erro de Conexão: ' + error.message);
+      }
+    });
+  });
+  
+  // Helper para pegar CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  // Carregar tipos ao abrir o formulário
+  const btnAtendimento = document.querySelector('.btn-add[data-tipo="atendimento"]');
+  btnAtendimento?.addEventListener('click', function() {
+    loadTiposAtendimento();
+  });
+});
+</script>

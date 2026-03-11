@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import User
 
 
@@ -32,7 +32,30 @@ class Pelagem(BaseCadastro):
 
 
 class FilaAtendimento(BaseCadastro):
-    descricao = models.TextField(blank=True, null=True, verbose_name='Descrição')
+    codigo = models.CharField(
+        max_length=10,
+        unique=True,
+        editable=False,
+        blank=True,
+        verbose_name='Código'
+    )
+    permanente = models.BooleanField(
+        default=False,
+        verbose_name='Permanente',
+        help_text='Se marcado, esta fila aparecerá todos os dias na agenda'
+    )
+    atribuido_a = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='filas_atendimento',
+        verbose_name='Atribuído a',
+        help_text='Veterinário responsável por atender esta fila'
+    )
+    
+    def __str__(self):
+        return f"{self.nome} ({self.codigo})"
 
 
 class Patologia(BaseCadastro):

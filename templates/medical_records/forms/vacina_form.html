@@ -1,0 +1,149 @@
+<!-- Formulário de Vacina -->
+<div id="form-vacina" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-vaccine form-record-icon" style="color: #FFD700;"></i>
+        <h4 class="form-record-title" style="color: #FFD700;">Vacina em</h4>
+        <span id="vacina-datetime" class="form-record-datetime" style="color: #FFD700;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('vacina-datetime')" title="Editar data/hora" style="color: #FFD700;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Nome da Vacina <span class="text-danger">*</span></label>
+      <input type="text" class="form-control" id="nome-vacina" required placeholder="Ex: V10, Antirrábica">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Lote</label>
+      <input type="text" class="form-control" id="lote-vacina" placeholder="Número do lote">
+    </div>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Fabricante</label>
+      <input type="text" class="form-control" id="fabricante-vacina" placeholder="Nome do fabricante">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Próxima Dose</label>
+      <input type="date" class="form-control" id="proxima-dose-vacina">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea class="form-control" id="obs-vacina" rows="3" placeholder="Observações sobre a vacinação"></textarea>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-vacina">Salvar Vacina</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  
+  document.getElementById('save-vacina')?.addEventListener('click', function() {
+    const nome = document.getElementById('nome-vacina').value;
+    
+    if (!nome) {
+      showDangerModal('Erro de Validação', 'Por favor, informe o nome da vacina');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('nome', nome);
+    formData.append('lote', document.getElementById('lote-vacina').value);
+    formData.append('fabricante', document.getElementById('fabricante-vacina').value);
+    formData.append('proxima_dose', document.getElementById('proxima-dose').value);
+    formData.append('observacoes', document.getElementById('obs-vacina').value);
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/vacina/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const isoDate = now.toISOString();
+        const lote = document.getElementById('lote-vacina').value;
+        
+        adicionarItemTimeline('vacina', nome, isoDate, lote ? `Lote: ${lote}` : 'Vacina aplicada', usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Vacina salva com sucesso!');
+        
+        // Resetar
+        document.getElementById('nome-vacina').value = '';
+        document.getElementById('lote-vacina').value = '';
+        document.getElementById('fabricante-vacina').value = '';
+        document.getElementById('proxima-dose').value = '';
+        document.getElementById('obs-vacina').value = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a vacina');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    document.getElementById('proxima-dose-vacina').value = '';
+    document.getElementById('obs-vacina').value = '';
+  });
+</script>

@@ -1,0 +1,146 @@
+<!-- Formulário de Patologia -->
+<div id="form-patologia" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-virus form-record-icon" style="color: #6C2C91;"></i>
+        <h4 class="form-record-title" style="color: #6C2C91;">Patologia em</h4>
+        <span id="patologia-datetime" class="form-record-datetime" style="color: #6C2C91;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('patologia-datetime')" title="Editar data/hora" style="color: #6C2C91;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="mb-3">
+    <label class="form-label">Diagnóstico <span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="diagnostico-patologia" required placeholder="Diagnóstico da patologia">
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">CID</label>
+      <input type="text" class="form-control" id="cid-patologia" placeholder="Código CID (opcional)">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Gravidade</label>
+      <select class="form-select" id="gravidade-patologia">
+        <option value="">Selecione...</option>
+        <option value="leve">Leve</option>
+        <option value="moderada">Moderada</option>
+        <option value="grave">Grave</option>
+        <option value="critica">Crítica</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Observações</label>
+    <textarea class="form-control" id="obs-patologia" rows="4" placeholder="Detalhes sobre a patologia"></textarea>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-patologia">Salvar Patologia</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('save-patologia')?.addEventListener('click', function() {
+    const diagnostico = document.getElementById('diagnostico-patologia').value;
+    
+    if (!diagnostico) {
+      showDangerModal('Erro de Validação', 'Por favor, informe o diagnóstico');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('diagnostico', diagnostico);
+    formData.append('cid', document.getElementById('cid-patologia').value);
+    formData.append('gravidade', document.getElementById('gravidade-patologia').value);
+    formData.append('observacoes', document.getElementById('obs-patologia').value);
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/patologia/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+        const isoDate = now.toISOString();
+        const gravidade = document.getElementById('gravidade-patologia').value;
+        
+        adicionarItemTimeline('patologia', diagnostico, isoDate, gravidade ? `Gravidade: ${gravidade}` : 'Patologia registrada', usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Patologia salva com sucesso!');
+        
+        // Resetar
+        document.getElementById('diagnostico-patologia').value = '';
+        document.getElementById('cid-patologia').value = '';
+        document.getElementById('gravidade-patologia').value = '';
+        document.getElementById('obs-patologia').value = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a patologia');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    document.getElementById('gravidade-patologia').value = '';
+    document.getElementById('obs-patologia').value = '';
+  });
+</script>

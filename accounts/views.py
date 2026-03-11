@@ -260,6 +260,8 @@ def user_create_ajax(request):
         group_id = request.POST.get('group', '').strip()
         first_name = request.POST.get('first_name', '').strip()
         last_name = request.POST.get('last_name', '').strip()
+        sexo = request.POST.get('sexo', 'M').strip()
+        perfil = request.POST.get('perfil', 'recepcionista').strip()
         
         # Validações
         if not username:
@@ -318,8 +320,13 @@ def user_create_ajax(request):
                     user.set_unusable_password()  # Senha será definida pelo link de reset
                     user.save()
                     
-                    # Criar perfil manualmente com CPF
-                    UserProfile.objects.create(user=user, cpf=cpf_numbers)
+                    # Criar perfil manualmente com CPF, sexo e perfil
+                    UserProfile.objects.create(
+                        user=user, 
+                        cpf=cpf_numbers,
+                        sexo=sexo,
+                        perfil=perfil
+                    )
                     
                     # Adicionar ao grupo dentro da transação
                     user.groups.add(group)

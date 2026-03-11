@@ -1,0 +1,168 @@
+<!-- Formulário de Internação -->
+<div id="form-internacao" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-report-medical form-record-icon" style="color: #8B0000;"></i>
+        <h4 class="form-record-title" style="color: #8B0000;">Internação em</h4>
+        <span id="internacao-datetime" class="form-record-datetime" style="color: #8B0000;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('internacao-datetime')" title="Editar data/hora" style="color: #8B0000;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Status <span class="text-danger">*</span></label>
+      <select class="form-select" id="status-internacao" required>
+        <option value="">Selecione...</option>
+        <option value="admissao">Admissão</option>
+        <option value="em-andamento">Em Andamento</option>
+        <option value="alta">Alta</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Gravidade</label>
+      <select class="form-select" id="gravidade-internacao">
+        <option value="">Selecione...</option>
+        <option value="estavel">Estável</option>
+        <option value="moderado">Moderado</option>
+        <option value="grave">Grave</option>
+        <option value="critico">Crítico</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Motivo da Internação <span class="text-danger">*</span></label>
+    <textarea class="form-control" id="motivo-internacao" rows="3" required placeholder="Descreva o motivo da internação"></textarea>
+  </div>
+
+  <div class="row mb-3">
+    <div class="col-md-6">
+      <label class="form-label">Data de Entrada</label>
+      <input type="date" class="form-control" id="data-entrada-internacao">
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Previsão de Alta</label>
+      <input type="date" class="form-control" id="previsao-alta-internacao">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Procedimentos / Observações</label>
+    <textarea class="form-control" id="obs-internacao" rows="4" placeholder="Procedimentos realizados e observações"></textarea>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-internacao">Salvar Internação</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  
+  document.getElementById('save-internacao')?.addEventListener('click', function() {
+    const status = document.getElementById('status-internacao').value;
+    const motivo = document.getElementById('motivo-internacao').value;
+    const dataEntrada = document.getElementById('data-entrada-internacao').value;
+    
+    if (!status || !motivo || !dataEntrada) {
+      showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('status', status);
+    formData.append('motivo', motivo);
+    formData.append('gravidade', document.getElementById('gravidade-internacao').value);
+    formData.append('data_entrada', dataEntrada);
+    formData.append('previsao_alta', document.getElementById('previsao-alta-internacao').value);
+    formData.append('observacoes', document.getElementById('obs-internacao').value);
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/internacao/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const isoDate = now.toISOString();
+        
+        adicionarItemTimeline('internacao', `Internação: ${status}`, isoDate, motivo.substring(0, 100), usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Internação salva com sucesso!');
+        
+        // Resetar
+        document.getElementById('status-internacao').value = '';
+        document.getElementById('gravidade-internacao').value = '';
+        document.getElementById('motivo-internacao').value = '';
+        document.getElementById('data-entrada-internacao').value = '';
+        document.getElementById('previsao-alta-internacao').value = '';
+        document.getElementById('obs-internacao').value = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a internação');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    document.getElementById('previsao-alta-internacao').value = '';
+    document.getElementById('obs-internacao').value = '';
+  });
+</script>

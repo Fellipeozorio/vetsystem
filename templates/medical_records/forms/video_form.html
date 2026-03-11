@@ -1,0 +1,160 @@
+<!-- Formulário de Vídeo -->
+<div id="form-video" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-video form-record-icon" style="color: #006400;"></i>
+        <h4 class="form-record-title" style="color: #006400;">Vídeo em</h4>
+        <span id="video-datetime" class="form-record-datetime" style="color: #006400;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('video-datetime')" title="Editar data/hora" style="color: #006400;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="mb-3">
+    <label class="form-label">Título <span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="titulo-video" required placeholder="Ex: Comportamento do animal">
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Descrição</label>
+    <textarea class="form-control" id="desc-video" rows="3" placeholder="Descrição do vídeo"></textarea>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Selecionar Vídeo <span class="text-danger">*</span></label>
+    <input type="file" class="form-control" id="file-video" accept="video/*" required>
+    <small class="text-muted">Formatos aceitos: MP4, AVI, MOV</small>
+    <div id="file-badges-video" class="file-badges mt-2"></div>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-video">Salvar Vídeo</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  let uploadedFileVideo = null;
+  const fileInputVideo = document.getElementById('file-video');
+  const fileBadgesVideo = document.getElementById('file-badges-video');
+  
+  fileInputVideo?.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+      uploadedFileVideo = file;
+      fileBadgesVideo.innerHTML = '';
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-secondary';
+      badge.innerHTML = `${file.name} <i class="ti ti-x"></i>`;
+      badge.onclick = () => {
+        uploadedFileVideo = null;
+        fileBadgesVideo.innerHTML = '';
+        fileInputVideo.value = '';
+      };
+      fileBadgesVideo.appendChild(badge);
+    }
+  });
+  
+  document.getElementById('save-video')?.addEventListener('click', function() {
+    const titulo = document.getElementById('titulo-video').value;
+    
+    if (!titulo) {
+      showDangerModal('Erro de Validação', 'Por favor, informe o título');
+      return;
+    }
+    
+    if (!uploadedFileVideo) {
+      showDangerModal('Erro de Validação', 'Por favor, selecione um vídeo');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('titulo', titulo);
+    formData.append('descricao', document.getElementById('desc-video').value);
+    formData.append('arquivo', uploadedFileVideo);
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/video/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const isoDate = now.toISOString();
+        
+        adicionarItemTimeline('video', titulo, isoDate, uploadedFileVideo.name, usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Vídeo salvo com sucesso!');
+        
+        // Resetar
+        document.getElementById('titulo-video').value = '';
+        document.getElementById('desc-video').value = '';
+        uploadedFileVideo = null;
+        fileBadgesVideo.innerHTML = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o vídeo');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    fileBadgesVideo.innerHTML = '';
+    fileInputVideo.value = '';
+  });
+</script>

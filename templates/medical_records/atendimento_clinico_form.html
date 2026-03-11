@@ -198,6 +198,10 @@
         <div class="tab-content">
           <!-- Tab Histórico (ativo por padrão) -->
           <div class="tab-pane active show" id="tab-historico" role="tabpanel">
+            <script>
+              // Disponibilizar petId globalmente para os formulários
+              window.CURRENT_PET_ID = {{ pet.id }};
+            </script>
             {% include 'medical_records/historico_base.html' %}
           </div>
           

@@ -7,7 +7,8 @@
     <div class="dropdown">
       <button class="btn btn-toolbar" type="button" data-bs-toggle="dropdown" id="period-button">
         <i class="ti ti-calendar me-1"></i>
-        <span id="period-text">Período</span>
+        <span id="period-text">Período...</span>
+        <i class="ti ti-chevron-down ms-1"></i>
       </button>
       <ul class="dropdown-menu">
         <li><a class="dropdown-item" href="#" data-period="today">Hoje</a></li>
@@ -58,31 +59,32 @@
       </button>
     </div>
 
-    <button class="btn btn-ui btn-report">
+    <button class="btn btn-toolbar-icon" title="Relatório">
       <i class="ti ti-file-text"></i>
-      Relatório
     </button>
   </div>
 </div>
 
-<!-- Conteúdo principal: Timeline (3 cols) + Botões Adicionar (9 cols) -->
+<!-- Conteúdo principal: Timeline (3 cols) + Botões Adicionar / Formulários (9 cols) -->
 <div class="row g-0">
   <!-- Coluna esquerda: Timeline vertical (3 colunas) -->
-  <div class="col-md-3 border-end p-3" style="max-height: 600px; overflow-y: auto;">
+  <div class="col-md-3 border-end" style="max-height: 600px; overflow-y: auto;">
     <ul class="timeline timeline-vertical" id="timeline-list">
       <!-- Registros serão adicionados dinamicamente aqui -->
     </ul>
     
-    <div class="text-center p-3 text-muted" id="no-timeline-records">
+    <div class="text-center text-muted" id="no-timeline-records">
       <i class="ti ti-clipboard-off" style="font-size: 48px; opacity: 0.3;"></i>
       <p class="small mt-2 mb-0">Nenhum registro encontrado</p>
       <p class="small text-muted">Adicione um novo registro usando os botões ao lado</p>
     </div>
   </div>
   
-  <!-- Coluna direita: Botões de Adicionar -->
-  <div class="col-md-9 p-4">
-    <h5 class="mb-3">Adicionar</h5>
+  <!-- Coluna direita: Botões de Adicionar e Formulários -->
+  <div class="col-md-9">
+    <h5 class="m-0 mb-3" id="add-buttons-title" style="font-size: 1.1rem;">Adicionar</h5>
+    
+    <!-- Grid de Botões Adicionar -->
     <div class="row g-3" id="add-buttons">
       <div class="col-md-4">
         <button type="button" class="btn-add" data-tipo="atendimento" style="background-color: #0066CC; border-color: #0066CC;">
@@ -103,7 +105,7 @@
         </button>
       </div>
       <div class="col-md-4">
-        <button type="button" class="btn-add" data-tipo="documento" style="background-color: #90EE90; border-color: #90EE90; color: #333;">
+        <button type="button" class="btn-add" data-tipo="documento" style="background-color: #90EE90; border-color: #90EE90;">
           <i class="ti ti-file-text"></i>
           <span>Documento</span>
         </button>
@@ -121,7 +123,7 @@
         </button>
       </div>
       <div class="col-md-4">
-        <button type="button" class="btn-add" data-tipo="vacina" style="background-color: #FFD700; border-color: #FFD700; color: #333;">
+        <button type="button" class="btn-add" data-tipo="vacina" style="background-color: #FFD700; border-color: #FFD700;">
           <i class="ti ti-vaccine"></i>
           <span>Vacina</span>
         </button>
@@ -149,6 +151,47 @@
           <i class="ti ti-report-medical"></i>
           <span>Internação</span>
         </button>
+      </div>
+    </div>
+
+    <!-- Formulários (carregados dinamicamente) -->
+    <div id="form-container">
+      {% include 'medical_records/forms/atendimento_form.html' %}
+      {% include 'medical_records/forms/peso_form.html' %}
+      {% include 'medical_records/forms/patologia_form.html' %}
+      {% include 'medical_records/forms/documento_form.html' %}
+      {% include 'medical_records/forms/exame_form.html' %}
+      {% include 'medical_records/forms/fotos_form.html' %}
+      {% include 'medical_records/forms/vacina_form.html' %}
+      {% include 'medical_records/forms/receita_form.html' %}
+      {% include 'medical_records/forms/observacoes_form.html' %}
+      {% include 'medical_records/forms/video_form.html' %}
+      {% include 'medical_records/forms/internacao_form.html' %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal para editar data/hora -->
+<div class="modal fade" id="modal-edit-datetime" tabindex="-1">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Editar Data e Hora</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <label class="form-label">Data</label>
+          <input type="date" class="form-control" id="edit-data">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Hora</label>
+          <input type="time" class="form-control" id="edit-hora">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary" id="save-datetime">Salvar</button>
       </div>
     </div>
   </div>
@@ -180,15 +223,90 @@
   </div>
 </div>
 
+<!-- Modals de Sucesso e Erro (Tabler) -->
+<div class="modal modal-blur fade" id="modal-success" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-green icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9" /><path d="M9 12l2 2l4 -4" /></svg>
+        <h3 id="modal-success-title">Sucesso!</h3>
+        <div class="text-muted" id="modal-success-message"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <button type="button" class="btn btn-success w-100" data-bs-dismiss="modal">Ok</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal-danger" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75" /></svg>
+        <h3 id="modal-danger-title">Erro</h3>
+        <div class="text-muted" id="modal-danger-message"></div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Ok</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal modal-blur fade" id="modal-confirm-delete" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75" /></svg>
+        <h3>Confirmar exclusão?</h3>
+        <div class="text-muted">Esta ação não pode ser desfeita.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-danger w-100" id="confirm-delete-btn">Excluir</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <style>
+/* ===== PADDING DAS ABAS ===== */
+.history-toolbar {
+  padding: 0.5rem;
+}
+
+.col-md-3.border-end {
+  padding: 0.5rem !important;
+  min-height: calc(100vh - 250px);
+}
+
+.col-md-9 {
+  padding: 0.5rem !important;
+}
+
 /* ===== TOOLBAR ===== */
 .history-toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 0;
   border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 12px;
+  overflow-x: visible;
+  gap: 8px;
 }
 
 .btn-toolbar {
@@ -250,16 +368,12 @@
   background: #f3f4f6;
 }
 
-/* Estado ativo: usar data-color */
 .btn-filter.active[data-color] {
   color: #fff;
   border-width: 1px;
   border-style: solid;
 }
 
-/* Aplicar cores específicas via inline style em JS */
-
-/* Links todos/nenhum */
 .toolbar-links {
   font-size: 0.8rem;
   color: #6b7280;
@@ -306,10 +420,28 @@
   list-style: none;
   padding: 0;
   margin: 0;
+  position: relative;
 }
 
 .timeline-event {
   margin-bottom: 0.75rem;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-event::before {
+  content: '';
+  position: absolute;
+  left: 16px;
+  top: 100%;
+  height: 0.75rem;
+  width: 2px;
+  background: #e5e7eb;
+  z-index: 0;
+}
+
+.timeline-event:last-child::before {
+  display: none;
 }
 
 .timeline-event-content {
@@ -320,6 +452,11 @@
   padding: 0.75rem;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2;
 }
 
 .timeline-event-content:hover {
@@ -327,35 +464,58 @@
   transform: translateX(2px);
 }
 
-.timeline-event-header {
+.timeline-event-left {
+  flex: 1;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.5rem;
-}
-
-.timeline-event-title {
-  font-weight: 600;
-  font-size: 0.875rem;
-  margin: 0;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 
 .timeline-event-date {
   font-size: 0.75rem;
-  color: #6c757d;
+  font-weight: 500;
 }
 
-.timeline-event-body {
+.timeline-date-separator {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #495057;
+  padding: 0.75rem 0;
+  margin: 1.5rem 0 0.75rem 0;
+  border-bottom: 2px solid #dee2e6;
+  position: relative;
+  z-index: 1;
+  background: #f8f9fa;
+  text-align: center;
+}
+
+.timeline-event-type {
+  font-size: 0.875rem;
+  color: #212529;
+  font-weight: 500;
+}
+
+.timeline-event-title {
   font-size: 0.8125rem;
   color: #495057;
   margin: 0;
 }
 
 .timeline-event-avatar {
-  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #0066CC;
+  color: white;
+  font-weight: 600;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  cursor: help;
 }
 
-/* Cores por tipo */
 .timeline-event-content[data-type="atendimento"] { border-left-color: #0066CC; }
 .timeline-event-content[data-type="peso"] { border-left-color: #8B4513; }
 .timeline-event-content[data-type="patologia"] { border-left-color: #6C2C91; }
@@ -368,9 +528,81 @@
 .timeline-event-content[data-type="video"] { border-left-color: #006400; }
 .timeline-event-content[data-type="internacao"] { border-left-color: #8B0000; }
 
-/* Ocultar timeline quando vazia */
 .timeline-event-content.hidden {
   display: none;
+}
+
+/* ===== FORMULÁRIOS ===== */
+.form-record {
+  display: none;
+  overflow: visible;
+}
+
+.form-record-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 1.5rem;
+}
+
+.form-record-title-section {
+  flex: 1;
+}
+
+.form-record-icon-title {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.form-record-icon {
+  font-size: 24px;
+  gap: 0;
+}
+
+.form-record-title {
+  font-size: 1.25rem;
+  font-weight: 400;
+  margin: 0;
+}
+
+.form-record-datetime {
+  font-size: 0.95rem;
+  margin-left: 0;
+}
+
+.form-record-user {
+  color: #6c757d;
+  font-size: 0.9rem;
+  margin: 0;
+  margin-left: 0;
+}
+
+#editor-container .tox-tinymce {
+  min-height: 300px;
+}
+
+.custom-file-input {
+  position: relative;
+}
+
+.custom-file-input input[type="file"] {
+  cursor: pointer;
+}
+
+.file-badges .badge {
+  margin-right: 5px;
+  margin-bottom: 5px;
+  padding: 8px 12px;
+  font-size: 0.875rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.file-badges .badge i {
+  cursor: pointer;
 }
 </style>
 
@@ -380,31 +612,69 @@ document.addEventListener('DOMContentLoaded', function() {
   
   console.log('=== Histórico inicializado ===');
   
+  // Preencher data/hora atual em todos os campos datetime dos formulários
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit', year: 'numeric'});
+  const timeStr = now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+  const datetimeStr = `${dateStr} ${timeStr}`;
+  
+  document.querySelectorAll('[id$="-datetime"]').forEach(el => {
+    if (!el.textContent.trim() || el.textContent.includes('{{')) {
+      el.textContent = datetimeStr;
+    }
+  });
+  
   // ===== CONFIGURAÇÃO =====
   const tipoConfig = {
-    atendimento: { color: '#0066CC', label: 'Atendimento' },
-    peso: { color: '#8B4513', label: 'Peso' },
-    patologia: { color: '#6C2C91', label: 'Patologia' },
-    documento: { color: '#90EE90', label: 'Documento' },
-    exame: { color: '#FA8072', label: 'Exame' },
-    fotos: { color: '#003366', label: 'Fotos' },
-    vacina: { color: '#FFD700', label: 'Vacina' },
-    receita: { color: '#9370DB', label: 'Receita' },
-    observacoes: { color: '#6c757d', label: 'Observações' },
-    video: { color: '#006400', label: 'Vídeo' },
-    internacao: { color: '#8B0000', label: 'Internação' }
+    atendimento: { color: '#0066CC', label: 'Atendimento', icon: 'ti-first-aid-kit' },
+    peso: { color: '#8B4513', label: 'Peso', icon: 'ti-weight' },
+    patologia: { color: '#6C2C91', label: 'Patologia', icon: 'ti-virus' },
+    documento: { color: '#90EE90', label: 'Documento', icon: 'ti-file-text' },
+    exame: { color: '#FA8072', label: 'Exame', icon: 'ti-test-pipe' },
+    fotos: { color: '#003366', label: 'Fotos', icon: 'ti-camera' },
+    vacina: { color: '#FFD700', label: 'Vacina', icon: 'ti-vaccine' },
+    receita: { color: '#9370DB', label: 'Receita', icon: 'ti-edit' },
+    observacoes: { color: '#6c757d', label: 'Observações', icon: 'ti-message' },
+    video: { color: '#006400', label: 'Vídeo', icon: 'ti-video' },
+    internacao: { color: '#8B0000', label: 'Internação', icon: 'ti-report-medical' }
   };
+
+  window.tipoConfig = tipoConfig;
 
   // ===== ELEMENTOS =====
   const periodText = document.getElementById('period-text');
   const filterButtons = document.querySelectorAll('#filter-buttons .btn-filter');
   const timelineList = document.getElementById('timeline-list');
   const noRecords = document.getElementById('no-timeline-records');
+  const addButtons = document.getElementById('add-buttons');
+  const addButtonsTitle = document.getElementById('add-buttons-title');
   
-  // Estado da filtragem
   let currentPeriod = null;
   let customStartDate = null;
   let customEndDate = null;
+  let currentEditingId = null;
+
+  // ===== MODALS HELPER =====
+  window.showSuccessModal = function(title, message) {
+    document.getElementById('modal-success-title').textContent = title;
+    document.getElementById('modal-success-message').textContent = message;
+    new bootstrap.Modal(document.getElementById('modal-success')).show();
+  };
+
+  window.showDangerModal = function(title, message) {
+    document.getElementById('modal-danger-title').textContent = title;
+    document.getElementById('modal-danger-message').textContent = message;
+    new bootstrap.Modal(document.getElementById('modal-danger')).show();
+  };
+
+  window.confirmDelete = function(callback) {
+    const modal = new bootstrap.Modal(document.getElementById('modal-confirm-delete'));
+    document.getElementById('confirm-delete-btn').onclick = function() {
+      callback();
+      modal.hide();
+    };
+    modal.show();
+  };
 
   // ===== APLICAR CORES AOS FILTROS =====
   filterButtons.forEach(btn => {
@@ -415,7 +685,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
-  // ===== FORMATAR DATA =====
   function formatDate(date) {
     const d = String(date.getDate()).padStart(2, '0');
     const m = String(date.getMonth() + 1).padStart(2, '0');
@@ -423,10 +692,8 @@ document.addEventListener('DOMContentLoaded', function() {
     return `${d}/${m}/${y}`;
   }
 
-  // ===== VERIFICAR SE DATA ESTÁ NO PERÍODO =====
   function isInPeriod(itemDate) {
     if (!currentPeriod && !customStartDate) return true;
-
     const item = new Date(itemDate);
     item.setHours(0, 0, 0, 0);
     const today = new Date();
@@ -441,8 +708,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     switch(currentPeriod) {
-      case 'today':
-        return item.getTime() === today.getTime();
+      case 'today': return item.getTime() === today.getTime();
       case 'yesterday':
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
@@ -456,28 +722,22 @@ document.addEventListener('DOMContentLoaded', function() {
       case 'lastmonth':
         const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
         return item.getMonth() === lastMonth.getMonth() && item.getFullYear() === lastMonth.getFullYear();
-      default:
-        return true;
+      default: return true;
     }
   }
 
-  // ===== FILTRAR TIMELINE =====
   function applyFilters() {
     const activeFilters = Array.from(filterButtons)
       .filter(btn => btn.classList.contains('active'))
       .map(btn => btn.dataset.filter);
 
     let visibleCount = 0;
-    
     document.querySelectorAll('.timeline-event').forEach(item => {
       const content = item.querySelector('.timeline-event-content');
       const tipo = content.dataset.type;
       const dataAttr = content.dataset.date;
       
-      const typeMatch = activeFilters.includes(tipo);
-      const periodMatch = isInPeriod(dataAttr);
-      
-      if (typeMatch && periodMatch) {
+      if (activeFilters.includes(tipo) && isInPeriod(dataAttr)) {
         item.style.display = '';
         visibleCount++;
       } else {
@@ -486,24 +746,19 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     noRecords.style.display = visibleCount === 0 ? '' : 'none';
-    console.log(`Filtros aplicados: ${visibleCount} itens visíveis`);
   }
 
-  // ===== DROPDOWN DE PERÍODO =====
   document.querySelectorAll('[data-period]').forEach(item => {
     item.addEventListener('click', function(e) {
       e.preventDefault();
       currentPeriod = this.dataset.period;
       customStartDate = null;
       customEndDate = null;
-
       const today = new Date();
       let text = '';
 
       switch(currentPeriod) {
-        case 'today':
-          text = formatDate(today);
-          break;
+        case 'today': text = formatDate(today); break;
         case 'yesterday':
           const yesterday = new Date(today);
           yesterday.setDate(yesterday.getDate() - 1);
@@ -524,13 +779,11 @@ document.addEventListener('DOMContentLoaded', function() {
           text = `${formatDate(lastMonthStart)} até ${formatDate(lastMonthEnd)}`;
           break;
       }
-
       periodText.textContent = text;
       applyFilters();
     });
   });
 
-  // ===== MODAL PERÍODO CUSTOMIZADO =====
   const modalPeriodo = document.getElementById('modal-periodo');
   if (modalPeriodo) {
     const btnFiltrar = modalPeriodo.querySelector('.btn-primary');
@@ -542,7 +795,6 @@ document.addEventListener('DOMContentLoaded', function() {
         customStartDate = dataInicial;
         customEndDate = dataFinal;
         currentPeriod = null;
-        
         const start = new Date(dataInicial);
         const end = new Date(dataFinal);
         periodText.textContent = `${formatDate(start)} até ${formatDate(end)}`;
@@ -551,12 +803,9 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // ===== FILTROS POR TIPO =====
   filterButtons.forEach(btn => {
     btn.addEventListener('click', function() {
-      const wasActive = this.classList.contains('active');
       this.classList.toggle('active');
-      
       const color = this.dataset.color;
       if (this.classList.contains('active') && color) {
         this.style.backgroundColor = color;
@@ -567,12 +816,10 @@ document.addEventListener('DOMContentLoaded', function() {
         this.style.borderColor = '';
         this.style.color = '';
       }
-      
       applyFilters();
     });
   });
 
-  // ===== TODOS / NENHUM =====
   document.getElementById('select-all-filters')?.addEventListener('click', function(e) {
     e.preventDefault();
     filterButtons.forEach(btn => {
@@ -598,13 +845,11 @@ document.addEventListener('DOMContentLoaded', function() {
     applyFilters();
   });
 
-  // ===== LIMPAR FILTROS =====
   document.getElementById('clear-filters')?.addEventListener('click', function() {
     currentPeriod = null;
     customStartDate = null;
     customEndDate = null;
-    periodText.textContent = 'Período';
-    
+    periodText.textContent = 'Período...';
     filterButtons.forEach(btn => {
       btn.classList.add('active');
       const color = btn.dataset.color;
@@ -614,78 +859,167 @@ document.addEventListener('DOMContentLoaded', function() {
         btn.style.color = '#fff';
       }
     });
-    
     applyFilters();
-    console.log('Filtros resetados');
   });
 
-  // ===== ORDENAÇÃO =====
   document.querySelectorAll('[data-sort]').forEach(btn => {
     btn.addEventListener('click', function() {
       document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
-      
       const order = this.dataset.sort;
       const items = Array.from(timelineList.querySelectorAll('.timeline-event'));
-      
       items.sort((a, b) => {
         const dateA = new Date(a.querySelector('.timeline-event-content').dataset.date);
         const dateB = new Date(b.querySelector('.timeline-event-content').dataset.date);
         return order === 'desc' ? dateB - dateA : dateA - dateB;
       });
-      
       items.forEach(item => timelineList.appendChild(item));
-      console.log('Ordenação:', order);
     });
   });
 
-  // ===== BOTÃO RELATÓRIO =====
-  document.getElementById('btn-report')?.addEventListener('click', function() {
-    alert('Funcionalidade de relatório em desenvolvimento');
-  });
-
-  // ===== BOTÕES ADICIONAR =====
-  document.querySelectorAll('#add-buttons .btn-add').forEach(btn => {
-    btn.addEventListener('click', function() {
-      const tipo = this.dataset.tipo;
-      const label = tipoConfig[tipo]?.label || tipo;
-      console.log('Adicionar:', label);
-      alert(`Formulário de ${label} será implementado`);
-    });
-  });
-
-  // ===== FUNÇÃO PÚBLICA: ADICIONAR ITEM =====
-  window.adicionarItemTimeline = function(tipo, titulo, data, descricao, usuario) {
+  window.showForm = function(tipo, editData = null) {
+    addButtonsTitle.style.display = 'none';
+    addButtons.style.display = 'none';
+    document.querySelectorAll('.form-record').forEach(form => form.style.display = 'none');
+    
+    const form = document.getElementById(`form-${tipo}`);
+    if (form) {
+      form.style.display = 'block';
+      
+      if (editData) {
+        currentEditingId = editData.id;
+        
+        // Preencher dados do formulário
+        if (tipo === 'atendimento' && editData.tipo_id) {
+          const tipoSelect = document.getElementById('tipo-atendimento');
+          if (tipoSelect) tipoSelect.value = editData.tipo_id;
+          const resumo = document.getElementById('resumo-atendimento');
+          if (resumo) resumo.value = editData.titulo || '';
+        } else if (tipo === 'peso' && editData.peso) {
+          const pesoInput = document.getElementById('valor-peso');
+          if (pesoInput) pesoInput.value = editData.peso;
+        }
+        
+        // Mostrar botão de excluir
+        const deleteBtn = form.querySelector('.btn-delete-record');
+        if (deleteBtn) deleteBtn.style.display = '';
+      } else {
+        currentEditingId = null;
+        const deleteBtn = form.querySelector('.btn-delete-record');
+        if (deleteBtn) deleteBtn.style.display = 'none';
+      }
+    }
+  };
+  
+  window.hideAllForms = function() {
+    document.querySelectorAll('.form-record').forEach(form => form.style.display = 'none');
+    addButtons.style.display = '';
+    addButtonsTitle.style.display = '';
+    currentEditingId = null;
+  };
+  
+  window.adicionarItemTimeline = function(tipo, titulo, data, descricao, usuario, usuarioAvatar, id = null) {
     const config = tipoConfig[tipo] || tipoConfig.atendimento;
+    const recordId = id || Date.now();
     const li = document.createElement('li');
     li.className = 'timeline-event';
+    li.dataset.recordId = recordId;
+    
+    // Extrair iniciais do usuário para o avatar
+    const iniciais = usuario ? usuario.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'SY';
+    
+    // Formatar data e hora: "02/03 às 21:21"
+    const dataObj = new Date(data);
+    const dia = String(dataObj.getDate()).padStart(2, '0');
+    const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
+    const hora = String(dataObj.getHours()).padStart(2, '0');
+    const minuto = String(dataObj.getMinutes()).padStart(2, '0');
+    const dataHoraFormatada = `${dia}/${mes} às ${hora}:${minuto}`;
     
     li.innerHTML = `
       <div class="timeline-event-content" data-type="${tipo}" data-date="${data}">
-        <div class="timeline-event-header">
-          <div>
-            <div class="timeline-event-title">${titulo}</div>
-            <div class="timeline-event-date">${formatDate(new Date(data))}</div>
-          </div>
+        <div class="timeline-event-left">
+          <div class="timeline-event-date" style="color: ${config.color};">${dataHoraFormatada}</div>
+          <div class="timeline-event-type">${config.label}</div>
+          <div class="timeline-event-title">${titulo}</div>
         </div>
-        <p class="timeline-event-body">${descricao}</p>
-        <div class="timeline-event-avatar d-flex justify-content-end">
-          <span class="text-muted small">${usuario || 'Sistema'}</span>
-        </div>
+        ${usuarioAvatar ? `<div class="avatar avatar-sm" style="background-image: url(${usuarioAvatar})" title="${usuario || 'Sistema'}"></div>` : `<div class="timeline-event-avatar" title="${usuario || 'Sistema'}">${iniciais}</div>`}
       </div>
     `;
     
     li.querySelector('.timeline-event-content').addEventListener('click', function() {
-      alert(`Editar: ${titulo}`);
+      showForm(tipo, { id: recordId, tipo, titulo, descricao, data, usuario });
     });
+    
+    // Inserir separador de ano se necessário
+    const ano = dataObj.getFullYear();
+    let separadorExiste = false;
+    
+    timelineList.querySelectorAll('.timeline-date-separator').forEach(sep => {
+      if (sep.textContent === String(ano)) {
+        separadorExiste = true;
+      }
+    });
+    
+    if (!separadorExiste) {
+      const separador = document.createElement('div');
+      separador.className = 'timeline-date-separator';
+      separador.textContent = ano;
+      timelineList.appendChild(separador);
+    }
     
     timelineList.appendChild(li);
     applyFilters();
+    noRecords.style.display = 'none';
   };
 
-  // ===== INICIALIZAÇÃO =====
+  window.deleteCurrentRecord = function() {
+    if (!currentEditingId) return;
+    
+    confirmDelete(function() {
+      const recordElement = document.querySelector(`[data-record-id="${currentEditingId}"]`);
+      if (recordElement) {
+        recordElement.remove();
+        hideAllForms();
+        applyFilters();
+      }
+    });
+  };
+
+  document.querySelectorAll('#add-buttons .btn-add').forEach(btn => {
+    btn.addEventListener('click', function() {
+      showForm(this.dataset.tipo);
+    });
+  });
+
+  let currentDatetimeElement = null;
+  window.editDatetime = function(elementId) {
+    currentDatetimeElement = document.getElementById(elementId);
+    const modal = new bootstrap.Modal(document.getElementById('modal-edit-datetime'));
+    const now = new Date();
+    document.getElementById('edit-data').value = now.toISOString().split('T')[0];
+    document.getElementById('edit-hora').value = now.toTimeString().slice(0, 5);
+    modal.show();
+  };
+  
+  document.getElementById('save-datetime')?.addEventListener('click', function() {
+    const data = document.getElementById('edit-data').value;
+    const hora = document.getElementById('edit-hora').value;
+    if (data && hora && currentDatetimeElement) {
+      const [year, month, day] = data.split('-');
+      const novoTexto = `${day}/${month}/${year} ${hora}`;
+      currentDatetimeElement.textContent = novoTexto;
+      
+      // Atualizar data interna se estiver editando
+      if (currentEditingId) {
+        currentDatetimeElement.dataset.isoDate = `${data}T${hora}:00`;
+      }
+      
+      bootstrap.Modal.getInstance(document.getElementById('modal-edit-datetime')).hide();
+    }
+  });
+
   applyFilters();
   console.log('✓ Histórico pronto');
 });
 </script>
-

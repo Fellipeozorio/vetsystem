@@ -1,0 +1,164 @@
+<!-- Formulário de Fotos -->
+<div id="form-fotos" class="form-record">
+  <!-- Cabeçalho -->
+  <div class="form-record-header">
+    <div class="form-record-title-section">
+      <div class="form-record-icon-title">
+        <i class="ti ti-camera form-record-icon" style="color: #003366;"></i>
+        <h4 class="form-record-title" style="color: #003366;">Fotos em</h4>
+        <span id="fotos-datetime" class="form-record-datetime" style="color: #003366;">{{ now|date:"d/m/Y H:i" }}</span>
+        <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('fotos-datetime')" title="Editar data/hora" style="color: #003366;">
+          <i class="ti ti-pencil" style="font-size: 20px;"></i>
+        </button>
+      </div>
+      <p class="form-record-user">Por: {{ user.get_full_name|default:user.username }}</p>
+    </div>
+    <button type="button" class="btn-close" onclick="hideAllForms()"></button>
+  </div>
+
+  <!-- Campos do formulário -->
+  <div class="mb-3">
+    <label class="form-label">Título <span class="text-danger">*</span></label>
+    <input type="text" class="form-control" id="titulo-fotos" required placeholder="Ex: Lesão na pata traseira">
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Descrição</label>
+    <textarea class="form-control" id="desc-fotos" rows="3" placeholder="Descrição das fotos"></textarea>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Selecionar Fotos <span class="text-danger">*</span></label>
+    <input type="file" class="form-control" id="file-fotos" accept="image/*" multiple required>
+    <small class="text-muted">Formatos aceitos: JPG, PNG, GIF</small>
+    <div id="file-badges-fotos" class="file-badges mt-2"></div>
+  </div>
+
+  <!-- Botões de ação -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-fotos">Salvar Fotos</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  let uploadedFilesFotos = [];
+  const fileInputFotos = document.getElementById('file-fotos');
+  const fileBadgesFotos = document.getElementById('file-badges-fotos');
+  
+  fileInputFotos?.addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+      if (!uploadedFilesFotos.find(f => f.name === file.name)) {
+        uploadedFilesFotos.push(file);
+        const badge = document.createElement('span');
+        badge.className = 'badge bg-secondary';
+        badge.innerHTML = `${file.name} <i class="ti ti-x"></i>`;
+        badge.onclick = () => {
+          uploadedFilesFotos = uploadedFilesFotos.filter(f => f.name !== file.name);
+          badge.remove();
+        };
+        fileBadgesFotos.appendChild(badge);
+      }
+    });
+    fileInputFotos.value = '';
+  });
+  
+  document.getElementById('save-fotos')?.addEventListener('click', function() {
+    const titulo = document.getElementById('titulo-fotos').value;
+    
+    if (!titulo) {
+      showDangerModal('Erro de Validação', 'Por favor, informe o título');
+      return;
+    }
+    
+    if (uploadedFilesFotos.length === 0) {
+      showDangerModal('Erro de Validação', 'Por favor, selecione pelo menos uma foto');
+      return;
+    }
+    
+    const formData = new FormData();
+    formData.append('titulo', titulo);
+    formData.append('descricao', document.getElementById('desc-fotos').value);
+    
+    uploadedFilesFotos.forEach(file => {
+      formData.append('arquivos', file);
+    });
+    
+    const now = new Date();
+    formData.append('data_hora', now.toISOString().slice(0, 16));
+    
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) {
+      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
+      return;
+    }
+    
+    fetch(`/atendimento/api/${petId}/fotos/`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        return response.text().then(text => {
+          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        const usuario = '{{ user.get_full_name|default:user.username }}';
+        const isoDate = now.toISOString();
+        
+        adicionarItemTimeline('fotos', titulo, isoDate, `${uploadedFilesFotos.length} foto(s)`, usuario, usuarioAvatar, data.id);
+        
+        hideAllForms();
+        showSuccessModal('Sucesso!', 'Fotos salvas com sucesso!');
+        
+        // Resetar
+        document.getElementById('titulo-fotos').value = '';
+        document.getElementById('desc-fotos').value = '';
+        uploadedFilesFotos = [];
+        fileBadgesFotos.innerHTML = '';
+      } else {
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar as fotos');
+      }
+    })
+    .catch(error => {
+      console.error('Erro:', error);
+      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
+    });
+  });
+  
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+    uploadedFilesFotos = [];
+    fileBadgesFotos.innerHTML = '';
+  });
+</script>

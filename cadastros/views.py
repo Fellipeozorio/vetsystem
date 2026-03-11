@@ -1,8 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User, Group
 from django.contrib import messages
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from django.db import IntegrityError, transaction
+import time
 from .models import (
     Especie, Raca, Pelagem, FilaAtendimento, Patologia,
     TipoAtendimento, Vacina, Exame, AtributoExame,
@@ -512,6 +515,271 @@ def tipo_atendimento_delete(request, pk):
     
     # GET não é mais suportado - redirecionar para a lista
     return redirect('cadastros:tipos_atendimento_list')
+
+
+# ===== FILAS DE ATENDIMENTO =====
+@login_required
+def filas_atendimento_list(request):
+    """Lista de filas de atendimento com colunas customizadas"""
+    query = request.GET.get('q', '')
+    
+    # Buscar registros
+    if query:
+        items = FilaAtendimento.objects.filter(nome__icontains=query)
+    else:
+        items = FilaAtendimento.objects.all()
+    
+    # Aplicar filtros avançados
+    active_filters = {}
+    
+    # Filtro por nome
+    if request.GET.get('filter_nome'):
+        items = items.filter(nome__icontains=request.GET.get('filter_nome'))
+        active_filters['nome'] = request.GET.get('filter_nome')
+    
+    # Filtro por código
+    if request.GET.get('filter_codigo'):
+        items = items.filter(codigo__icontains=request.GET.get('filter_codigo'))
+        active_filters['codigo'] = request.GET.get('filter_codigo')
+    
+    # Filtro por permanente
+    if request.GET.get('filter_permanente'):
+        value = request.GET.get('filter_permanente')
+        if value.lower() in ['true', '1', 'sim']:
+            items = items.filter(permanente=True)
+            active_filters['permanente'] = 'Sim'
+        elif value.lower() in ['false', '0', 'não', 'nao']:
+            items = items.filter(permanente=False)
+            active_filters['permanente'] = 'Não'
+    
+    # Filtro por usuário atribuído
+    if request.GET.get('filter_atribuido_a'):
+        user_id = request.GET.get('filter_atribuido_a')
+        items = items.filter(atribuido_a_id=user_id)
+        # Buscar o nome do usuário para exibir no filtro
+        try:
+            user = User.objects.get(id=user_id)
+            active_filters['atribuido_a'] = user.get_full_name() or user.username
+        except User.DoesNotExist:
+            active_filters['atribuido_a'] = user_id
+    
+    # Filtro por status
+    if request.GET.get('filter_ativo'):
+        value = request.GET.get('filter_ativo')
+        if value.lower() in ['true', '1', 'sim']:
+            items = items.filter(ativo=True)
+            active_filters['ativo'] = 'True'
+        elif value.lower() in ['false', '0', 'não', 'nao']:
+            items = items.filter(ativo=False)
+            active_filters['ativo'] = 'False'
+    
+    # Ordenar por código e nome
+    items = items.select_related('atribuido_a').order_by('codigo', 'nome')
+    
+    # Paginação
+    paginator = Paginator(items, 20)  # 20 itens por página
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Buscar veterinários para filtros (grupo Veterinário ou todos os usuários se não existir o grupo)
+    try:
+        grupo_vet = Group.objects.get(name='Veterinário')
+        veterinarios = User.objects.filter(groups=grupo_vet, is_active=True).order_by('first_name', 'username')
+    except Group.DoesNotExist:
+        veterinarios = User.objects.filter(is_active=True).order_by('first_name', 'username')
+    
+    context = {
+        'tipo': 'filas-atendimento',
+        'label': 'Filas de Atendimento',
+        'page_obj': page_obj,
+        'query': query,
+        'active_filters': active_filters,
+        'veterinarios': veterinarios,
+    }
+    
+    return render(request, 'cadastros/filas_atendimento_list.html', context)
+
+
+@login_required
+def fila_atendimento_create(request):
+    """Criar nova fila de atendimento"""
+    if request.method == 'POST':
+        # Processar dados do formulário
+        nome = request.POST.get('nome')
+        permanente = request.POST.get('permanente', 'false') == 'true'
+        ativo = request.POST.get('ativo', 'false') == 'true'
+        
+        # Atribuir veterinário se selecionado
+        atribuido_a = None
+        atribuido_a_id = request.POST.get('atribuido_a')
+        if atribuido_a_id:
+            try:
+                atribuido_a = User.objects.get(id=int(atribuido_a_id))
+            except (ValueError, User.DoesNotExist):
+                pass
+        
+        # Tentar criar com retry em caso de conflito de código ou lock do banco
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            try:
+                # Gerar código e salvar na mesma transação atômica
+                with transaction.atomic():
+                    # Gerar o próximo código com lock
+                    existing_codes = FilaAtendimento.objects.select_for_update().exclude(
+                        codigo__isnull=True
+                    ).exclude(codigo='').values_list('codigo', flat=True)
+                    
+                    numeric_codes = []
+                    for code in existing_codes:
+                        try:
+                            numeric_codes.append(int(code))
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    if numeric_codes:
+                        next_num = max(numeric_codes) + 1
+                    else:
+                        next_num = 1
+                    
+                    codigo = str(next_num).zfill(3)
+                    
+                    # Criar o objeto diretamente com todos os campos
+                    fila = FilaAtendimento(
+                        nome=nome,
+                        codigo=codigo,
+                        permanente=permanente,
+                        ativo=ativo,
+                        atribuido_a=atribuido_a
+                    )
+                    fila.save(force_insert=True)
+                    
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Fila de atendimento criada com sucesso!'
+                    })
+            except IntegrityError as e:
+                # Se for erro de código duplicado ou nome duplicado, tentar novamente
+                if ('codigo' in str(e).lower() or 'locked' in str(e).lower()) and attempt < max_attempts - 1:
+                    # Aguardar um pouco antes de tentar novamente (backoff exponencial)
+                    time.sleep(0.1 * (2 ** min(attempt, 3)))  # Max 0.8s
+                    continue
+                else:
+                    # Se não for erro de código/lock ou esgotamos as tentativas
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Erro ao criar fila de atendimento: {str(e)}'
+                    })
+            except Exception as e:
+                # Para database locked, tentar novamente
+                if ('locked' in str(e).lower() or 'lock' in str(e).lower()) and attempt < max_attempts - 1:
+                    time.sleep(0.1 * (2 ** min(attempt, 3)))
+                    continue
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Erro ao criar fila de atendimento: {str(e)}'
+                })
+        
+        # Se chegou aqui, esgotou as tentativas
+        return JsonResponse({
+            'success': False,
+            'error': 'Não foi possível criar a fila após várias tentativas. Tente novamente.'
+        })
+    
+    return JsonResponse({'success': False, 'error': 'Método não permitido'})
+
+
+@login_required
+def fila_atendimento_detail(request, pk):
+    """API: Obter detalhes de uma fila de atendimento"""
+    fila = get_object_or_404(FilaAtendimento, pk=pk)
+    
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': fila.id,
+            'codigo': fila.codigo,
+            'nome': fila.nome,
+            'permanente': fila.permanente,
+            'atribuido_a': fila.atribuido_a_id,
+            'ativo': fila.ativo,
+        }
+    })
+
+
+@login_required
+def fila_atendimento_update(request, pk):
+    """Atualizar fila de atendimento"""
+    obj = get_object_or_404(FilaAtendimento, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            # Atualizar dados
+            obj.nome = request.POST.get('nome')
+            obj.permanente = request.POST.get('permanente', 'false') == 'true'
+            obj.ativo = request.POST.get('ativo', 'false') == 'true'
+            
+            # Atribuir veterinário
+            atribuido_a_id = request.POST.get('atribuido_a')
+            if atribuido_a_id:
+                obj.atribuido_a_id = int(atribuido_a_id)
+            else:
+                obj.atribuido_a = None
+            
+            obj.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Fila de atendimento atualizada com sucesso!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erro ao atualizar fila de atendimento: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Método não permitido'})
+
+
+@login_required
+def fila_atendimento_delete(request, pk):
+    """Excluir fila de atendimento"""
+    obj = get_object_or_404(FilaAtendimento, pk=pk)
+    
+    if request.method == 'POST':
+        try:
+            nome = obj.nome
+            obj.delete()
+            return JsonResponse({
+                'success': True,
+                'message': f'Fila "{nome}" excluída com sucesso!'
+            })
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': f'Erro ao excluir fila de atendimento: {str(e)}'
+            })
+    
+    return JsonResponse({'success': False, 'error': 'Método não permitido'})
+
+
+# ===== API ENDPOINTS =====
+@login_required
+def api_tipos_atendimento_list(request):
+    """API: Listar todos os tipos de atendimento (JSON)"""
+    tipos = TipoAtendimento.objects.filter(ativo=True).values('id', 'nome', 'modelo_atendimento')
+    return JsonResponse(list(tipos), safe=False)
+
+
+@login_required
+def api_tipo_atendimento_template(request, pk):
+    """API: Obter template de um tipo de atendimento específico (JSON)"""
+    tipo = get_object_or_404(TipoAtendimento, pk=pk)
+    return JsonResponse({
+        'id': tipo.id,
+        'nome': tipo.nome,
+        'modelo_atendimento': tipo.modelo_atendimento or ''
+    })
 
 
 # Views para Protocolos de Vacina
