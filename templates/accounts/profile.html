@@ -43,7 +43,15 @@
             {% if profile.avatar %}
             <span class="avatar avatar-xl" style="background-image: url({{ profile.avatar.url }})"></span>
             {% else %}
-            <span class="avatar avatar-xl" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ user.get_full_name|default:user.username }})"></span>
+            {% with fn=user.first_name|default:'' ln=user.last_name|default:'' %}
+              {% if fn and ln %}
+                <span class="avatar avatar-xl bg-primary text-white">{{ fn|slice:":1"|upper }}{{ ln|slice:":1"|upper }}</span>
+              {% elif fn %}
+                <span class="avatar avatar-xl bg-primary text-white">{{ fn|slice:":1"|upper }}{{ user.username|slice:":1"|upper }}</span>
+              {% else %}
+                <span class="avatar avatar-xl bg-primary text-white">{{ user.username|slice:":2"|upper }}</span>
+              {% endif %}
+            {% endwith %}
             {% endif %}
           </div>
           <div class="col-auto">

@@ -77,7 +77,15 @@
             {% if editing_user.userprofile.avatar %}
             <span class="avatar avatar-xl mb-3" style="background-image: url({{ editing_user.userprofile.avatar.url }})"></span>
             {% else %}
-            <span class="avatar avatar-xl mb-3" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ editing_user.get_full_name|default:editing_user.username }})"></span>
+            {% with fn=editing_user.first_name|default:'' ln=editing_user.last_name|default:'' %}
+              {% if fn and ln %}
+                <span class="avatar avatar-xl mb-3 bg-primary text-white">{{ fn|slice:":1"|upper }}{{ ln|slice:":1"|upper }}</span>
+              {% elif fn %}
+                <span class="avatar avatar-xl mb-3 bg-primary text-white">{{ fn|slice:":1"|upper }}{{ editing_user.username|slice:":1"|upper }}</span>
+              {% else %}
+                <span class="avatar avatar-xl mb-3 bg-primary text-white">{{ editing_user.username|slice:":2"|upper }}</span>
+              {% endif %}
+            {% endwith %}
             {% endif %}
           </div>
           

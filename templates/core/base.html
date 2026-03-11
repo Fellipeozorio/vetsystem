@@ -82,6 +82,18 @@
       padding-left: 0.5rem !important;
     }
     
+    /* Avatar com iniciais - garantir texto centralizado */
+    .avatar.bg-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+    .avatar.bg-primary.avatar-xl {
+      font-size: 1.5rem;
+    }
+    
   </style>
 
   {% block extra_css %}{% endblock %}
@@ -107,7 +119,15 @@
             {% if user.userprofile.avatar %}
               <span class="avatar avatar-sm" style="background-image: url({{ user.userprofile.avatar.url }})"></span>
             {% else %}
-              <span class="avatar avatar-sm" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ user.get_full_name|default:user.username }})"></span>
+              {% with fn=user.first_name|default:'' ln=user.last_name|default:'' %}
+                {% if fn and ln %}
+                  <span class="avatar avatar-sm bg-primary text-white">{{ fn|slice:":1"|upper }}{{ ln|slice:":1"|upper }}</span>
+                {% elif fn %}
+                  <span class="avatar avatar-sm bg-primary text-white">{{ fn|slice:":1"|upper }}{{ user.username|slice:":1"|upper }}</span>
+                {% else %}
+                  <span class="avatar avatar-sm bg-primary text-white">{{ user.username|slice:":2"|upper }}</span>
+                {% endif %}
+              {% endwith %}
             {% endif %}
             <div class="d-none d-xl-block ps-2">
               <div>{{ user.get_full_name|default:user.username }}</div>

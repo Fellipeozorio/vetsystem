@@ -69,29 +69,15 @@
               {% if u.userprofile.avatar %}
               <span class="avatar me-2" style="background-image: url({{ u.userprofile.avatar.url }})"></span>
               {% else %}
-<!-- Modal de Sucesso de Criação -->
-<div class="modal modal-blur fade" id="modal-create-success" tabindex="-1" aria-modal="true" role="dialog">
-  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      <div class="modal-status bg-success"></div>
-      <div class="modal-body text-center py-4">
-        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M5 12l5 5l10 -10"/></svg>
-        <h3>Sucesso</h3>
-        <div class="text-secondary" id="create-success-message"></div>
-      </div>
-      <div class="modal-footer">
-        <div class="w-100">
-          <div class="row">
-            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Fechar</button></div>
-            <div class="col d-none"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-              <span class="avatar me-2" style="background-image: url(https://api.dicebear.com/7.x/initials/svg?seed={{ u.get_full_name|default:u.username }})"></span>
+              {% with fn=u.first_name|default:'' ln=u.last_name|default:'' %}
+                {% if fn and ln %}
+                  <span class="avatar me-2 bg-primary text-white">{{ fn|slice:":1"|upper }}{{ ln|slice:":1"|upper }}</span>
+                {% elif fn %}
+                  <span class="avatar me-2 bg-primary text-white">{{ fn|slice:":1"|upper }}{{ u.username|slice:":1"|upper }}</span>
+                {% else %}
+                  <span class="avatar me-2 bg-primary text-white">{{ u.username|slice:":2"|upper }}</span>
+                {% endif %}
+              {% endwith %}
               {% endif %}
               <div class="flex-fill">
                 <div class="font-weight-medium">{{ u.get_full_name|default:u.username }}</div>
