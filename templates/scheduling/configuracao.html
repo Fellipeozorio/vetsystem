@@ -43,14 +43,12 @@
             <div class="col">
                 <h2 class="page-title">Configuração da Agenda</h2>
             </div>
-            {% if user.is_staff or user.is_superuser %}
             <div class="col-auto ms-auto d-print-none">
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modal-usuarios">
+                <button type="button" class="btn btn-primary" onclick="window.checkAdminAndOpenModal()">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"></path><path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"></path><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"></path></svg>
                     Usuários
                 </button>
             </div>
-            {% endif %}
         </div>
     </div>
 </div>
@@ -339,6 +337,30 @@
     </div>
 </div>
 
+<!-- Modal de Acesso Negado (Danger) -->
+<div class="modal modal-blur fade" id="modal-no-access" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Acesso Negado</h3>
+        <div class="text-secondary">Apenas usuários com permissão de administrador podem acessar esta funcionalidade.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col">
+              <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">Fechar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Sucesso (igual ao cadastros/base_list) -->
 <div class="modal modal-blur fade" id="modal-success" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
@@ -368,6 +390,18 @@
 document.addEventListener('DOMContentLoaded', function() {
     carregarHorarios();
     carregarUsuarios();
+    
+    // Função para verificar admin e abrir modal apropriado
+    window.checkAdminAndOpenModal = function() {
+        const isAdmin = {{ is_admin|yesno:"true,false" }};
+        if (isAdmin) {
+            const modal = new bootstrap.Modal(document.getElementById('modal-usuarios'));
+            modal.show();
+        } else {
+            const modal = new bootstrap.Modal(document.getElementById('modal-no-access'));
+            modal.show();
+        }
+    };
     
     // Função para mostrar modal de sucesso
     function showSuccessModal(message) {

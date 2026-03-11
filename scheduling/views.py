@@ -35,6 +35,7 @@ def configuracao_view(request):
     context = {
         'horarios': horarios,
         'usuarios': usuarios,
+        'is_admin': request.user.is_superuser,
     }
     return render(request, 'scheduling/configuracao.html', context)
 
