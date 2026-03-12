@@ -874,6 +874,26 @@ document.addEventListener('DOMContentLoaded', function() {
         atualizarHorariosDisponiveis();
     });
     
+    // Celular - atualizar botão WhatsApp quando campo mudar
+    document.getElementById('celular_cliente').addEventListener('input', function() {
+        // Buscar dados do cliente para verificar se tem WhatsApp
+        const clienteId = document.getElementById('cliente').value;
+        if (clienteId) {
+            fetch(`/scheduling/api/cliente/${clienteId}/`)
+                .then(r => r.json())
+                .then(cliente => {
+                    atualizarBotaoWhatsApp(this.value, cliente.celular_whatsapp);
+                })
+                .catch(() => {
+                    // Em caso de erro, esconder botão
+                    document.getElementById('btn-whatsapp').style.display = 'none';
+                });
+        } else {
+            // Sem cliente selecionado, esconder botão
+            document.getElementById('btn-whatsapp').style.display = 'none';
+        }
+    });
+    
     // Select adicionar fila - evento change
     document.getElementById('select-add-fila').addEventListener('change', function() {
         const filaId = this.value;
@@ -1071,7 +1091,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (currentMode === 'timeline') {
                     initCalendar();
                 } else {
-                    carregarEventos({ startStr: calendar.getOption('date'), endStr: new Date(calendar.getOption('date').getTime() + 86400000 * 7).toISOString() });
+                    // Usar refetchEvents para manter o range atual do calendário
+                    // Evita problema de badges sumindo em outros dias
+                    calendar.refetchEvents();
                 }
                 bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento')).hide();
                 // Mostrar modal de sucesso (criado ou editado)
@@ -1107,7 +1129,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (currentMode === 'timeline') {
                             initCalendar();
                         } else {
-                            carregarEventos({ startStr: calendar.getOption('date'), endStr: new Date(calendar.getOption('date').getTime() + 86400000 * 7).toISOString() });
+                            // Usar refetchEvents para manter o range atual do calendário
+                            calendar.refetchEvents();
                         }
                         bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento')).hide();
                     } else {
@@ -2361,21 +2384,31 @@ function limparFormularioAgendamento() {
     // Garantir que status volte para agendado
     document.getElementById('status-agendado').checked = true;
     
-    // Esconder botão WhatsApp
+    // SEMPRE esconder botão WhatsApp ao limpar formulário
     document.getElementById('btn-whatsapp').style.display = 'none';
+    document.getElementById('btn-whatsapp').href = '#';
 }
 
 function atualizarBotaoWhatsApp(celular, celularWhatsapp) {
     const btnWhatsApp = document.getElementById('btn-whatsapp');
     
-    if (celular && celularWhatsapp) {
+    // Validar se celular existe e não está vazio, e se WhatsApp está habilitado
+    if (celular && celular.trim() !== '' && celularWhatsapp === true) {
         // Formatar número removendo caracteres especiais
         const numeroFormatado = celular.replace(/\D/g, '');
-        // URL do WhatsApp com código do Brasil (55)
-        btnWhatsApp.href = `https://wa.me/55${numeroFormatado}`;
-        btnWhatsApp.style.display = 'block';
+        
+        // Validar se há dígitos suficientes para um número válido
+        if (numeroFormatado.length >= 10) {
+            // URL do WhatsApp com código do Brasil (55)
+            btnWhatsApp.href = `https://wa.me/55${numeroFormatado}`;
+            btnWhatsApp.style.display = 'inline-flex';
+        } else {
+            btnWhatsApp.style.display = 'none';
+            btnWhatsApp.href = '#';
+        }
     } else {
         btnWhatsApp.style.display = 'none';
+        btnWhatsApp.href = '#';
     }
 }
 
