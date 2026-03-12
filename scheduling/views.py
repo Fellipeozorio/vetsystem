@@ -3,7 +3,8 @@ from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from django.db.models import Q
-from datetime import datetime, timedelta, date
+from django.utils import timezone
+from datetime import datetime, timedelta, date, time as datetime_time
 import json
 
 from .models import Agendamento, HorarioFuncionamento, ConfiguracaoAgendaUsuario, FilaDiaCalendario, HorarioAtendimentoUsuario
@@ -65,14 +66,24 @@ def get_eventos_api(request):
     for agendamento in agendamentos:
         # Verificar se tem horário ou é all-day
         if agendamento.horario:
-            # Combinar data e horário
-            start_datetime = datetime.combine(agendamento.data, agendamento.horario)
+            # Combinar data e horário mantendo timezone local para preservar a data correta
+            # Usando timezone.make_aware para criar datetime timezone-aware
+            naive_datetime = datetime.combine(agendamento.data, agendamento.horario)
+            # Tornar timezone-aware assumindo timezone local do Django
+            start_datetime = timezone.make_aware(naive_datetime, timezone.get_current_timezone())
             end_datetime = start_datetime + timedelta(minutes=agendamento.duracao_minutos)
             all_day = False
         else:
             # Agendamento sem horário - all-day
-            start_datetime = datetime.combine(agendamento.data, datetime.min.time())
-            end_datetime = datetime.combine(agendamento.data, datetime.max.time())
+            # Para eventos all-day, usar apenas a data sem horário
+            start_datetime = timezone.make_aware(
+                datetime.combine(agendamento.data, datetime_time.min),
+                timezone.get_current_timezone()
+            )
+            end_datetime = timezone.make_aware(
+                datetime.combine(agendamento.data, datetime_time.max),
+                timezone.get_current_timezone()
+            )
             all_day = True
         
         # Cores por status
@@ -856,6 +867,142 @@ def salvar_horarios_api(request):
         
     except json.JSONDecodeError:
         return JsonResponse({'error': 'JSON inválido'}, status=400)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_GET
+def get_horarios_disponiveis_api(request):
+    """API para buscar horários disponíveis para agendamento"""
+    try:
+        data_str = request.GET.get('data')
+        veterinario_id = request.GET.get('veterinario_id')
+        
+        if not data_str:
+            return JsonResponse({'error': 'Parâmetro data é obrigatório'}, status=400)
+        
+        data_agendamento = datetime.strptime(data_str, '%Y-%m-%d').date()
+        dia_semana = data_agendamento.weekday()  # 0=Segunda, 6=Domingo
+        
+        # Converter para formato do HorarioAtendimentoUsuario (0=Domingo, 6=Sábado)
+        dia_semana_usuario = (dia_semana + 1) % 7
+        
+        # Determinar horários base (clínica ou veterinário)
+        horario_inicio = None
+        horario_fim = None
+        
+        if veterinario_id:
+            # Buscar configuração do veterinário
+            try:
+                veterinario = User.objects.get(id=veterinario_id, is_active=True)
+                config = veterinario.config_agenda
+                
+                # Se escala fixa, usar horários específicos do veterinário
+                if config.tipo_atendimento == 'escala_fixa':
+                    # Buscar horário do dia específico
+                    horario_dia = config.horarios_semanais.filter(
+                        dia_semana=dia_semana_usuario,
+                        trabalha=True
+                    ).first()
+                    
+                    if horario_dia and horario_dia.horario_inicio and horario_dia.horario_fim:
+                        horario_inicio = horario_dia.horario_inicio
+                        horario_fim = horario_dia.horario_fim
+                    else:
+                        # Veterinário não trabalha neste dia
+                        return JsonResponse({
+                            'horarios': [],
+                            'message': 'Veterinário não atende neste dia da semana'
+                        })
+                
+                # Se escala variável ou não realiza, usar horários da clínica
+                elif config.tipo_atendimento in ['escala_variavel', 'nao_realiza']:
+                    # Buscar horários de funcionamento da clínica
+                    # Converter dia_semana (0=Seg) para HorarioFuncionamento (0=Seg, 6=Dom)
+                    horario_clinica = HorarioFuncionamento.objects.filter(
+                        dia_semana=dia_semana,
+                        ativo=True
+                    ).first()
+                    
+                    if horario_clinica:
+                        horario_inicio = horario_clinica.horario_inicio
+                        horario_fim = horario_clinica.horario_fim
+                        
+            except (User.DoesNotExist, ConfiguracaoAgendaUsuario.DoesNotExist):
+                # Sem veterinário válido, usar horários da clínica
+                pass
+        
+        # Se não encontrou horários do veterinário, usar horários da clínica
+        if not horario_inicio or not horario_fim:
+            horario_clinica = HorarioFuncionamento.objects.filter(
+                dia_semana=dia_semana,
+                ativo=True
+            ).first()
+            
+            if horario_clinica:
+                horario_inicio = horario_clinica.horario_inicio
+                horario_fim = horario_clinica.horario_fim
+            else:
+                # Clínica não funciona neste dia
+                return JsonResponse({
+                    'horarios': [],
+                    'message': 'Clínica não funciona neste dia da semana'
+                })
+        
+        # Gerar todos os slots de 15 minutos no intervalo
+        slots_disponiveis = []
+        hora_atual = datetime.combine(data_agendamento, horario_inicio)
+        hora_fim = datetime.combine(data_agendamento, horario_fim)
+        
+        while hora_atual < hora_fim:
+            slots_disponiveis.append(hora_atual.time())
+            hora_atual += timedelta(minutes=15)
+        
+        # Buscar agendamentos existentes para o veterinário na data
+        if veterinario_id:
+            agendamentos = Agendamento.objects.filter(
+                data=data_agendamento,
+                veterinario_id=veterinario_id,
+                horario__isnull=False
+            ).exclude(
+                status='cancelado'
+            )
+        else:
+            # Sem veterinário específico, não filtrar por agendamentos
+            agendamentos = []
+        
+        # Remover horários ocupados
+        horarios_ocupados = set()
+        for agendamento in agendamentos:
+            if agendamento.horario:
+                # Marcar o horário de início como ocupado
+                horarios_ocupados.add(agendamento.horario)
+                
+                # Marcar também os slots durante a duração do agendamento
+                hora_inicio = datetime.combine(data_agendamento, agendamento.horario)
+                hora_fim_ag = hora_inicio + timedelta(minutes=agendamento.duracao_minutos)
+                
+                slot_atual = hora_inicio
+                while slot_atual < hora_fim_ag:
+                    horarios_ocupados.add(slot_atual.time())
+                    slot_atual += timedelta(minutes=15)
+        
+        # Filtrar slots disponíveis
+        horarios_finais = [
+            h.strftime('%H:%M') 
+            for h in slots_disponiveis 
+            if h not in horarios_ocupados
+        ]
+        
+        return JsonResponse({
+            'horarios': horarios_finais,
+            'horario_inicio': horario_inicio.strftime('%H:%M'),
+            'horario_fim': horario_fim.strftime('%H:%M')
+        })
+        
+    except ValueError:
+        return JsonResponse({'error': 'Data inválida'}, status=400)
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 

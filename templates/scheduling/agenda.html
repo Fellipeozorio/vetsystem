@@ -846,6 +846,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Fila tem veterinário fixo
                     selectVet.innerHTML = `<option value="${fila.atribuido_a.id}">${fila.atribuido_a.nome}</option>`;
                     selectVet.disabled = true;
+                    selectVet.value = fila.atribuido_a.id;
+                    // Atualizar horários quando veterinário fixo é definido
+                    atualizarHorariosDisponiveis();
                 } else {
                     // Fila sem veterinário, carregar lista
                     fetch('/scheduling/api/veterinarios/')
@@ -859,6 +862,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         });
                 }
             });
+    });
+    
+    // Veterinário - atualizar horários disponíveis quando mudar
+    document.getElementById('veterinario').addEventListener('change', function() {
+        atualizarHorariosDisponiveis();
+    });
+    
+    // Data - atualizar horários disponíveis quando mudar
+    document.getElementById('data').addEventListener('change', function() {
+        atualizarHorariosDisponiveis();
     });
     
     // Select adicionar fila - evento change
@@ -1896,22 +1909,10 @@ async function carregarEventos(info) {
         if (response.ok) {
             const eventos = await response.json();
             if (calendar && Array.isArray(eventos)) {
-                // Normaliza eventos timed: arredonda o start para o INÍCIO da hora
-                // e o end para o fim dessa mesma hora.
-                // Assim TODOS eventos de um mesmo slot cobrem exatamente 12:00–13:00,
-                // o que faz slotEventOverlap:false empilhá-los verticalmente.
-                const eventosNormalizados = eventos.map(e => {
-                    if (e.allDay || !e.start) return e;
-                    const horaInicio = new Date(e.start);
-                    horaInicio.setMinutes(0, 0, 0);
-                    const horaFim = new Date(horaInicio);
-                    horaFim.setHours(horaFim.getHours() + 1);
-                    return Object.assign({}, e, {
-                        start: horaInicio.toISOString(),
-                        end: horaFim.toISOString()
-                    });
-                });
-                calendar.setOption('events', eventosNormalizados);
+                // Usar eventos sem normalização para preservar horários corretos
+                // A normalização anterior causava problemas onde agendamentos às 23:00
+                // apareciam no dia seguinte devido ao arredondamento de horário
+                calendar.setOption('events', eventos);
             }
         } else {
             console.error('Erro ao carregar eventos: status', response.status);
@@ -2376,6 +2377,66 @@ function atualizarBotaoWhatsApp(celular, celularWhatsapp) {
     } else {
         btnWhatsApp.style.display = 'none';
     }
+}
+
+function atualizarHorariosDisponiveis() {
+    const dataInput = document.getElementById('data');
+    const veterinarioSelect = document.getElementById('veterinario');
+    const horarioSelect = document.getElementById('horario');
+    
+    const data = dataInput.value;
+    const veterinarioId = veterinarioSelect.value;
+    
+    if (!data) {
+        // Sem data, não há como buscar horários
+        return;
+    }
+    
+    // Salvar horário selecionado atualmente (se houver)
+    const horarioAtual = horarioSelect.value;
+    
+    // Construir URL da API
+    let url = `/scheduling/api/horarios-disponiveis/?data=${encodeURIComponent(data)}`;
+    if (veterinarioId) {
+        url += `&veterinario_id=${encodeURIComponent(veterinarioId)}`;
+    }
+    
+    // Buscar horários disponíveis
+    fetch(url)
+        .then(r => r.json())
+        .then(response => {
+            // Limpar select
+            horarioSelect.innerHTML = '<option value="">Selecione...</option>';
+            horarioSelect.innerHTML += '<option value="sem-horario">Sem horário definido</option>';
+            
+            // Adicionar horários disponíveis
+            if (response.horarios && response.horarios.length > 0) {
+                response.horarios.forEach(horario => {
+                    const option = document.createElement('option');
+                    option.value = horario;
+                    option.textContent = horario;
+                    horarioSelect.appendChild(option);
+                });
+                
+                // Restaurar horário selecionado se ainda disponível
+                if (horarioAtual && response.horarios.includes(horarioAtual)) {
+                    horarioSelect.value = horarioAtual;
+                } else if (horarioAtual === 'sem-horario') {
+                    horarioSelect.value = 'sem-horario';
+                }
+            } else if (response.message) {
+                // Mostrar mensagem se não houver horários disponíveis
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = response.message;
+                option.disabled = true;
+                horarioSelect.appendChild(option);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar horários disponíveis:', error);
+            // Em caso de erro, manter select com opções padrão (sem-horario)
+        });
 }
 
 function getCookie(name) {
