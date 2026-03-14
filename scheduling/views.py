@@ -14,6 +14,85 @@ from patients.models import Pet
 from django.contrib.auth.models import User
 
 
+def _is_time_between(target, start, end):
+    """Retorna True se target estiver no intervalo [start, end)"""
+    if not (start and end and target):
+        return False
+    return (start <= target) and (target < end)
+
+
+def _validate_agendamento_allowed(data_agendamento, horario, duracao_minutos, veterinario, exclude_agendamento_id=None):
+    """Valida se é permitido criar/editar agendamento na data/horário informados.
+
+    Regras:
+    - Se houver veterinário com `escala_fixa`, usar os horários semanais do veterinário.
+    - Caso contrário (escala_variavel ou sem veterinário), usar horários de funcionamento da clínica.
+    - Para agendamentos sem horário (horario is None), apenas verificar se a clínica está aberta naquele dia.
+    - Para agendamentos com horário, verificar que o horário esteja dentro do intervalo permitido
+      e não colida com agendamentos existentes do mesmo veterinário.
+    """
+    # Obter weekday para HorarioFuncionamento (model usa 0=Segunda..6=Domingo)
+    weekday_model = data_agendamento.weekday()  # 0=Monday
+    # Para HorarioAtendimentoUsuario (0=Domingo..6=Sábado) convertemos
+    weekday_usuario = (weekday_model + 1) % 7
+
+    horario_inicio = None
+    horario_fim = None
+
+    # Se houver veterinário, tentar obter configuração
+    if veterinario:
+        try:
+            config = veterinario.config_agenda
+            if config.tipo_atendimento == 'escala_fixa':
+                horario_dia = config.horarios_semanais.filter(dia_semana=weekday_usuario, trabalha=True).first()
+                if not horario_dia or not horario_dia.horario_inicio or not horario_dia.horario_fim:
+                    return False, 'Veterinário não atende neste dia'
+                horario_inicio = horario_dia.horario_inicio
+                horario_fim = horario_dia.horario_fim
+        except ConfiguracaoAgendaUsuario.DoesNotExist:
+            pass
+
+    # Se não determinamos horários pelo veterinário, usar horário da clínica
+    if not horario_inicio or not horario_fim:
+        horario_clinica = HorarioFuncionamento.objects.filter(dia_semana=weekday_model, ativo=True).first()
+        if not horario_clinica:
+            return False, 'Clínica não funciona neste dia'
+        horario_inicio = horario_clinica.horario_inicio
+        horario_fim = horario_clinica.horario_fim
+
+    # Se é agendamento sem horário, já validamos que o dia tem funcionamento
+    if not horario:
+        return True, None
+
+    # Validar que o horário está dentro do intervalo permitido
+    if not _is_time_between(horario, horario_inicio, horario_fim):
+        return False, 'Horário fora do horário de atendimento'
+
+    # Verificar colisões com outros agendamentos do mesmo veterinário
+    if veterinario:
+        inicio_dt = datetime.combine(data_agendamento, horario)
+        fim_dt = inicio_dt + timedelta(minutes=int(duracao_minutos or 0))
+
+        conflitos = Agendamento.objects.filter(
+            veterinario=veterinario,
+            data=data_agendamento,
+        ).exclude(status='cancelado')
+
+        if exclude_agendamento_id:
+            conflitos = conflitos.exclude(id=exclude_agendamento_id)
+
+        for ag in conflitos:
+            if not ag.horario:
+                continue
+            ag_inicio = datetime.combine(ag.data, ag.horario)
+            ag_fim = ag_inicio + timedelta(minutes=ag.duracao_minutos or 0)
+            # overlap check
+            if (inicio_dt < ag_fim) and (ag_inicio < fim_dt):
+                return False, 'Horário já reservado para o veterinário'
+
+    return True, None
+
+
 @login_required
 def agenda_view(request):
     """View principal da agenda"""
@@ -193,6 +272,13 @@ def criar_agendamento_api(request):
         if data['horario'] and data['horario'] != 'sem-horario':
             horario = datetime.strptime(data['horario'], '%H:%M').time()
         
+        # Validar se é permitido agendar nesta data/horário
+        is_allowed, message = _validate_agendamento_allowed(
+            data_agendamento, horario, int(data['duracao_minutos']), veterinario
+        )
+        if not is_allowed:
+            return JsonResponse({'error': message}, status=400)
+        
         # Criar agendamento
         agendamento = Agendamento.objects.create(
             tipo_atendimento=tipo_atendimento,
@@ -271,6 +357,14 @@ def editar_agendamento_api(request, pk):
         
         if 'observacoes' in data:
             agendamento.observacoes = data['observacoes']
+        
+        # Validar se é permitido manter este agendamento nas novas condições
+        is_allowed, message = _validate_agendamento_allowed(
+            agendamento.data, agendamento.horario, agendamento.duracao_minutos,
+            agendamento.veterinario, exclude_agendamento_id=agendamento.id
+        )
+        if not is_allowed:
+            return JsonResponse({'error': message}, status=400)
         
         agendamento.save()
         
