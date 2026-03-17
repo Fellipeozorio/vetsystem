@@ -909,6 +909,44 @@ document.addEventListener('DOMContentLoaded', function() {
         atualizarHorariosDisponiveis();
     });
     
+    // Função para validar disponibilidade do veterinário
+    async function validarDisponibilidadeVeterinario() {
+        const dataSelecionada = document.getElementById('data').value;
+        const veterinarioId = document.getElementById('veterinario').value;
+        
+        if (!dataSelecionada || !veterinarioId) {
+            return; // Sem data ou veterinário, não validar
+        }
+        
+        // Validar se é dia fechado
+        if (!validarDataSelecionada(dataSelecionada)) {
+            showDangerModal('A clínica não funciona no dia da semana selecionado. Por favor, escolha outro dia.');
+            // Fechar o offcanvas
+            const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento'));
+            if (offcanvas) offcanvas.hide();
+            return;
+        }
+        
+        try {
+            const response = await fetch(`/scheduling/api/horarios-disponiveis/?data=${encodeURIComponent(dataSelecionada)}&veterinario_id=${veterinarioId}`);
+            const info = await response.json();
+            
+            if (!info.horarios || info.horarios.length === 0) {
+                showDangerModal(info.message || 'O veterinário não atende neste dia da semana.');
+                // Fechar o offcanvas
+                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento'));
+                if (offcanvas) offcanvas.hide();
+                return;
+            }
+            
+            // Tudo OK, atualizar horários disponíveis
+            atualizarHorariosDisponiveis();
+        } catch (err) {
+            console.error('Erro ao validar disponibilidade do veterinário:', err);
+            atualizarHorariosDisponiveis();
+        }
+    }
+    
     // Data - validar e atualizar horários disponíveis quando mudar
     document.getElementById('data').addEventListener('change', function() {
         const dataSelecionada = this.value;
@@ -919,26 +957,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Validar se veterinário trabalha neste dia
-        const veterinarioId = document.getElementById('veterinario').value;
-        if (veterinarioId && dataSelecionada) {
-            fetch(`/scheduling/api/horarios-disponiveis/?data=${encodeURIComponent(dataSelecionada)}&veterinario_id=${veterinarioId}`)
-                .then(r => r.json())
-                .then(info => {
-                    if (!info.horarios || info.horarios.length === 0) {
-                        document.getElementById('data').value = dataAtual;
-                        showDangerModal(info.message || 'O veterinário não atende neste dia da semana.');
-                        return;
-                    }
-                    atualizarHorariosDisponiveis();
-                })
-                .catch(err => {
-                    console.error('Erro ao validar disponibilidade do veterinário:', err);
-                    atualizarHorariosDisponiveis();
-                });
-        } else {
-            atualizarHorariosDisponiveis();
-        }
+        // Validar disponibilidade do veterinário
+        validarDisponibilidadeVeterinario();
     });
     
     // Celular cliente - atualizar botão WhatsApp quando mudar
@@ -1031,15 +1051,23 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Listener para quando o offcanvas for aberto - limpar formulário e preencher data
     document.getElementById('offcanvasAgendamento').addEventListener('show.bs.offcanvas', function() {
-        // Só limpar se for um novo agendamento (título = "Novo Agendamento")
+        // Preencher data com dataAtual se ainda não estiver preenchida
+        // Nota: Não chamar limparFormularioAgendamento() aqui pois as funções
+        // novoAgendamento() e novoAgendamentoFila() já fazem isso ANTES de definir os campos
         const titulo = document.getElementById('offcanvas-title').textContent;
         if (titulo === 'Novo Agendamento') {
-            limparFormularioAgendamento();
-            // Preencher data com dataAtual se ainda não estiver preenchida
             const dataInput = document.getElementById('data');
             if (!dataInput.value || dataInput.value === '') {
                 dataInput.value = dataAtual;
             }
+        }
+    });
+    
+    // Validar disponibilidade do veterinário quando o offcanvas for exibido
+    document.getElementById('offcanvasAgendamento').addEventListener('shown.bs.offcanvas', function() {
+        const titulo = document.getElementById('offcanvas-title').textContent;
+        if (titulo === 'Novo Agendamento') {
+            validarDisponibilidadeVeterinario();
         }
     });
     
