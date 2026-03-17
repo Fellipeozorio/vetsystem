@@ -918,7 +918,27 @@ document.addEventListener('DOMContentLoaded', function() {
             showDangerModal('A clínica não funciona no dia da semana selecionado. Por favor, escolha outro dia.');
             return;
         }
-        atualizarHorariosDisponiveis();
+        
+        // Validar se veterinário trabalha neste dia
+        const veterinarioId = document.getElementById('veterinario').value;
+        if (veterinarioId && dataSelecionada) {
+            fetch(`/scheduling/api/horarios-disponiveis/?data=${encodeURIComponent(dataSelecionada)}&veterinario_id=${veterinarioId}`)
+                .then(r => r.json())
+                .then(info => {
+                    if (!info.horarios || info.horarios.length === 0) {
+                        document.getElementById('data').value = dataAtual;
+                        showDangerModal(info.message || 'O veterinário não atende neste dia da semana.');
+                        return;
+                    }
+                    atualizarHorariosDisponiveis();
+                })
+                .catch(err => {
+                    console.error('Erro ao validar disponibilidade do veterinário:', err);
+                    atualizarHorariosDisponiveis();
+                });
+        } else {
+            atualizarHorariosDisponiveis();
+        }
     });
     
     // Celular cliente - atualizar botão WhatsApp quando mudar
@@ -2018,14 +2038,23 @@ function novoAgendamento(info = null) {
     document.getElementById('status').value = 'agendado';
     
     // Definir data padrão como dataAtual
-    document.getElementById('data').value = dataAtual;
+    let dataSelecionada = dataAtual;
     
     if (info) {
         // Event Calendar usa start/end como Date objects
         const start = info.start;
         if (start) {
-            document.getElementById('data').value = getLocalDateString(start);
-
+            dataSelecionada = getLocalDateString(start);
+        }
+    }
+    
+    // Preencher data sempre (seja do info ou dataAtual)
+    document.getElementById('data').value = dataSelecionada;
+    
+    if (info) {
+        // Processar informações adicionais do info (horário e fila)
+        const start = info.start;
+        if (start) {
             // Quando o usuário clica na área do dia (click em celula do dia),
             // o start geralmente vem com hora 00:00 e/ou selection com duração >= 24h.
             // Nesses casos não preenchermos o horário automaticamente — deixar em "Selecione...".

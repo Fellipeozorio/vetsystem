@@ -383,6 +383,30 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Danger/Atenção -->
+<div class="modal modal-blur fade" id="modal-danger" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+        <div class="modal-content">
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+                <h3>Atenção</h3>
+                <div class="text-secondary" id="danger-message">Erro na operação.</div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <div class="row">
+                        <div class="col">
+                            <button type="button" class="btn btn-danger w-100" data-bs-dismiss="modal">OK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -407,6 +431,13 @@ document.addEventListener('DOMContentLoaded', function() {
     function showSuccessModal(message) {
         document.getElementById('success-message').textContent = message;
         const modal = new bootstrap.Modal(document.getElementById('modal-success'));
+        modal.show();
+    }
+    
+    // Função para mostrar modal de erro/atenção
+    function showDangerModal(message) {
+        document.getElementById('danger-message').textContent = message;
+        const modal = new bootstrap.Modal(document.getElementById('modal-danger'));
         modal.show();
     }
     
@@ -816,13 +847,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (horarioInicio && horarioFim) {
                             const horarioEmpresa = horariosEmpresa.find(h => h.dia_semana === dia && h.ativo);
                             if (!horarioEmpresa) {
-                                alert(`Erro: A empresa não funciona no dia ${getDiaNome(dia)}. O usuário não pode ter horários neste dia.`);
+                                showDangerModal(`A empresa não funciona no dia ${getDiaNome(dia)}. O usuário não pode ter horários neste dia.`);
                                 return;
                             }
                             
                             // Validar que horários do usuário estão dentro dos horários da empresa
                             if (horarioInicio < horarioEmpresa.horario_inicio || horarioFim > horarioEmpresa.horario_fim) {
-                                alert(`Erro: Os horários do usuário no dia ${getDiaNome(dia)} devem estar dentro do horário de funcionamento da empresa (${horarioEmpresa.horario_inicio} - ${horarioEmpresa.horario_fim}).`);
+                                showDangerModal(`Os horários do usuário no dia ${getDiaNome(dia)} devem estar dentro do horário de funcionamento da empresa (${horarioEmpresa.horario_inicio} - ${horarioEmpresa.horario_fim}).`);
                                 return;
                             }
                         }
@@ -833,7 +864,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('Erro ao validar horários:', error);
-                    alert('Erro ao validar horários da empresa');
+                    showDangerModal('Erro ao validar horários da empresa');
                 });
             return;
         }
