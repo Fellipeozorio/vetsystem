@@ -1125,3 +1125,30 @@ def get_horarios_disponiveis_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@login_required
+@require_GET
+def get_dias_fechados_api(request):
+    """API para retornar os dias da semana em que a clínica está fechada"""
+    try:
+        # Buscar todos os horários de funcionamento ativos
+        horarios_ativos = HorarioFuncionamento.objects.filter(ativo=True).values_list('dia_semana', flat=True)
+        
+        # Dias da semana: 0=Segunda, 1=Terça, 2=Quarta, 3=Quinta, 4=Sexta, 5=Sábado, 6=Domingo
+        todos_dias = set(range(7))
+        dias_abertos = set(horarios_ativos)
+        dias_fechados = list(todos_dias - dias_abertos)
+        
+        # Converter para formato JavaScript: 0=Domingo, 1=Segunda, ..., 6=Sábado
+        # HorarioFuncionamento: 0=Segunda, ..., 6=Domingo
+        # Precisamos mapear: Segunda(0) -> 1, Terça(1) -> 2, ..., Domingo(6) -> 0
+        dias_fechados_js = [(dia + 1) % 7 for dia in dias_fechados]
+        
+        return JsonResponse({
+            'dias_fechados': dias_fechados_js,
+            'message': 'Dias fechados carregados com sucesso'
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
