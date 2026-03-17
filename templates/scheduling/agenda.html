@@ -450,6 +450,9 @@
                         <input type="text" class="form-control" id="cliente-search" placeholder="Digite..." autocomplete="off">
                         <input type="hidden" id="cliente">
                         <div id="cliente-autocomplete-results" class="dropdown-menu" style="max-height: 200px; overflow-y: auto;"></div>
+                        <div class="invalid-feedback">
+                            Por favor, selecione um cliente.
+                        </div>
                     </div>
                 </div>
                 <div class="col-5">
@@ -457,6 +460,9 @@
                     <select class="form-select" id="animal" required disabled>
                         <option value="">Selecione cliente</option>
                     </select>
+                    <div class="invalid-feedback">
+                        Por favor, selecione um animal.
+                    </div>
                 </div>
             </div>
             
@@ -1094,6 +1100,37 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('form-agendamento').addEventListener('submit', function(e) {
         e.preventDefault();
         
+        // Validar campos obrigatórios antes de prosseguir
+        const clienteId = document.getElementById('cliente').value;
+        const animalId = document.getElementById('animal').value;
+        const clienteSearch = document.getElementById('cliente-search');
+        const animalSelect = document.getElementById('animal');
+        
+        // Remover estados de validação anteriores
+        clienteSearch.classList.remove('is-invalid');
+        animalSelect.classList.remove('is-invalid');
+        
+        let hasError = false;
+        
+        // Validar cliente
+        if (!clienteId || clienteId === '') {
+            clienteSearch.classList.add('is-invalid');
+            clienteSearch.focus();
+            hasError = true;
+        }
+        
+        // Validar animal
+        if (!animalId || animalId === '') {
+            animalSelect.classList.add('is-invalid');
+            if (!hasError) animalSelect.focus();
+            hasError = true;
+        }
+        
+        if (hasError) {
+            showDangerModal('Por favor, preencha todos os campos obrigatórios (Cliente e Animal).');
+            return;
+        }
+        
         const id = document.getElementById('agendamento-id').value;
         const filaId = document.getElementById('fila').value;
         const dataAgendamento = document.getElementById('data').value;
@@ -1206,7 +1243,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (currentMode === 'timeline') {
                         initCalendar();
                     } else {
-                        calendar.refetchEvents();
+                        // Para o modo calendário, forçar recarregamento dos eventos
+                        if (calendar) {
+                            // Obter as datas visíveis atuais do calendário
+                            const currentView = calendar.getOption('view');
+                            carregarEventos({ start: new Date(), end: new Date() });
+                        }
                     }
                 }, 300);
                 
@@ -2333,6 +2375,9 @@ function selecionarCliente(cliente) {
     document.getElementById('celular_cliente').value = cliente.celular || '';
     document.getElementById('cliente-autocomplete-results').classList.remove('show');
     
+    // Remover estado de erro quando cliente é selecionado
+    document.getElementById('cliente-search').classList.remove('is-invalid');
+    
     // Atualizar botão WhatsApp
     atualizarBotaoWhatsApp(cliente.celular, cliente.celular_whatsapp);
     
@@ -2359,6 +2404,8 @@ function selecionarCliente(cliente) {
                     select.appendChild(option);
                 });
                 select.disabled = false;
+                // Remover estado de erro quando animais são carregados
+                select.classList.remove('is-invalid');
             }
         })
         .catch(error => {
@@ -2511,6 +2558,10 @@ function limparFormularioAgendamento() {
     document.getElementById('veterinario').value = '';
     document.getElementById('row-veterinario').style.display = 'none';
     document.getElementById('veterinario-fila-info').style.display = 'none';
+    
+    // Remover estados de validação
+    document.getElementById('cliente-search').classList.remove('is-invalid');
+    document.getElementById('animal').classList.remove('is-invalid');
     
     // Limpar data e horário
     document.getElementById('data').value = '';
