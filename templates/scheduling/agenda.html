@@ -887,8 +887,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectVet.innerHTML = `<option value="${fila.atribuido_a.id}">${fila.atribuido_a.nome}</option>`;
                     selectVet.disabled = true;
                     selectVet.value = fila.atribuido_a.id;
-                    // Atualizar horários quando veterinário fixo é definido
-                    atualizarHorariosDisponiveis();
+                    // Validar disponibilidade do veterinário quando fixo é definido
+                    validarDisponibilidadeVeterinario();
                 } else {
                     // Fila sem veterinário, carregar lista
                     fetch('/scheduling/api/veterinarios/')
@@ -2571,10 +2571,12 @@ function atualizarHorariosDisponiveis() {
         .then(response => {
             // Limpar select
             horarioSelect.innerHTML = '<option value="">Selecione...</option>';
-            horarioSelect.innerHTML += '<option value="sem-horario">Sem horário definido</option>';
             
             // Adicionar horários disponíveis
             if (response.horarios && response.horarios.length > 0) {
+                // Só adicionar "sem horário definido" se houver horários (veterinário atende neste dia)
+                horarioSelect.innerHTML += '<option value="sem-horario">Sem horário definido</option>';
+                
                 response.horarios.forEach(horario => {
                     const option = document.createElement('option');
                     option.value = horario;
