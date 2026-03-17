@@ -5,6 +5,7 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.4.1/dist/event-calendar.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.css">
 <style>
     .ec {
         max-width: 100%;
@@ -324,7 +325,7 @@
             <div class="row mb-3">
                 <div class="col-4">
                     <label class="form-label required">Data</label>
-                    <input type="date" class="form-control" id="data" required>
+                    <input type="text" class="form-control" id="data" placeholder="Selecione a data" required readonly>
                 </div>
                 <div class="col-4">
                     <label class="form-label required">Horário</label>
@@ -718,6 +719,9 @@
 {% block extra_js %}
 <!-- Event Calendar - Open Source (MIT License) -->
 <script src="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.4.1/dist/event-calendar.min.js"></script>
+<!-- Flatpickr - Open Source (MIT License) -->
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/flatpickr.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.13/dist/l10n/pt.js"></script>
 
 <script>
 function showSuccessModal(mensagem) {
@@ -798,6 +802,8 @@ function carregarDiasFechados() {
         .then(data => {
             diasFechados = data.dias_fechados || [];
             console.log('Dias fechados carregados:', diasFechados);
+            // Atualizar Flatpickr com os dias fechados
+            atualizarFlatpickr();
         })
         .catch(err => {
             console.error('Erro ao carregar dias fechados:', err);
@@ -836,6 +842,7 @@ async function carregarDiasVeterinario(veterinarioId) {
     if (!veterinarioId) {
         diasVeterinario = [];
         veterinarioSelecionadoId = null;
+        atualizarFlatpickr(); // Atualizar Flatpickr quando veterinário for removido
         return;
     }
     
@@ -854,6 +861,8 @@ async function carregarDiasVeterinario(veterinarioId) {
             });
             veterinarioSelecionadoId = veterinarioId;
             console.log('Dias de trabalho do veterinário carregados:', diasVeterinario);
+            // Atualizar Flatpickr com os dias do veterinário
+            atualizarFlatpickr();
         }
     } catch (err) {
         console.error('Erro ao carregar dias de trabalho do veterinário:', err);
@@ -869,12 +878,57 @@ let currentResources = [];
 let diasFechados = []; // Array com os dias da semana fechados (0=Domingo, 1=Segunda, ..., 6=Sábado)
 let diasVeterinario = []; // Array com os dias que o veterinário selecionado trabalha (0=Domingo, ..., 6=Sábado)
 let veterinarioSelecionadoId = null; // ID do veterinário atualmente selecionado
+let flatpickrInstance = null; // Instância do Flatpickr
+
+// Função para inicializar ou atualizar o Flatpickr com dias bloqueados
+function atualizarFlatpickr() {
+    const inputData = document.getElementById('data');
+    
+    // Função que determina se um dia deve ser desabilitado
+    function desabilitarDia(date) {
+        const diaSemana = date.getDay(); // 0=Domingo, 1=Segunda, ..., 6=Sábado
+        
+        // Verificar se é dia fechado
+        if (diasFechados.includes(diaSemana)) {
+            return true;
+        }
+        
+        // Verificar se veterinário foi selecionado e se trabalha neste dia
+        if (veterinarioSelecionadoId && diasVeterinario.length > 0) {
+            if (!diasVeterinario.includes(diaSemana)) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    if (flatpickrInstance) {
+        // Atualizar instância existente
+        flatpickrInstance.set('disable', [desabilitarDia]);
+    } else {
+        // Criar nova instância
+        flatpickrInstance = flatpickr(inputData, {
+            dateFormat: 'Y-m-d',
+            locale: 'pt',
+            disable: [desabilitarDia],
+            onChange: function(selectedDates, dateStr) {
+                // Trigger do evento change nativo para manter compatibilidade
+                const event = new Event('change', { bubbles: true });
+                inputData.dispatchEvent(event);
+            }
+        });
+    }
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     // Definir data padrão como hoje
     const hoje = getLocalDateString();
     document.getElementById('data').value = hoje;
     dataAtual = hoje;
+    
+    // Inicializar Flatpickr
+    atualizarFlatpickr();
     
     // Carregar dias fechados
     carregarDiasFechados();
