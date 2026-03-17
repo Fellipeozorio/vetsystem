@@ -60,8 +60,19 @@ def _validate_agendamento_allowed(data_agendamento, horario, duracao_minutos, ve
         horario_inicio = horario_clinica.horario_inicio
         horario_fim = horario_clinica.horario_fim
 
-    # Se é agendamento sem horário, já validamos que o dia tem funcionamento
+    # Se é agendamento sem horário, validar que temos horários válidos
+    # (significa que o veterinário trabalha neste dia ou a clínica funciona)
     if not horario:
+        # Se tem veterinário com escala fixa, verificamos se ele trabalha
+        if veterinario:
+            try:
+                config = veterinario.config_agenda
+                if config.tipo_atendimento == 'escala_fixa':
+                    # Já validamos acima - se chegou aqui com horario_inicio/fim,
+                    # significa que ele trabalha neste dia
+                    return True, None
+            except ConfiguracaoAgendaUsuario.DoesNotExist:
+                pass
         return True, None
 
     # Validar que o horário está dentro do intervalo permitido

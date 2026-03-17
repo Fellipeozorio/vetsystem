@@ -778,6 +778,15 @@ function showDangerModal(mensagem) {
     new bootstrap.Modal(modal).show();
 }
 
+// Função para obter data local no formato YYYY-MM-DD sem problemas de timezone
+function getLocalDateString(date) {
+    const d = date || new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // Função para carregar dias fechados da semana
 function carregarDiasFechados() {
     fetch('/scheduling/api/dias-fechados/')
@@ -807,13 +816,13 @@ function validarDataSelecionada(dataStr) {
 
 let calendar;
 let currentMode = 'timeline';
-let dataAtual = new Date().toISOString().split('T')[0];
+let dataAtual = getLocalDateString();
 let currentResources = [];
 let diasFechados = []; // Array com os dias da semana fechados (0=Domingo, 1=Segunda, ..., 6=Sábado)
 
 document.addEventListener('DOMContentLoaded', function() {
     // Definir data padrão como hoje
-    const hoje = new Date().toISOString().split('T')[0];
+    const hoje = getLocalDateString();
     document.getElementById('data').value = hoje;
     dataAtual = hoje;
     
@@ -1731,7 +1740,7 @@ function formatarDataExtenso(data) {
 async function navegarData(direcao) {
     const d = new Date(dataAtual + 'T12:00:00');
     d.setDate(d.getDate() + direcao);
-    dataAtual = d.toISOString().split('T')[0];
+    dataAtual = getLocalDateString(d);
     
     document.getElementById('data-titulo').textContent = formatarDataExtenso(dataAtual);
     
@@ -2008,15 +2017,14 @@ function novoAgendamento(info = null) {
     document.getElementById('status-agendado').checked = true;
     document.getElementById('status').value = 'agendado';
     
-    // Definir data padrão como hoje
-    const hoje = new Date().toISOString().split('T')[0];
-    document.getElementById('data').value = hoje;
+    // Definir data padrão como dataAtual
+    document.getElementById('data').value = dataAtual;
     
     if (info) {
         // Event Calendar usa start/end como Date objects
         const start = info.start;
         if (start) {
-            document.getElementById('data').value = start.toISOString().split('T')[0];
+            document.getElementById('data').value = getLocalDateString(start);
 
             // Quando o usuário clica na área do dia (click em celula do dia),
             // o start geralmente vem com hora 00:00 e/ou selection com duração >= 24h.
