@@ -904,9 +904,9 @@ document.addEventListener('DOMContentLoaded', function() {
             });
     });
     
-    // Veterinário - atualizar horários disponíveis quando mudar
+    // Veterinário - validar disponibilidade e atualizar horários quando mudar
     document.getElementById('veterinario').addEventListener('change', function() {
-        atualizarHorariosDisponiveis();
+        validarDisponibilidadeVeterinario();
     });
     
     // Função para validar disponibilidade do veterinário
@@ -914,17 +914,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const dataSelecionada = document.getElementById('data').value;
         const veterinarioId = document.getElementById('veterinario').value;
         
-        if (!dataSelecionada || !veterinarioId) {
-            return; // Sem data ou veterinário, não validar
+        // Se não tem data, validar apenas se é dia válido
+        if (dataSelecionada && !validarDataSelecionada(dataSelecionada)) {
+            showDangerModal('A clínica não funciona no dia da semana selecionado. Por favor, escolha outro dia.');
+            // Limpar apenas o campo de data conflitante
+            document.getElementById('data').value = '';
+            return;
         }
         
-        // Validar se é dia fechado
-        if (!validarDataSelecionada(dataSelecionada)) {
-            showDangerModal('A clínica não funciona no dia da semana selecionado. Por favor, escolha outro dia.');
-            // Fechar o offcanvas
-            const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento'));
-            if (offcanvas) offcanvas.hide();
-            return;
+        if (!dataSelecionada || !veterinarioId) {
+            return; // Sem data ou veterinário, não validar
         }
         
         try {
@@ -933,9 +932,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!info.horarios || info.horarios.length === 0) {
                 showDangerModal(info.message || 'O veterinário não atende neste dia da semana.');
-                // Fechar o offcanvas
-                const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento'));
-                if (offcanvas) offcanvas.hide();
+                // Limpar apenas os campos conflitantes (veterinário e horário)
+                document.getElementById('veterinario').value = '';
+                document.getElementById('horario').value = '';
+                document.getElementById('horario').innerHTML = '<option value="">Selecione...</option>';
+                // Se a fila tinha veterinário fixo, também limpar a fila
+                const filaSelect = document.getElementById('fila');
+                if (filaSelect.options[filaSelect.selectedIndex]?.getAttribute('data-veterinario-fixo')) {
+                    document.getElementById('fila').value = '';
+                    document.getElementById('row-veterinario').style.display = 'none';
+                }
                 return;
             }
             
@@ -1049,21 +1055,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 300);
     });
     
-    // Listener para quando o offcanvas for aberto - limpar formulário e preencher data
-    document.getElementById('offcanvasAgendamento').addEventListener('show.bs.offcanvas', function() {
-        // Preencher data com dataAtual se ainda não estiver preenchida
-        // Nota: Não chamar limparFormularioAgendamento() aqui pois as funções
-        // novoAgendamento() e novoAgendamentoFila() já fazem isso ANTES de definir os campos
+    // Listener para quando o offcanvas for aberto
+    document.getElementById('offcanvasAgendamento').addEventListener('show.bs.offcanvas', function(e) {
         const titulo = document.getElementById('offcanvas-title').textContent;
-        if (titulo === 'Novo Agendamento') {
+        
+        // Se for aberto pelo botão Agendar (sem ter sido preparado por novoAgendamento/novoAgendamentoFila)
+        // verificamos se os campos estão vazios. Se sim, é uma abertura direta, então limpar e preencher data
+        if (titulo === 'Novo Agendamento' || titulo === '') {
             const dataInput = document.getElementById('data');
-            if (!dataInput.value || dataInput.value === '') {
+            const filaInput = document.getElementById('fila');
+            
+            // Se data e fila estão vazias, é abertura direta do botão
+            if ((!dataInput.value || dataInput.value === '') && (!filaInput.value || filaInput.value === '')) {
+                limparFormularioAgendamento();
                 dataInput.value = dataAtual;
+                document.getElementById('offcanvas-title').textContent = 'Novo Agendamento';
             }
         }
     });
     
-    // Validar disponibilidade do veterinário quando o offcanvas for exibido
+    // Validar disponibilidade do veterinário quando o offcanvas for totalmente exibido
     document.getElementById('offcanvasAgendamento').addEventListener('shown.bs.offcanvas', function() {
         const titulo = document.getElementById('offcanvas-title').textContent;
         if (titulo === 'Novo Agendamento') {
@@ -2126,6 +2137,12 @@ function novoAgendamento(info = null) {
 }
 
 function novoAgendamentoFila(filaId) {
+    // Validar se a data atual é um dia que a empresa funciona
+    if (!validarDataSelecionada(dataAtual)) {
+        showDangerModal('A clínica não funciona no dia da semana atual. Por favor, navegue para um dia válido.');
+        return;
+    }
+    
     limparFormularioAgendamento();
     
     // Alterar título
@@ -2481,6 +2498,15 @@ function limparFormularioAgendamento() {
     const animalSelect = document.getElementById('animal');
     animalSelect.innerHTML = '<option value="">Selecione cliente</option>';
     animalSelect.disabled = true;
+    
+    // Limpar fila e veterinário
+    document.getElementById('fila').value = '';
+    document.getElementById('veterinario').value = '';
+    document.getElementById('row-veterinario').style.display = 'none';
+    
+    // Limpar data e horário
+    document.getElementById('data').value = '';
+    document.getElementById('horario').value = '';
     
     // Limpar autocomplete
     document.getElementById('cliente-autocomplete-results').classList.remove('show');
