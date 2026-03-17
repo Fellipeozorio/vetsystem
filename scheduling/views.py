@@ -267,6 +267,18 @@ def criar_agendamento_api(request):
         # Converter strings de data e hora
         data_agendamento = datetime.strptime(data['data'], '%Y-%m-%d').date()
         
+        # Validar se a clínica funciona neste dia
+        dia_semana = data_agendamento.weekday()  # 0=Monday
+        horario_clinica = HorarioFuncionamento.objects.filter(
+            dia_semana=dia_semana,
+            ativo=True
+        ).first()
+        
+        if not horario_clinica:
+            return JsonResponse({
+                'error': 'A clínica não funciona neste dia da semana'
+            }, status=400)
+        
         # Horário pode ser "sem-horario" ou um horário válido
         horario = None
         if data['horario'] and data['horario'] != 'sem-horario':
@@ -326,7 +338,20 @@ def editar_agendamento_api(request, pk):
                 agendamento.fila = None
         
         if 'data' in data:
-            agendamento.data = datetime.strptime(data['data'], '%Y-%m-%d').date()
+            nova_data = datetime.strptime(data['data'], '%Y-%m-%d').date()
+            # Validar se a clínica funciona neste dia
+            dia_semana = nova_data.weekday()  # 0=Monday
+            horario_clinica = HorarioFuncionamento.objects.filter(
+                dia_semana=dia_semana,
+                ativo=True
+            ).first()
+            
+            if not horario_clinica:
+                return JsonResponse({
+                    'error': 'A clínica não funciona neste dia da semana'
+                }, status=400)
+            
+            agendamento.data = nova_data
         
         if 'horario' in data:
             if data['horario'] and data['horario'] != 'sem-horario':

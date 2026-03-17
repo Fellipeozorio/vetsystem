@@ -1950,7 +1950,7 @@ async function carregarEventos(info) {
     }
 }
 
-function novoAgendamento(info = null) {
+async function novoAgendamento(info = null) {
     limparFormularioAgendamento();
     
     // Alterar título
@@ -2014,10 +2014,15 @@ function novoAgendamento(info = null) {
         }
     }
     
+    // Validar se a clínica funciona neste dia
+    const dataSelecionada = document.getElementById('data').value;
+    const permitido = await validarDiaDisponivel(dataSelecionada);
+    if (!permitido) return;
+    
     new bootstrap.Offcanvas(document.getElementById('offcanvasAgendamento')).show();
 }
 
-function novoAgendamentoFila(filaId) {
+async function novoAgendamentoFila(filaId) {
     limparFormularioAgendamento();
     
     // Alterar título
@@ -2041,6 +2046,11 @@ function novoAgendamentoFila(filaId) {
     // Disparar evento change para carregar veterinário se necessário
     const event = new Event('change', { bubbles: true });
     document.getElementById('fila').dispatchEvent(event);
+    
+    // Validar se a clínica funciona neste dia
+    const dataSelecionada = document.getElementById('data').value;
+    const permitido = await validarDiaDisponivel(dataSelecionada);
+    if (!permitido) return;
     
     // Abrir modal
     new bootstrap.Offcanvas(document.getElementById('offcanvasAgendamento')).show();
@@ -2467,6 +2477,31 @@ function atualizarHorariosDisponiveis() {
             console.error('Erro ao buscar horários disponíveis:', error);
             // Em caso de erro, manter select com opções padrão (sem-horario)
         });
+}
+
+/**
+ * Valida se é possível agendar na data especificada (clínica deve estar aberta).
+ * Retorna uma Promise que resolve para true se permitido, ou false se bloqueado.
+ */
+async function validarDiaDisponivel(dataStr) {
+    if (!dataStr) return false;
+    
+    try {
+        const resp = await fetch(`/scheduling/api/horarios-disponiveis/?data=${encodeURIComponent(dataStr)}`);
+        if (resp.ok) {
+            const info = await resp.json();
+            if (!info.horarios || info.horarios.length === 0) {
+                showDangerModal(info.message || 'A clínica não funciona nesta data selecionada.');
+                return false;
+            }
+            return true;
+        }
+    } catch (err) {
+        console.error('Erro ao validar disponibilidade:', err);
+        // Em caso de erro, permitir para não bloquear fluxo
+        return true;
+    }
+    return true;
 }
 
 function getCookie(name) {
