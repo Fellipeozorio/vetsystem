@@ -625,6 +625,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById(`fechado_${diaNum}`).checked = !h.ativo;
                 });
                 
+                // Armazenar dias fechados globalmente para uso na configuração de usuários
+                window.diasEmpresaFechados = data.filter(h => !h.ativo).map(h => h.dia_semana);
+                
                 const modal = new bootstrap.Modal(document.getElementById('modal-horario'));
                 modal.show();
             })
@@ -644,24 +647,37 @@ document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.tipo-atendimento-checkbox').forEach(cb => cb.checked = false);
         document.querySelectorAll('.permissao-agenda-checkbox').forEach(cb => cb.checked = false);
         
-        // Limpar e desbloquear horários
-        for (let dia = 0; dia <= 6; dia++) {
-            const inicioInput = document.getElementById(`usuario_horario_inicio_${dia}`);
-            const fimInput = document.getElementById(`usuario_horario_fim_${dia}`);
-            const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${dia}`);
-            if (inicioInput) {
-                inicioInput.value = '';
-                inicioInput.disabled = false;
-            }
-            if (fimInput) {
-                fimInput.value = '';
-                fimInput.disabled = false;
-            }
-            if (naoTrabalhaCheckbox) {
-                naoTrabalhaCheckbox.checked = false;
-                naoTrabalhaCheckbox.disabled = false;
-            }
-        }
+        // Carregar dias fechados da empresa
+        fetch('/scheduling/api/horarios/')
+            .then(response => response.json())
+            .then(horariosEmpresa => {
+                const diasEmpresaFechados = horariosEmpresa.filter(h => !h.ativo).map(h => h.dia_semana);
+                
+                // Limpar e configurar horários baseado nos dias fechados
+                for (let dia = 0; dia <= 6; dia++) {
+                    const inicioInput = document.getElementById(`usuario_horario_inicio_${dia}`);
+                    const fimInput = document.getElementById(`usuario_horario_fim_${dia}`);
+                    const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${dia}`);
+                    
+                    const empresaFechada = diasEmpresaFechados.includes(dia);
+                    
+                    if (inicioInput) {
+                        inicioInput.value = '';
+                        inicioInput.disabled = empresaFechada;
+                        if (empresaFechada) inicioInput.style.backgroundColor = '#f0f0f0';
+                        else inicioInput.style.backgroundColor = '';
+                    }
+                    if (fimInput) {
+                        fimInput.value = '';
+                        fimInput.disabled = empresaFechada;
+                        if (empresaFechada) fimInput.style.backgroundColor = '#f0f0f0';
+                        else fimInput.style.backgroundColor = '';
+                    }
+                    if (naoTrabalhaCheckbox) {
+                        naoTrabalhaCheckbox.checked = empresaFechada;
+                        naoTrabalhaCheckbox.disabled = empresaFechada;
+                    }
+                }
         
         // Carregar dados do usuário
         fetch(`/scheduling/api/usuario-config/${usuarioId}/`)
@@ -674,49 +690,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 const permissaoAgendaCheckbox = document.querySelector(`input[name="permissao_agenda"][value="${config.permissao_agenda || 'propria'}"]`);
                 if (permissaoAgendaCheckbox) permissaoAgendaCheckbox.checked = true;
                 
-                // Bloquear campos se escala variável ou não realiza
-                const isEscalaVariavel = config.tipo_atendimento === 'escala_variavel';
-                const isNaoRealiza = config.tipo_atendimento === 'nao_realiza';
-                
-                // Tab 2: Horário de Atendimento
-                if (config.horarios_semanais) {
-                    config.horarios_semanais.forEach(h => {
-                        const inicioInput = document.getElementById(`usuario_horario_inicio_${h.dia_semana}`);
-                        const fimInput = document.getElementById(`usuario_horario_fim_${h.dia_semana}`);
-                        const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${h.dia_semana}`);
-                        
-                        if (inicioInput) {
-                            inicioInput.value = h.horario_inicio || '';
-                            inicioInput.disabled = isEscalaVariavel || isNaoRealiza;
+                    // Bloquear campos se escala variável ou não realiza
+                    const isEscalaVariavel = config.tipo_atendimento === 'escala_variavel';
+                    const isNaoRealiza = config.tipo_atendimento === 'nao_realiza';
+                    
+                    // Tab 2: Horário de Atendimento
+                    if (config.horarios_semanais) {
+                        config.horarios_semanais.forEach(h => {
+                            const inicioInput = document.getElementById(`usuario_horario_inicio_${h.dia_semana}`);
+                            const fimInput = document.getElementById(`usuario_horario_fim_${h.dia_semana}`);
+                            const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${h.dia_semana}`);
+                            
+                            const empresaFechada = inicioInput && inicioInput.disabled && inicioInput.style.backgroundColor === 'rgb(240, 240, 240)';
+                            
+                            if (inicioInput && !empresaFechada) {
+                                inicioInput.value = h.horario_inicio || '';
+                                inicioInput.disabled = isEscalaVariavel || isNaoRealiza;
+                            }
+                            if (fimInput && !empresaFechada) {
+                                fimInput.value = h.horario_fim || '';
+                                fimInput.disabled = isEscalaVariavel || isNaoRealiza;
+                            }
+                            if (naoTrabalhaCheckbox && !empresaFechada) {
+                                naoTrabalhaCheckbox.checked = !h.trabalha;
+                                naoTrabalhaCheckbox.disabled = isEscalaVariavel || isNaoRealiza;
+                            }
+                        });
+                    } else if (isEscalaVariavel || isNaoRealiza) {
+                        // Se não tem horários e é escala variável ou não realiza, bloquear todos (exceto dias fechados)
+                        for (let dia = 0; dia <= 6; dia++) {
+                            const inicioInput = document.getElementById(`usuario_horario_inicio_${dia}`);
+                            const fimInput = document.getElementById(`usuario_horario_fim_${dia}`);
+                            const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${dia}`);
+                            
+                            const empresaFechada = inicioInput && inicioInput.style.backgroundColor === 'rgb(240, 240, 240)';
+                            
+                            if (inicioInput && !empresaFechada) inicioInput.disabled = true;
+                            if (fimInput && !empresaFechada) fimInput.disabled = true;
+                            if (naoTrabalhaCheckbox && !empresaFechada) naoTrabalhaCheckbox.disabled = true;
                         }
-                        if (fimInput) {
-                            fimInput.value = h.horario_fim || '';
-                            fimInput.disabled = isEscalaVariavel || isNaoRealiza;
-                        }
-                        if (naoTrabalhaCheckbox) {
-                            naoTrabalhaCheckbox.checked = !h.trabalha;
-                            naoTrabalhaCheckbox.disabled = isEscalaVariavel || isNaoRealiza;
-                        }
-                    });
-                } else if (isEscalaVariavel || isNaoRealiza) {
-                    // Se não tem horários e é escala variável ou não realiza, bloquear todos
-                    for (let dia = 0; dia <= 6; dia++) {
-                        const inicioInput = document.getElementById(`usuario_horario_inicio_${dia}`);
-                        const fimInput = document.getElementById(`usuario_horario_fim_${dia}`);
-                        const naoTrabalhaCheckbox = document.getElementById(`usuario_nao_trabalha_${dia}`);
-                        if (inicioInput) inicioInput.disabled = true;
-                        if (fimInput) fimInput.disabled = true;
-                        if (naoTrabalhaCheckbox) naoTrabalhaCheckbox.disabled = true;
                     }
-                }
                 
-                const modal = new bootstrap.Modal(document.getElementById('modal-usuario'));
-                modal.show();
+                    const modal = new bootstrap.Modal(document.getElementById('modal-usuario'));
+                    modal.show();
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    const modal = new bootstrap.Modal(document.getElementById('modal-usuario'));
+                    modal.show();
+                });
             })
             .catch(error => {
-                console.error('Erro:', error);
-                const modal = new bootstrap.Modal(document.getElementById('modal-usuario'));
-                modal.show();
+                console.error('Erro ao carregar horários da empresa:', error);
             });
     }
     
