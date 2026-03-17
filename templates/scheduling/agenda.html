@@ -300,6 +300,10 @@
                     <select class="form-select" id="veterinario" disabled>
                         <option value="">Veterinário da fila</option>
                     </select>
+                    <small class="form-hint text-muted" id="veterinario-fila-info" style="display: none;">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-info-circle" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+                        Esta fila é específica deste veterinário
+                    </small>
                 </div>
             </div>
             
@@ -881,16 +885,20 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(r => r.json())
             .then(fila => {
                 rowVet.style.display = 'block';
+                const infoVetFila = document.getElementById('veterinario-fila-info');
                 
                 if (fila.atribuido_a) {
                     // Fila tem veterinário fixo
                     selectVet.innerHTML = `<option value="${fila.atribuido_a.id}">${fila.atribuido_a.nome}</option>`;
                     selectVet.disabled = true;
                     selectVet.value = fila.atribuido_a.id;
+                    // Mostrar mensagem de fila específica
+                    infoVetFila.style.display = 'block';
                     // Validar disponibilidade do veterinário quando fixo é definido
                     validarDisponibilidadeVeterinario();
                 } else {
                     // Fila sem veterinário, carregar lista
+                    infoVetFila.style.display = 'none';
                     fetch('/scheduling/api/veterinarios/')
                         .then(r => r.json())
                         .then(vets => {
@@ -932,16 +940,10 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (!info.horarios || info.horarios.length === 0) {
                 showDangerModal(info.message || 'O veterinário não atende neste dia da semana.');
-                // Limpar apenas os campos conflitantes (veterinário e horário)
-                document.getElementById('veterinario').value = '';
+                // Limpar apenas o campo de data (manter veterinário selecionado)
+                document.getElementById('data').value = '';
                 document.getElementById('horario').value = '';
                 document.getElementById('horario').innerHTML = '<option value="">Selecione...</option>';
-                // Se a fila tinha veterinário fixo, também limpar a fila
-                const filaSelect = document.getElementById('fila');
-                if (filaSelect.options[filaSelect.selectedIndex]?.getAttribute('data-veterinario-fixo')) {
-                    document.getElementById('fila').value = '';
-                    document.getElementById('row-veterinario').style.display = 'none';
-                }
                 return;
             }
             
@@ -1196,13 +1198,18 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(r => r.json())
         .then(data => {
             if (data.success) {
-                // Recarregar eventos
-                if (currentMode === 'timeline') {
-                    initCalendar();
-                } else {
-                    calendar.refetchEvents();
-                }
+                // Fechar offcanvas
                 bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento')).hide();
+                
+                // Recarregar eventos após pequeno delay para garantir processamento
+                setTimeout(() => {
+                    if (currentMode === 'timeline') {
+                        initCalendar();
+                    } else {
+                        calendar.refetchEvents();
+                    }
+                }, 300);
+                
                 // Mostrar modal de sucesso (criado ou editado)
                 const mensagem = id ? 'Agendamento atualizado com sucesso.' : 'Agendamento criado com sucesso.';
                 showSuccessModal(mensagem);
@@ -2503,6 +2510,7 @@ function limparFormularioAgendamento() {
     document.getElementById('fila').value = '';
     document.getElementById('veterinario').value = '';
     document.getElementById('row-veterinario').style.display = 'none';
+    document.getElementById('veterinario-fila-info').style.display = 'none';
     
     // Limpar data e horário
     document.getElementById('data').value = '';
