@@ -447,12 +447,9 @@
                 <div class="col-5">
                     <label class="form-label required">Cliente</label>
                     <div style="position: relative;">
-                        <input type="text" class="form-control" id="cliente-search" placeholder="Digite..." autocomplete="off">
-                        <input type="hidden" id="cliente">
+                        <input type="text" class="form-control" id="cliente-search" placeholder="Digite..." autocomplete="off" required>
+                        <input type="hidden" id="cliente" required>
                         <div id="cliente-autocomplete-results" class="dropdown-menu" style="max-height: 200px; overflow-y: auto;"></div>
-                        <div class="invalid-feedback">
-                            Por favor, selecione um cliente.
-                        </div>
                     </div>
                 </div>
                 <div class="col-5">
@@ -460,9 +457,6 @@
                     <select class="form-select" id="animal" required disabled>
                         <option value="">Selecione cliente</option>
                     </select>
-                    <div class="invalid-feedback">
-                        Por favor, selecione um animal.
-                    </div>
                 </div>
             </div>
             
@@ -824,11 +818,57 @@ function validarDataSelecionada(dataStr) {
     return true;
 }
 
+// Função para validar se o veterinário trabalha no dia selecionado
+function validarDiaVeterinario(dataStr) {
+    if (!dataStr || !veterinarioSelecionadoId || diasVeterinario.length === 0) {
+        return true; // Sem restrições se não há veterinário ou dias carregados
+    }
+    
+    const data = new Date(dataStr + 'T00:00:00');
+    const diaSemana = data.getDay(); // 0=Domingo, 1=Segunda, ..., 6=Sábado
+    
+    // Verificar se o veterinário trabalha neste dia
+    return diasVeterinario.includes(diaSemana);
+}
+
+// Função para carregar dias de trabalho do veterinário
+async function carregarDiasVeterinario(veterinarioId) {
+    if (!veterinarioId) {
+        diasVeterinario = [];
+        veterinarioSelecionadoId = null;
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/scheduling/api/veterinario/${veterinarioId}/dias-trabalho/`);
+        const data = await response.json();
+        
+        if (data.dias_trabalho) {
+            // API retorna dias no formato Django (0=Segunda, ..., 6=Domingo)
+            // Converter para formato JavaScript (0=Domingo, 1=Segunda, ..., 6=Sábado)
+            diasVeterinario = data.dias_trabalho.map(dia => {
+                // Django: 0=Segunda, 1=Terça, 2=Quarta, 3=Quinta, 4=Sexta, 5=Sábado, 6=Domingo
+                // JS: 0=Domingo, 1=Segunda, 2=Terça, 3=Quarta, 4=Quinta, 5=Sexta, 6=Sábado
+                if (dia === 6) return 0; // Domingo
+                return dia + 1; // Outros dias
+            });
+            veterinarioSelecionadoId = veterinarioId;
+            console.log('Dias de trabalho do veterinário carregados:', diasVeterinario);
+        }
+    } catch (err) {
+        console.error('Erro ao carregar dias de trabalho do veterinário:', err);
+        diasVeterinario = [];
+        veterinarioSelecionadoId = null;
+    }
+}
+
 let calendar;
 let currentMode = 'timeline';
 let dataAtual = getLocalDateString();
 let currentResources = [];
 let diasFechados = []; // Array com os dias da semana fechados (0=Domingo, 1=Segunda, ..., 6=Sábado)
+let diasVeterinario = []; // Array com os dias que o veterinário selecionado trabalha (0=Domingo, ..., 6=Sábado)
+let veterinarioSelecionadoId = null; // ID do veterinário atualmente selecionado
 
 document.addEventListener('DOMContentLoaded', function() {
     // Definir data padrão como hoje
@@ -889,7 +929,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Buscar informações da fila
         fetch(`/scheduling/api/fila/${filaId}/detalhes/`)
             .then(r => r.json())
-            .then(fila => {
+            .then(async fila => {
                 rowVet.style.display = 'block';
                 const infoVetFila = document.getElementById('veterinario-fila-info');
                 
@@ -900,6 +940,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     selectVet.value = fila.atribuido_a.id;
                     // Mostrar mensagem de fila específica
                     infoVetFila.style.display = 'block';
+                    // Carregar dias de trabalho do veterinário
+                    await carregarDiasVeterinario(fila.atribuido_a.id);
                     // Validar disponibilidade do veterinário quando fixo é definido
                     validarDisponibilidadeVeterinario();
                 } else {
@@ -919,7 +961,25 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Veterinário - validar disponibilidade e atualizar horários quando mudar
-    document.getElementById('veterinario').addEventListener('change', function() {
+    document.getElementById('veterinario').addEventListener('change', async function() {
+        const veterinarioId = this.value;
+        
+        // Carregar dias de trabalho do veterinário
+        if (veterinarioId) {
+            await carregarDiasVeterinario(veterinarioId);
+            
+            // Validar data já selecionada
+            const dataSelecionada = document.getElementById('data').value;
+            if (dataSelecionada && !validarDiaVeterinario(dataSelecionada)) {
+                showDangerModal('O veterinário não atende no dia selecionado. Por favor, escolha outro dia.');
+                document.getElementById('data').value = '';
+                return;
+            }
+        } else {
+            diasVeterinario = [];
+            veterinarioSelecionadoId = null;
+        }
+        
         validarDisponibilidadeVeterinario();
     });
     
@@ -964,10 +1024,18 @@ document.addEventListener('DOMContentLoaded', function() {
     // Data - validar e atualizar horários disponíveis quando mudar
     document.getElementById('data').addEventListener('change', function() {
         const dataSelecionada = this.value;
+        
+        // Validar se é dia fechado
         if (dataSelecionada && !validarDataSelecionada(dataSelecionada)) {
-            // Data inválida (dia fechado)
-            this.value = dataAtual; // Reverter para data atual
+            this.value = '';
             showDangerModal('A clínica não funciona no dia da semana selecionado. Por favor, escolha outro dia.');
+            return;
+        }
+        
+        // Validar se o veterinário trabalha neste dia
+        if (dataSelecionada && !validarDiaVeterinario(dataSelecionada)) {
+            this.value = '';
+            showDangerModal('O veterinário selecionado não atende neste dia da semana. Por favor, escolha outro dia.');
             return;
         }
         
@@ -1100,34 +1168,11 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('form-agendamento').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // Validar campos obrigatórios antes de prosseguir
+        // Validar campo cliente (hidden precisa ser validado manualmente)
         const clienteId = document.getElementById('cliente').value;
-        const animalId = document.getElementById('animal').value;
-        const clienteSearch = document.getElementById('cliente-search');
-        const animalSelect = document.getElementById('animal');
-        
-        // Remover estados de validação anteriores
-        clienteSearch.classList.remove('is-invalid');
-        animalSelect.classList.remove('is-invalid');
-        
-        let hasError = false;
-        
-        // Validar cliente
         if (!clienteId || clienteId === '') {
-            clienteSearch.classList.add('is-invalid');
-            clienteSearch.focus();
-            hasError = true;
-        }
-        
-        // Validar animal
-        if (!animalId || animalId === '') {
-            animalSelect.classList.add('is-invalid');
-            if (!hasError) animalSelect.focus();
-            hasError = true;
-        }
-        
-        if (hasError) {
-            showDangerModal('Por favor, preencha todos os campos obrigatórios (Cliente e Animal).');
+            document.getElementById('cliente-search').setCustomValidity('Por favor, selecione um cliente.');
+            document.getElementById('cliente-search').reportValidity();
             return;
         }
         
@@ -2375,8 +2420,8 @@ function selecionarCliente(cliente) {
     document.getElementById('celular_cliente').value = cliente.celular || '';
     document.getElementById('cliente-autocomplete-results').classList.remove('show');
     
-    // Remover estado de erro quando cliente é selecionado
-    document.getElementById('cliente-search').classList.remove('is-invalid');
+    // Limpar validação customizada
+    document.getElementById('cliente-search').setCustomValidity('');
     
     // Atualizar botão WhatsApp
     atualizarBotaoWhatsApp(cliente.celular, cliente.celular_whatsapp);
@@ -2404,8 +2449,6 @@ function selecionarCliente(cliente) {
                     select.appendChild(option);
                 });
                 select.disabled = false;
-                // Remover estado de erro quando animais são carregados
-                select.classList.remove('is-invalid');
             }
         })
         .catch(error => {
@@ -2559,9 +2602,12 @@ function limparFormularioAgendamento() {
     document.getElementById('row-veterinario').style.display = 'none';
     document.getElementById('veterinario-fila-info').style.display = 'none';
     
-    // Remover estados de validação
-    document.getElementById('cliente-search').classList.remove('is-invalid');
-    document.getElementById('animal').classList.remove('is-invalid');
+    // Limpar dias do veterinário
+    diasVeterinario = [];
+    veterinarioSelecionadoId = null;
+    
+    // Limpar validação customizada
+    document.getElementById('cliente-search').setCustomValidity('');
     
     // Limpar data e horário
     document.getElementById('data').value = '';

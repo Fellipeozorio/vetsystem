@@ -37,6 +37,7 @@ urlpatterns = [
     path('api/horario/<int:pk>/editar/', views.editar_horario_api, name='editar_horario_api'),
     path('api/horarios-disponiveis/', views.get_horarios_disponiveis_api, name='get_horarios_disponiveis_api'),
     path('api/dias-fechados/', views.get_dias_fechados_api, name='get_dias_fechados_api'),
+    path('api/veterinario/<int:veterinario_id>/dias-trabalho/', views.get_dias_trabalho_veterinario_api, name='get_dias_trabalho_veterinario_api'),
     
     # Configuração - Usuários
     path('api/usuarios-config/', views.get_usuarios_config_api, name='get_usuarios_config_api'),
