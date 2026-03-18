@@ -140,14 +140,14 @@
     .status-btn.btn-danger { background-color: #d63939; border-color: #d63939; color: white; }
     .status-btn.btn-purple { background-color: #ae3ec9; border-color: #ae3ec9; color: white; }
 
-    /* Ajuste do botão-ícone WhatsApp: mesmo tamanho do input */
+    /* Ajuste do botão-ícone WhatsApp: alinhamento vertical perfeito */
     #btn-whatsapp {
-        height: 38px; /* Mesma altura do input Bootstrap */
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        padding: 0.5rem;
+        padding: 0.5rem 0.75rem;
         border-radius: 0 0.25rem 0.25rem 0;
+        line-height: 1;
     }
     #btn-whatsapp .icon {
         width: 20px;
@@ -1175,11 +1175,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                         setTimeout(() => initCalendar(), 500);
                                     }
                                 } else {
-                                    alert('Erro ao adicionar fila: ' + (data.error || 'Erro desconhecido'));
+                                    showDangerModal('Erro ao adicionar fila: ' + (data.error || 'Erro desconhecido'));
                                 }
                             })
                             .catch(err => {
-                                alert('Erro ao adicionar fila: ' + err.message);
+                                showDangerModal('Erro ao adicionar fila: ' + err.message);
                             });
                         };
                         
@@ -1252,7 +1252,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const mensagem = id ? 'Agendamento atualizado com sucesso.' : 'Agendamento criado com sucesso.';
                 showSuccessModal(mensagem);
             } else {
-                alert('Erro: ' + (data.error || 'Erro desconhecido'));
+                showDangerModal('Erro: ' + (data.error || 'Erro desconhecido'));
             }
         });
     };
@@ -1290,9 +1290,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }
                         bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasAgendamento')).hide();
-                        showDangerModal('Agendamento excluído com sucesso.');
                     } else {
-                        alert('Erro ao excluir: ' + (data.error || 'Erro desconhecido'));
+                        showDangerModal('Erro ao excluir: ' + (data.error || 'Erro desconhecido'));
                     }
             })
             .catch(err => mostrarModalErro('Erro ao excluir: ' + (err.message || err)));
@@ -2365,7 +2364,7 @@ function atualizarAgendamento(event) {
     .then(r => r.json())
     .then(data => {
         if (!data.success) {
-            alert('Erro: ' + (data.error || 'Erro desconhecido'));
+            showDangerModal('Erro: ' + (data.error || 'Erro desconhecido'));
             // Recarregar eventos do calendário
             if (calendar) {
                 const view = calendar.getView();
