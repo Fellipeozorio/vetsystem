@@ -1201,9 +1201,8 @@ def get_dias_fechados_api(request):
 def imprimir_fila_view(request):
     """View para gerar PDF de impressão de uma fila específica"""
     try:
-        from weasyprint import HTML, CSS
-        from django.conf import settings
-        import os
+        from xhtml2pdf import pisa
+        from io import BytesIO
         
         fila_id = request.GET.get('fila_id')
         data_str = request.GET.get('data')
@@ -1243,15 +1242,17 @@ def imprimir_fila_view(request):
         # Renderizar template como string
         html_string = render_to_string('scheduling/imprimir_fila.html', context, request=request)
         
-        # Gerar PDF
-        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
-        pdf_file = html.write_pdf()
+        # Gerar PDF usando xhtml2pdf
+        result = BytesIO()
+        pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
         
-        # Criar resposta HTTP com PDF
-        response = HttpResponse(pdf_file, content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="agenda_{fila.nome}_{data_agendamento.strftime("%Y%m%d")}.pdf"'
-        
-        return response
+        if not pdf.err:
+            # Criar resposta HTTP com PDF
+            response = HttpResponse(result.getvalue(), content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="agenda_{fila.nome}_{data_agendamento.strftime("%Y%m%d")}.pdf"'
+            return response
+        else:
+            return JsonResponse({'error': 'Erro ao gerar PDF'}, status=500)
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
