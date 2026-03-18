@@ -147,7 +147,7 @@
         justify-content: center;
         padding: 0.5rem 0.75rem;
         border-radius: 0 0.25rem 0.25rem 0;
-        line-height: 1;
+        line-height: 0.5;
     }
     #btn-whatsapp .icon {
         width: 20px;
@@ -439,8 +439,8 @@
             <div class="row mb-3">
                 <div class="col-2">
                     <label class="form-label">Pesquisar</label>
-                    <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalPesquisarCliente">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+                    <button type="button" class="btn btn-outline-primary d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#modalPesquisarCliente">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
                     </button>
                 </div>
                 <div class="col-5">
@@ -781,6 +781,21 @@ function showDangerModal(mensagem) {
     new bootstrap.Modal(modal).show();
 }
 
+// Função para atualizar as cores dos botões de status
+function atualizarCoresStatusButtons(statusValue) {
+    // Resetar todos os botões para outline-secondary
+    document.querySelectorAll('.status-btn').forEach(btn => {
+        btn.className = 'btn btn-outline-secondary status-btn';
+    });
+    
+    // Aplicar cor ao botão selecionado
+    const label = document.querySelector(`label[for="status-${statusValue}"]`);
+    if (label) {
+        const color = label.dataset.color;
+        label.className = `btn btn-${color} status-btn`;
+    }
+}
+
 // Função para obter data local no formato YYYY-MM-DD sem problemas de timezone
 function getLocalDateString(date) {
     const d = date || new Date();
@@ -847,13 +862,8 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('input[name="status-radio"]').forEach(radio => {
         radio.addEventListener('change', function() {
             document.getElementById('status').value = this.value;
-            // Atualizar cores dos botões
-            document.querySelectorAll('.status-btn').forEach(btn => {
-                btn.className = 'btn btn-outline-secondary status-btn';
-            });
-            const label = document.querySelector(`label[for="${this.id}"]`);
-            const color = label.dataset.color;
-            label.className = `btn btn-${color} status-btn`;
+            // Atualizar cores dos botões usando a função centralizada
+            atualizarCoresStatusButtons(this.value);
         });
     });
     
@@ -1951,15 +1961,8 @@ function editarAgendamentoPorId(id) {
             if (statusRadio) {
                 statusRadio.checked = true;
                 document.getElementById('status').value = agendamento.status;
-                // Atualizar cores dos botões
-                document.querySelectorAll('.status-btn').forEach(btn => {
-                    btn.className = 'btn btn-outline-secondary status-btn';
-                });
-                const label = document.querySelector(`label[for="status-${agendamento.status}"]`);
-                if (label) {
-                    const color = label.dataset.color;
-                    label.className = `btn btn-${color} status-btn`;
-                }
+                // Atualizar cores dos botões usando a função centralizada
+                atualizarCoresStatusButtons(agendamento.status);
             }
             
             // Cliente e animal
@@ -2586,6 +2589,9 @@ function limparFormularioAgendamento() {
     
     // Garantir que status volte para agendado
     document.getElementById('status-agendado').checked = true;
+    document.getElementById('status').value = 'agendado';
+    // Atualizar cores dos botões usando a função centralizada
+    atualizarCoresStatusButtons('agendado');
     
     // Esconder botão WhatsApp
     document.getElementById('btn-whatsapp').style.display = 'none';
