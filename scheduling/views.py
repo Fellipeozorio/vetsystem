@@ -1,9 +1,10 @@
 from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from django.db.models import Q
 from django.utils import timezone
+from django.template.loader import render_to_string
 from datetime import datetime, timedelta, date, time as datetime_time
 import json
 
@@ -1198,8 +1199,12 @@ def get_dias_fechados_api(request):
 @login_required
 @require_GET
 def imprimir_fila_view(request):
-    """View para gerar página de impressão de uma fila específica"""
+    """View para gerar PDF de impressão de uma fila específica"""
     try:
+        from weasyprint import HTML, CSS
+        from django.conf import settings
+        import os
+        
         fila_id = request.GET.get('fila_id')
         data_str = request.GET.get('data')
         
@@ -1231,10 +1236,22 @@ def imprimir_fila_view(request):
             'agendamentos': agendamentos,
             'dados_unidade': dados_unidade,
             'usuario': request.user,
-            'data_impressao': timezone.now()
+            'data_impressao': timezone.now(),
+            'is_pdf': True  # Flag para indicar que é geração de PDF
         }
         
-        return render(request, 'scheduling/imprimir_fila.html', context)
+        # Renderizar template como string
+        html_string = render_to_string('scheduling/imprimir_fila.html', context, request=request)
+        
+        # Gerar PDF
+        html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+        pdf_file = html.write_pdf()
+        
+        # Criar resposta HTTP com PDF
+        response = HttpResponse(pdf_file, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="agenda_{fila.nome}_{data_agendamento.strftime("%Y%m%d")}.pdf"'
+        
+        return response
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)

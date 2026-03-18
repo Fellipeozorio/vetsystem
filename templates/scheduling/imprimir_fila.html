@@ -297,6 +297,7 @@
     
     <script>
         // Auto-print ao carregar
+        {% if not is_pdf %}
         window.onload = function() {
             // Atualizar números de página
             const pageNumber = document.querySelector('.pageNumber');
@@ -310,6 +311,7 @@
                 window.print();
             }, 500);
         };
+        {% endif %}
     </script>
 </body>
 </html>
