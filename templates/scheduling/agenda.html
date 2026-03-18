@@ -144,7 +144,7 @@
     #btn-whatsapp {
         width: 44px;
         height: 44px;
-        display: inline-flex !important;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
         padding: 0.35rem;
@@ -1240,9 +1240,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else {
                         // Para o modo calendário, forçar recarregamento dos eventos
                         if (calendar) {
-                            // Obter as datas visíveis atuais do calendário
-                            const currentView = calendar.getOption('view');
-                            carregarEventos({ start: new Date(), end: new Date() });
+                            calendar.refetchEvents();
                         }
                     }
                 }, 300);
