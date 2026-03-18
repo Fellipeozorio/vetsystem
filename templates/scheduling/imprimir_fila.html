@@ -272,9 +272,7 @@
                                 {% endif %}
                             </td>
                             <td class="col-status">
-                                <span class="status-badge status-{{ agendamento.status }}">
-                                    {{ agendamento.get_status_display }}
-                                </span>
+                                {{ agendamento.get_status_display }}
                             </td>
                         </tr>
                     {% endfor %}
