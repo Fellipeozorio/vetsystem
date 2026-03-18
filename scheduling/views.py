@@ -1139,38 +1139,6 @@ def get_horarios_disponiveis_api(request):
 
 @login_required
 @require_GET
-def get_dias_trabalho_veterinario_api(request, veterinario_id):
-    """API para retornar os dias da semana em que o veterinário trabalha"""
-    try:
-        veterinario = User.objects.get(id=veterinario_id, is_active=True)
-        config = veterinario.config_agenda
-        
-        dias_trabalho = []
-        
-        # Se escala fixa, buscar dias específicos
-        if config.tipo_atendimento == 'escala_fixa':
-            # Buscar horários do veterinário
-            horarios = config.horarios_semanais.filter(trabalha=True).values_list('dia_semana', flat=True)
-            dias_trabalho = list(horarios)
-        else:
-            # Se escala variável, retornar dias que a clínica funciona
-            horarios_clinica = HorarioFuncionamento.objects.filter(ativo=True).values_list('dia_semana', flat=True)
-            # Converter de HorarioFuncionamento (0=Seg) para HorarioAtendimentoUsuario (0=Dom)
-            dias_trabalho = [(dia + 1) % 7 for dia in horarios_clinica]
-        
-        return JsonResponse({
-            'dias_trabalho': dias_trabalho,
-            'tipo_atendimento': config.tipo_atendimento
-        })
-        
-    except (User.DoesNotExist, ConfiguracaoAgendaUsuario.DoesNotExist):
-        return JsonResponse({'error': 'Veterinário não encontrado'}, status=404)
-    except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
-
-
-@login_required
-@require_GET
 def get_dias_fechados_api(request):
     """API para retornar os dias da semana em que a clínica está fechada"""
     try:
