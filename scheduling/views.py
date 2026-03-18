@@ -1194,3 +1194,47 @@ def get_dias_fechados_api(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
+@login_required
+@require_GET
+def imprimir_fila_view(request):
+    """View para gerar página de impressão de uma fila específica"""
+    try:
+        fila_id = request.GET.get('fila_id')
+        data_str = request.GET.get('data')
+        
+        if not fila_id or not data_str:
+            return JsonResponse({'error': 'Parâmetros fila_id e data são obrigatórios'}, status=400)
+        
+        # Buscar fila
+        fila = get_object_or_404(FilaAtendimento, id=fila_id)
+        
+        # Converter data
+        data_agendamento = datetime.strptime(data_str, '%Y-%m-%d').date()
+        
+        # Buscar agendamentos da fila nesse dia
+        agendamentos = Agendamento.objects.filter(
+            fila_id=fila_id,
+            data=data_agendamento
+        ).exclude(status='cancelado').order_by('horario', 'ordem')
+        
+        # Buscar dados da unidade para logo
+        from cadastros.models import DadosUnidade
+        try:
+            dados_unidade = DadosUnidade.objects.first()
+        except:
+            dados_unidade = None
+        
+        context = {
+            'fila': fila,
+            'data': data_agendamento,
+            'agendamentos': agendamentos,
+            'dados_unidade': dados_unidade,
+            'usuario': request.user,
+            'data_impressao': timezone.now()
+        }
+        
+        return render(request, 'scheduling/imprimir_fila.html', context)
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

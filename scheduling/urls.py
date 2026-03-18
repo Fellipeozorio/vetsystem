@@ -10,6 +10,9 @@ urlpatterns = [
     # Configuração da agenda
     path('agenda/configuracao/', views.configuracao_view, name='configuracao'),
     
+    # Impressão de fila
+    path('agenda/imprimir-fila/', views.imprimir_fila_view, name='imprimir_fila'),
+    
     # API para FullCalendar
     path('api/eventos/', views.get_eventos_api, name='get_eventos_api'),
     path('api/agendamento/criar/', views.criar_agendamento_api, name='criar_agendamento_api'),
