@@ -2224,7 +2224,7 @@ function novoAgendamentoFila(filaId) {
 
 function imprimirFila(filaId, filaNome) {
     // Abrir página de impressão em nova janela
-    const url = `/scheduling/agenda/imprimir-fila/?fila_id=${filaId}&data=${dataAtual}`;
+    const url = `/scheduling/agenda/imprimir-fila.php?fila_id=${filaId}&data=${dataAtual}`;
     window.open(url, '_blank');
 }
 
