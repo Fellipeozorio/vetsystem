@@ -1201,9 +1201,6 @@ def get_dias_fechados_api(request):
 def imprimir_fila_view(request):
     """View para gerar PDF de impressão de uma fila específica"""
     try:
-        from xhtml2pdf import pisa
-        from io import BytesIO
-        
         fila_id = request.GET.get('fila_id')
         data_str = request.GET.get('data')
         
@@ -1242,17 +1239,51 @@ def imprimir_fila_view(request):
         # Renderizar template como string
         html_string = render_to_string('scheduling/imprimir_fila.html', context, request=request)
         
-        # Gerar PDF usando xhtml2pdf
-        result = BytesIO()
-        pdf = pisa.pisaDocument(BytesIO(html_string.encode("UTF-8")), result)
-        
-        if not pdf.err:
+        # Tentar usar WeasyPrint
+        try:
+            from weasyprint import HTML, CSS
+            
+            html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
+            pdf_file = html.write_pdf()
+            
             # Criar resposta HTTP com PDF
-            response = HttpResponse(result.getvalue(), content_type='application/pdf')
+            response = HttpResponse(pdf_file, content_type='application/pdf')
             response['Content-Disposition'] = f'inline; filename="agenda_{fila.nome}_{data_agendamento.strftime("%Y%m%d")}.pdf"'
+            
             return response
-        else:
-            return JsonResponse({'error': 'Erro ao gerar PDF'}, status=500)
+            
+        except OSError as e:
+            # GTK não instalado - fornecer instruções
+            if 'libgobject' in str(e) or 'libcairo' in str(e):
+                error_msg = """
+                <html>
+                <head><title>GTK Runtime Necessário</title></head>
+                <body style="font-family: Arial; padding: 40px;">
+                    <h1>🔧 Instalação Necessária</h1>
+                    <p>Para gerar PDFs, é necessário instalar o <strong>GTK Runtime para Windows</strong>.</p>
+                    
+                    <h2>Passos para Instalação:</h2>
+                    <ol>
+                        <li>Baixe o instalador GTK3 Runtime em:<br>
+                            <a href="https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/latest">
+                            https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases
+                            </a>
+                        </li>
+                        <li>Escolha a versão <strong>gtk3-runtime-...-win64.exe</strong></li>
+                        <li>Execute o instalador e siga as instruções</li>
+                        <li>Reinicie o navegador e o servidor Django após a instalação</li>
+                    </ol>
+                    
+                    <p><strong>Erro técnico:</strong> {}</p>
+                    
+                    <button onclick="window.close()" style="background: #206bc4; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
+                        Fechar
+                    </button>
+                </body>
+                </html>
+                """.format(str(e))
+                return HttpResponse(error_msg, status=500)
+            raise
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
