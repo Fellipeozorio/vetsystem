@@ -240,7 +240,10 @@ def get_agendamento_api(request, pk):
             'celular_cliente': agendamento.celular_cliente or '',
             'celular_whatsapp': agendamento.cliente.celular_whatsapp if agendamento.cliente else False,
             'status': agendamento.status,
-            'observacoes': agendamento.observacoes or ''
+            'observacoes': agendamento.observacoes or '',
+            'data_hora_chegada': agendamento.data_hora_chegada.isoformat() if agendamento.data_hora_chegada else None,
+            'data_hora_inicio_atendimento': agendamento.data_hora_inicio_atendimento.isoformat() if agendamento.data_hora_inicio_atendimento else None,
+            'data_hora_fim_atendimento': agendamento.data_hora_fim_atendimento.isoformat() if agendamento.data_hora_fim_atendimento else None,
         })
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
@@ -389,7 +392,35 @@ def editar_agendamento_api(request, pk):
             agendamento.celular_cliente = data['celular_cliente']
         
         if 'status' in data:
-            agendamento.status = data['status']
+            status_anterior = agendamento.status
+            novo_status = data['status']
+            
+            # Atualizar campos de tempo baseado na mudança de status
+            if status_anterior != novo_status:
+                agora = timezone.now()
+                
+                # Quando muda para "espera" - marca chegada
+                if novo_status == 'espera' and not agendamento.data_hora_chegada:
+                    agendamento.data_hora_chegada = agora
+                
+                # Quando muda para "em_atendimento" - marca início do atendimento
+                if novo_status == 'em_atendimento' and not agendamento.data_hora_inicio_atendimento:
+                    agendamento.data_hora_inicio_atendimento = agora
+                    # Se não marcou chegada ainda, marca agora também
+                    if not agendamento.data_hora_chegada:
+                        agendamento.data_hora_chegada = agora
+                
+                # Quando muda para "atendido" - marca fim do atendimento
+                if novo_status == 'atendido' and not agendamento.data_hora_fim_atendimento:
+                    agendamento.data_hora_fim_atendimento = agora
+                    # Se não marcou início do atendimento, marca agora também
+                    if not agendamento.data_hora_inicio_atendimento:
+                        agendamento.data_hora_inicio_atendimento = agora
+                    # Se não marcou chegada, marca agora também
+                    if not agendamento.data_hora_chegada:
+                        agendamento.data_hora_chegada = agora
+            
+            agendamento.status = novo_status
         
         if 'observacoes' in data:
             agendamento.observacoes = data['observacoes']

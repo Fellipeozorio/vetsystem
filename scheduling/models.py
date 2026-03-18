@@ -89,6 +89,28 @@ class Agendamento(models.Model):
         verbose_name='Ordem na Fila'
     )
     
+    # Controle de tempos
+    data_hora_chegada = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data/Hora de Chegada',
+        help_text='Quando o paciente chegou (status mudou para "espera")'
+    )
+    
+    data_hora_inicio_atendimento = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data/Hora de Início do Atendimento',
+        help_text='Quando o atendimento começou (status mudou para "em_atendimento")'
+    )
+    
+    data_hora_fim_atendimento = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data/Hora de Fim do Atendimento',
+        help_text='Quando o atendimento terminou (status mudou para "atendido")'
+    )
+    
     # Controle
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

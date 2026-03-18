@@ -508,7 +508,7 @@
             </div>
             
             <!-- Seção de Tempos (apenas visível no modo edição) -->
-            <div id="secao-tempos" style="display: none;">
+            <div id="secao-tempos" class="d-none">
                 <hr>
                 <h5>Tempos de Atendimento</h5>
                 <div class="row mb-2">
@@ -2005,42 +2005,10 @@ function editarAgendamentoPorId(id) {
             document.getElementById('botoes-edicao').classList.remove('d-none');
             document.getElementById('botoes-acao-topo').classList.remove('d-none');
             
-            // Mostrar seção de tempos se não estiver agendado
-            if (agendamento.status !== 'agendado') {
+            // Calcular e mostrar tempos se houver dados
+            const temExibir = calcularEExibirTempos(agendamento);
+            if (temExibir) {
                 document.getElementById('secao-tempos').classList.remove('d-none');
-                
-                // Calcular tempos
-                const agora = new Date();
-                const dataHoraInicio = agendamento.data_hora_inicio ? new Date(agendamento.data_hora_inicio) : null;
-                
-                // Tempo em espera
-                if (agendamento.status === 'espera' && dataHoraInicio) {
-                    const diffMs = agora - dataHoraInicio;
-                    const horas = Math.floor(diffMs / (1000 * 60 * 60));
-                    const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                    document.getElementById('tempo-espera').textContent = `${horas}h ${minutos}min`;
-                } else {
-                    document.getElementById('tempo-espera').textContent = '-';
-                }
-                
-                // Tempo em atraso (se horário agendado passou e ainda está em espera)
-                document.getElementById('tempo-atraso').textContent = '-';
-                if (agendamento.status === 'espera' && agendamento.horario && agendamento.horario !== 'sem-horario') {
-                    const [horas, minutos] = agendamento.horario.split(':');
-                    const dataAgendada = new Date(agendamento.data);
-                    dataAgendada.setHours(parseInt(horas), parseInt(minutos), 0, 0);
-                    
-                    if (agora > dataAgendada) {
-                        const atrasoMs = agora - dataAgendada;
-                        const horasAtraso = Math.floor(atrasoMs / (1000 * 60 * 60));
-                        const minutosAtraso = Math.floor((atrasoMs % (1000 * 60 * 60)) / (1000 * 60));
-                        document.getElementById('tempo-atraso').textContent = `${horasAtraso}h ${minutosAtraso}min`;
-                    }
-                }
-                
-                // Tempo em atendimento
-                document.getElementById('tempo-atendimento').textContent = '-';
-                
             } else {
                 document.getElementById('secao-tempos').classList.add('d-none');
             }
@@ -2595,6 +2563,106 @@ function limparFormularioAgendamento() {
     
     // Esconder botão WhatsApp
     document.getElementById('btn-whatsapp').style.display = 'none';
+}
+
+function calcularEExibirTempos(agendamento) {
+    // Função para calcular e exibir os tempos de atendimento
+    // Retorna true se houver algum tempo para exibir, false caso contrário
+    
+    const agora = new Date();
+    let temExibir = false;
+    
+    // Resetar todos os tempos
+    document.getElementById('tempo-espera').textContent = '-';
+    document.getElementById('tempo-atraso').textContent = '-';
+    document.getElementById('tempo-atendimento').textContent = '-';
+    
+    // 1. TEMPO EM ESPERA
+    // Calculado do momento da chegada até o início do atendimento (ou até agora se ainda está em espera)
+    if (agendamento.data_hora_chegada) {
+        const dataChegada = new Date(agendamento.data_hora_chegada);
+        let dataFimEspera;
+        
+        if (agendamento.data_hora_inicio_atendimento) {
+            // Já começou o atendimento, calcular até esse momento
+            dataFimEspera = new Date(agendamento.data_hora_inicio_atendimento);
+        } else if (agendamento.status === 'espera') {
+            // Ainda está em espera, calcular até agora
+            dataFimEspera = agora;
+        } else {
+            // Não tem dados suficientes
+            dataFimEspera = null;
+        }
+        
+        if (dataFimEspera) {
+            const diffMs = dataFimEspera - dataChegada;
+            if (diffMs > 0) {
+                const horas = Math.floor(diffMs / (1000 * 60 * 60));
+                const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById('tempo-espera').textContent = `${horas}h ${minutos}min`;
+                temExibir = true;
+            }
+        }
+    }
+    
+    // 2. TEMPO EM ATRASO
+    // Calculado quando o horário agendado passou e o paciente ainda não foi atendido
+    if (agendamento.horario && agendamento.horario !== 'sem-horario' && agendamento.data) {
+        const [horas, minutos] = agendamento.horario.split(':');
+        const dataAgendada = new Date(agendamento.data + 'T' + agendamento.horario + ':00');
+        
+        // Só calcula atraso se ainda não foi atendido e passou do horário
+        if (!agendamento.data_hora_fim_atendimento && agora > dataAgendada) {
+            let dataFimAtraso;
+            
+            if (agendamento.data_hora_inicio_atendimento) {
+                // Começou atendimento, calcular atraso até esse momento
+                dataFimAtraso = new Date(agendamento.data_hora_inicio_atendimento);
+            } else if (agendamento.status === 'espera' || agendamento.status === 'em_atendimento') {
+                // Ainda não iniciou ou está em atendimento mas atrasado, calcular até agora
+                dataFimAtraso = agora;
+            } else {
+                dataFimAtraso = null;
+            }
+            
+            if (dataFimAtraso && dataFimAtraso > dataAgendada) {
+                const atrasoMs = dataFimAtraso - dataAgendada;
+                const horasAtraso = Math.floor(atrasoMs / (1000 * 60 * 60));
+                const minutosAtraso = Math.floor((atrasoMs % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById('tempo-atraso').textContent = `${horasAtraso}h ${minutosAtraso}min`;
+                temExibir = true;
+            }
+        }
+    }
+    
+    // 3. TEMPO EM ATENDIMENTO
+    // Calculado do início ao fim do atendimento (ou até agora se ainda está em atendimento)
+    if (agendamento.data_hora_inicio_atendimento) {
+        const dataInicioAtendimento = new Date(agendamento.data_hora_inicio_atendimento);
+        let dataFimAtendimento;
+        
+        if (agendamento.data_hora_fim_atendimento) {
+            // Atendimento finalizado
+            dataFimAtendimento = new Date(agendamento.data_hora_fim_atendimento);
+        } else if (agendamento.status === 'em_atendimento') {
+            // Ainda em atendimento, calcular até agora
+            dataFimAtendimento = agora;
+        } else {
+            dataFimAtendimento = null;
+        }
+        
+        if (dataFimAtendimento) {
+            const diffMs = dataFimAtendimento - dataInicioAtendimento;
+            if (diffMs > 0) {
+                const horas = Math.floor(diffMs / (1000 * 60 * 60));
+                const minutos = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+                document.getElementById('tempo-atendimento').textContent = `${horas}h ${minutos}min`;
+                temExibir = true;
+            }
+        }
+    }
+    
+    return temExibir;
 }
 
 function atualizarBotaoWhatsApp(celular, celularWhatsapp) {
