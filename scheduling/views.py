@@ -1199,8 +1199,17 @@ def get_dias_fechados_api(request):
 @login_required
 @require_GET
 def imprimir_fila_view(request):
-    """View para gerar PDF de impressão de uma fila específica"""
+    """View para gerar PDF de impressão de uma fila específica usando ReportLab"""
     try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from io import BytesIO
+        import os
+        
         fila_id = request.GET.get('fila_id')
         data_str = request.GET.get('data')
         
@@ -1226,64 +1235,141 @@ def imprimir_fila_view(request):
         except:
             dados_unidade = None
         
-        context = {
-            'fila': fila,
-            'data': data_agendamento,
-            'agendamentos': agendamentos,
-            'dados_unidade': dados_unidade,
-            'usuario': request.user,
-            'data_impressao': timezone.now(),
-            'is_pdf': True  # Flag para indicar que é geração de PDF
-        }
+        # Criar buffer para o PDF
+        buffer = BytesIO()
         
-        # Renderizar template como string
-        html_string = render_to_string('scheduling/imprimir_fila.html', context, request=request)
+        # Criar documento PDF
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=15*mm,
+            leftMargin=15*mm,
+            topMargin=15*mm,
+            bottomMargin=15*mm
+        )
         
-        # Tentar usar WeasyPrint
-        try:
-            from weasyprint import HTML, CSS
+        # Container para os elementos do PDF
+        elements = []
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=16,
+            textColor=colors.HexColor('#206bc4'),
+            spaceAfter=12,
+            alignment=TA_CENTER
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Heading2'],
+            fontSize=12,
+            textColor=colors.white,
+            backColor=colors.HexColor('#55a7e0'),
+            spaceAfter=6,
+            spaceBefore=6,
+            alignment=TA_LEFT,
+            leftIndent=6,
+            rightIndent=6
+        )
+        
+        # Logo (se existir)
+        if dados_unidade and dados_unidade.logomarca:
+            try:
+                logo_path = dados_unidade.logomarca.path
+                if os.path.exists(logo_path):
+                    img = Image(logo_path, width=40*mm, height=40*mm, kind='proportional')
+                    elements.append(img)
+                    elements.append(Spacer(1, 6*mm))
+            except:
+                pass
+        
+        # Título
+        titulo = f"Agenda - {data_agendamento.strftime('%d/%m/%Y')}"
+        elements.append(Paragraph(titulo, title_style))
+        elements.append(Spacer(1, 6*mm))
+        
+        # Nome da fila
+        elements.append(Paragraph(f"Fila: {fila.nome}", subtitle_style))
+        elements.append(Spacer(1, 3*mm))
+        
+        # Tabela de agendamentos
+        if agendamentos.exists():
+            # Cabeçalho da tabela
+            data_table = [['Cliente', 'Animal', 'Tipo de Atendimento', 'Hora', 'Status']]
             
-            html = HTML(string=html_string, base_url=request.build_absolute_uri('/'))
-            pdf_file = html.write_pdf()
+            # Dados
+            for agendamento in agendamentos:
+                cliente = agendamento.cliente.nome_completo
+                animal = agendamento.animal.nome
+                tipo = agendamento.tipo_atendimento.nome
+                hora = agendamento.horario.strftime('%H:%M') if agendamento.horario else '-'
+                status = agendamento.get_status_display()
+                
+                data_table.append([cliente, animal, tipo, hora, status])
             
-            # Criar resposta HTTP com PDF
-            response = HttpResponse(pdf_file, content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="agenda_{fila.nome}_{data_agendamento.strftime("%Y%m%d")}.pdf"'
+            # Criar tabela
+            table = Table(data_table, colWidths=[60*mm, 30*mm, 50*mm, 20*mm, 30*mm])
             
-            return response
+            # Estilo da tabela
+            table.setStyle(TableStyle([
+                # Cabeçalho
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#d0e7f7')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                ('TOPPADDING', (0, 0), (-1, 0), 8),
+                
+                # Corpo da tabela
+                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
+                ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Hora centralizada
+                ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Status centralizado
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
+                ('TOPPADDING', (0, 1), (-1, -1), 6),
+                
+                # Bordas
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                
+                # Linhas alternadas
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
+            ]))
             
-        except OSError as e:
-            # GTK não instalado - fornecer instruções
-            if 'libgobject' in str(e) or 'libcairo' in str(e):
-                error_msg = """
-                <html>
-                <head><title>GTK Runtime Necessário</title></head>
-                <body style="font-family: Arial; padding: 40px;">
-                    <h1>🔧 Instalação Necessária</h1>
-                    <p>Para gerar PDFs, é necessário instalar o <strong>GTK Runtime para Windows</strong>.</p>
-                    
-                    <h2>Passos para Instalação:</h2>
-                    <ol>
-                        <li>Baixe o instalador GTK3 Runtime em:<br>
-                            <a href="https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases/latest">
-                            https://github.com/tschoonj/GTK-for-Windows-Runtime-Environment-Installer/releases
-                            </a>
-                        </li>
-                        <li>Escolha a versão <strong>gtk3-runtime-...-win64.exe</strong></li>
-                        <li>Execute o instalador e siga as instruções</li>
-                        <li>Reinicie o navegador e o servidor Django após a instalação</li>
-                    </ol>
-                    
-                    <p><strong>Erro técnico:</strong> {}</p>
-                    
-                    <button onclick="window.close()" style="background: #206bc4; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer;">
-                        Fechar
-                    </button>
-                </body>
-                </html>
-                """.format(str(e))
-                return HttpResponse(error_msg, status=500)
-            raise
+            elements.append(table)
+        else:
+            elements.append(Paragraph("Nenhum agendamento encontrado para esta fila.", styles['Normal']))
+        
+        elements.append(Spacer(1, 10*mm))
+        
+        # Rodapé
+        footer_text = f"Impresso em: {timezone.now().strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
+        footer_style = ParagraphStyle(
+            'Footer',
+            parent=styles['Normal'],
+            fontSize=8,
+            textColor=colors.grey,
+            alignment=TA_CENTER
+        )
+        elements.append(Paragraph(footer_text, footer_style))
+        
+        # Gerar PDF
+        doc.build(elements)
+        
+        # Retornar resposta
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        
+        response = HttpResponse(pdf_data, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="agenda_{fila.nome}_{data_agendamento.strftime("%Y%m%d")}.pdf"'
+        
+        return response
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
