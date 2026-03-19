@@ -1204,9 +1204,9 @@ def imprimir_fila_view(request):
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
         from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
         from io import BytesIO
         import os
         
@@ -1238,14 +1238,33 @@ def imprimir_fila_view(request):
         # Criar buffer para o PDF
         buffer = BytesIO()
         
-        # Criar documento PDF
+        # Função para adicionar cabeçalho e rodapé
+        def add_page_number(canvas, doc):
+            """Adiciona rodapé com informações em todas as páginas"""
+            canvas.saveState()
+            
+            # Rodapé
+            footer_text = f"Impresso em: {timezone.now().strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
+            page_num_text = f"Pág. {doc.page} / {doc.page}"  # Será atualizado no final
+            
+            # Texto do rodapé à esquerda
+            canvas.setFont('Helvetica', 8)
+            canvas.setFillColor(colors.grey)
+            canvas.drawString(15*mm, 10*mm, footer_text)
+            
+            # Número da página à direita
+            canvas.drawRightString(A4[0] - 15*mm, 10*mm, page_num_text)
+            
+            canvas.restoreState()
+        
+        # Criar documento PDF com callback para rodapé
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
-            rightMargin=15*mm,
-            leftMargin=15*mm,
-            topMargin=15*mm,
-            bottomMargin=15*mm
+            rightMargin=10*mm,
+            leftMargin=10*mm,
+            topMargin=10*mm,
+            bottomMargin=20*mm
         )
         
         # Container para os elementos do PDF
@@ -1256,9 +1275,9 @@ def imprimir_fila_view(request):
         title_style = ParagraphStyle(
             'CustomTitle',
             parent=styles['Heading1'],
-            fontSize=16,
-            textColor=colors.HexColor('#206bc4'),
-            spaceAfter=12,
+            fontSize=12,
+            textColor=colors.black,
+            spaceAfter=0,
             alignment=TA_CENTER
         )
         
@@ -1275,30 +1294,54 @@ def imprimir_fila_view(request):
             rightIndent=6
         )
         
-        # Logo (se existir)
+        # CABEÇALHO: Logo à esquerda e título centralizado
+        header_data = []
+        header_widths = []
+        
+        # Preparar logo
+        logo_cell = ""
         if dados_unidade and dados_unidade.logomarca:
             try:
                 logo_path = dados_unidade.logomarca.path
                 if os.path.exists(logo_path):
-                    img = Image(logo_path, width=40*mm, height=40*mm, kind='proportional')
-                    elements.append(img)
-                    elements.append(Spacer(1, 6*mm))
+                    logo_cell = Image(logo_path, width=20*mm, height=20*mm, kind='proportional')
             except:
                 pass
         
         # Título
         titulo = f"Agenda - {data_agendamento.strftime('%d/%m/%Y')}"
-        elements.append(Paragraph(titulo, title_style))
-        elements.append(Spacer(1, 6*mm))
+        titulo_cell = Paragraph(titulo, title_style)
         
-        # Nome da fila
-        elements.append(Paragraph(f"Fila: {fila.nome}", subtitle_style))
-        elements.append(Spacer(1, 3*mm))
+        # Espaço vazio à direita para balancear
+        espaco_cell = ""
+        
+        # Criar tabela de cabeçalho
+        if logo_cell:
+            header_data = [[logo_cell, titulo_cell, espaco_cell]]
+            header_widths = [25*mm, 145*mm, 25*mm]
+        else:
+            header_data = [[titulo_cell]]
+            header_widths = [195*mm]
+        
+        header_table = Table(header_data, colWidths=header_widths)
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),    # Logo à esquerda
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),  # Título centralizado
+            ('ALIGN', (2, 0), (2, 0), 'RIGHT'),   # Espaço à direita
+        ]))
+        
+        elements.append(header_table)
+        elements.append(Spacer(1, 5*mm))
         
         # Tabela de agendamentos
         if agendamentos.exists():
+            # Nome da fila como primeira linha da tabela
+            fila_row = Paragraph(f"<b>Fila: {fila.nome}</b>", ParagraphStyle('FilaNome', parent=styles['Normal'], fontSize=11, textColor=colors.white))
+            data_table = [[fila_row, '', '', '', '']]
+            
             # Cabeçalho da tabela
-            data_table = [['Cliente', 'Animal', 'Tipo de Atendimento', 'Hora', 'Status']]
+            data_table.append(['Cliente', 'Animal', 'Tipo de Atendimento', 'Horário', 'Status'])
             
             # Dados
             for agendamento in agendamentos:
@@ -1311,56 +1354,54 @@ def imprimir_fila_view(request):
                 data_table.append([cliente, animal, tipo, hora, status])
             
             # Criar tabela
-            table = Table(data_table, colWidths=[60*mm, 30*mm, 50*mm, 20*mm, 30*mm])
+            table = Table(data_table, colWidths=[60*mm, 35*mm, 55*mm, 20*mm, 25*mm])
             
             # Estilo da tabela
             table.setStyle(TableStyle([
-                # Cabeçalho
-                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#d0e7f7')),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+                # Linha do nome da fila (primeira linha)
+                ('SPAN', (0, 0), (-1, 0)),  # Mesclar todas as colunas
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#55a7e0')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
                 ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 10),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
                 ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
                 ('TOPPADDING', (0, 0), (-1, 0), 8),
+                ('LEFTPADDING', (0, 0), (-1, 0), 6),
+                
+                # Cabeçalho da tabela (segunda linha)
+                ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#d0e7f7')),
+                ('TEXTCOLOR', (0, 1), (-1, 1), colors.black),
+                ('ALIGN', (0, 1), (-1, 1), 'LEFT'),
+                ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 1), (-1, 1), 10),
+                ('BOTTOMPADDING', (0, 1), (-1, 1), 8),
+                ('TOPPADDING', (0, 1), (-1, 1), 8),
                 
                 # Corpo da tabela
-                ('BACKGROUND', (0, 1), (-1, -1), colors.white),
-                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
-                ('ALIGN', (0, 1), (-1, -1), 'LEFT'),
-                ('ALIGN', (3, 1), (3, -1), 'CENTER'),  # Hora centralizada
-                ('ALIGN', (4, 1), (4, -1), 'CENTER'),  # Status centralizado
-                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 1), (-1, -1), 6),
-                ('TOPPADDING', (0, 1), (-1, -1), 6),
+                ('BACKGROUND', (0, 2), (-1, -1), colors.white),
+                ('TEXTCOLOR', (0, 2), (-1, -1), colors.black),
+                ('ALIGN', (0, 2), (-1, -1), 'LEFT'),
+                ('ALIGN', (3, 2), (3, -1), 'CENTER'),  # Horário centralizado
+                ('ALIGN', (4, 2), (4, -1), 'CENTER'),  # Status centralizado
+                ('FONTNAME', (0, 2), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 2), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 2), (-1, -1), 6),
+                ('TOPPADDING', (0, 2), (-1, -1), 6),
                 
                 # Bordas
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
                 
-                # Linhas alternadas
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
+                # Linhas alternadas (começando da linha 2, que é índice 2)
+                ('ROWBACKGROUNDS', (0, 2), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
             ]))
             
             elements.append(table)
         else:
             elements.append(Paragraph("Nenhum agendamento encontrado para esta fila.", styles['Normal']))
         
-        elements.append(Spacer(1, 10*mm))
-        
-        # Rodapé
-        footer_text = f"Impresso em: {timezone.now().strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
-        footer_style = ParagraphStyle(
-            'Footer',
-            parent=styles['Normal'],
-            fontSize=8,
-            textColor=colors.grey,
-            alignment=TA_CENTER
-        )
-        elements.append(Paragraph(footer_text, footer_style))
-        
-        # Gerar PDF
-        doc.build(elements)
+        # Gerar PDF com rodapé
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
         
         # Retornar resposta
         pdf_data = buffer.getvalue()
