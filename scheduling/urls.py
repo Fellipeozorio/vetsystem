@@ -13,6 +13,9 @@ urlpatterns = [
     # Impressão de fila
     path('agenda/imprimir-fila.php', views.imprimir_fila_view, name='imprimir_fila'),
     
+    # Relatório completo da agenda
+    path('agenda/relatorio.php', views.relatorio_agenda_view, name='relatorio_agenda'),
+    
     # API para FullCalendar
     path('api/eventos/', views.get_eventos_api, name='get_eventos_api'),
     path('api/agendamento/criar/', views.criar_agendamento_api, name='criar_agendamento_api'),

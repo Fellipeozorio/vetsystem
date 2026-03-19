@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
@@ -108,6 +108,17 @@ def _validate_agendamento_allowed(data_agendamento, horario, duracao_minutos, ve
 @login_required
 def agenda_view(request):
     """View principal da agenda"""
+    # Verificar se é solicitação de relatório PDF
+    if request.GET.get('relatorio') == 'pdf':
+        data_str = request.GET.get('data')
+        if data_str:
+            return redirect(f"/scheduling/agenda/relatorio.php?data={data_str}")
+        else:
+            # Usar data atual se não especificada
+            from datetime import date
+            data_atual = date.today().strftime('%Y-%m-%d')
+            return redirect(f"/scheduling/agenda/relatorio.php?data={data_atual}")
+    
     tipos_atendimento = TipoAtendimento.objects.filter(ativo=True)
     filas = FilaAtendimento.objects.all()
     
@@ -1244,7 +1255,8 @@ def imprimir_fila_view(request):
             canvas.saveState()
             
             # Rodapé
-            footer_text = f"Impresso em: {timezone.now().strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
+            agora_local = timezone.localtime(timezone.now())
+            footer_text = f"Impresso em: {agora_local.strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
             page_num_text = f"Pág. {doc.page} / {doc.page}"  # Será atualizado no final
             
             # Texto do rodapé à esquerda
@@ -1304,7 +1316,7 @@ def imprimir_fila_view(request):
             try:
                 logo_path = dados_unidade.logomarca.path
                 if os.path.exists(logo_path):
-                    logo_cell = Image(logo_path, width=20*mm, height=20*mm, kind='proportional')
+                    logo_cell = Image(logo_path, width=15*mm, height=15*mm, kind='proportional')
             except:
                 pass
         
@@ -1318,7 +1330,7 @@ def imprimir_fila_view(request):
         # Criar tabela de cabeçalho
         if logo_cell:
             header_data = [[logo_cell, titulo_cell, espaco_cell]]
-            header_widths = [25*mm, 145*mm, 25*mm]
+            header_widths = [20*mm, 155*mm, 20*mm]
         else:
             header_data = [[titulo_cell]]
             header_widths = [195*mm]
@@ -1337,7 +1349,7 @@ def imprimir_fila_view(request):
         # Tabela de agendamentos
         if agendamentos.exists():
             # Nome da fila como primeira linha da tabela
-            fila_row = Paragraph(f"<b>Fila: {fila.nome}</b>", ParagraphStyle('FilaNome', parent=styles['Normal'], fontSize=11, textColor=colors.white))
+            fila_row = Paragraph(f"<b>{fila.nome}</b>", ParagraphStyle('FilaNome', parent=styles['Normal'], fontSize=11, textColor=colors.white))
             data_table = [[fila_row, '', '', '', '']]
             
             # Cabeçalho da tabela
@@ -1409,6 +1421,220 @@ def imprimir_fila_view(request):
         
         response = HttpResponse(pdf_data, content_type='application/pdf')
         response['Content-Disposition'] = f'inline; filename="agenda_{fila.nome}_{data_agendamento.strftime("%Y%m%d")}.pdf"'
+        
+        return response
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_GET
+def relatorio_agenda_view(request):
+    """View para gerar PDF de relatório completo da agenda com todas as filas"""
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib import colors
+        from reportlab.lib.units import mm
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+        from io import BytesIO
+        import os
+        
+        data_str = request.GET.get('data')
+        
+        if not data_str:
+            return JsonResponse({'error': 'Parâmetro data é obrigatório'}, status=400)
+        
+        # Converter data
+        data_agendamento = datetime.strptime(data_str, '%Y-%m-%d').date()
+        
+        # Buscar todas as filas
+        filas = FilaAtendimento.objects.all().order_by('nome')
+        
+        # Buscar dados da unidade para logo
+        from cadastros.models import DadosUnidade
+        try:
+            dados_unidade = DadosUnidade.objects.first()
+        except:
+            dados_unidade = None
+        
+        # Criar buffer para o PDF
+        buffer = BytesIO()
+        
+        # Função para adicionar cabeçalho e rodapé
+        def add_page_number(canvas, doc):
+            """Adiciona rodapé com informações em todas as páginas"""
+            canvas.saveState()
+            
+            # Rodapé
+            agora_local = timezone.localtime(timezone.now())
+            footer_text = f"Impresso em: {agora_local.strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
+            page_num_text = f"Pág. {doc.page} / {doc.page}"
+            
+            # Texto do rodapé à esquerda
+            canvas.setFont('Helvetica', 8)
+            canvas.setFillColor(colors.grey)
+            canvas.drawString(15*mm, 10*mm, footer_text)
+            
+            # Número da página à direita
+            canvas.drawRightString(A4[0] - 15*mm, 10*mm, page_num_text)
+            
+            canvas.restoreState()
+        
+        # Criar documento PDF com callback para rodapé
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=10*mm,
+            leftMargin=10*mm,
+            topMargin=10*mm,
+            bottomMargin=20*mm
+        )
+        
+        # Container para os elementos do PDF
+        elements = []
+        
+        # Estilos
+        styles = getSampleStyleSheet()
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=12,
+            textColor=colors.black,
+            spaceAfter=0,
+            alignment=TA_CENTER
+        )
+        
+        # CABEÇALHO: Logo à esquerda e título centralizado
+        header_data = []
+        header_widths = []
+        
+        # Preparar logo
+        logo_cell = ""
+        if dados_unidade and dados_unidade.logomarca:
+            try:
+                logo_path = dados_unidade.logomarca.path
+                if os.path.exists(logo_path):
+                    logo_cell = Image(logo_path, width=15*mm, height=15*mm, kind='proportional')
+            except:
+                pass
+        
+        # Título
+        titulo = f"Agenda - {data_agendamento.strftime('%d/%m/%Y')}"
+        titulo_cell = Paragraph(titulo, title_style)
+        
+        # Espaço vazio à direita para balancear
+        espaco_cell = ""
+        
+        # Criar tabela de cabeçalho
+        if logo_cell:
+            header_data = [[logo_cell, titulo_cell, espaco_cell]]
+            header_widths = [20*mm, 155*mm, 20*mm]
+        else:
+            header_data = [[titulo_cell]]
+            header_widths = [195*mm]
+        
+        header_table = Table(header_data, colWidths=header_widths)
+        header_table.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('ALIGN', (0, 0), (0, 0), 'LEFT'),    # Logo à esquerda
+            ('ALIGN', (1, 0), (1, 0), 'CENTER'),  # Título centralizado
+            ('ALIGN', (2, 0), (2, 0), 'RIGHT'),   # Espaço à direita
+        ]))
+        
+        elements.append(header_table)
+        elements.append(Spacer(1, 5*mm))
+        
+        # Iterar por cada fila
+        primeira_fila = True
+        for fila in filas:
+            # Buscar agendamentos da fila nesse dia
+            agendamentos = Agendamento.objects.filter(
+                fila_id=fila.id,
+                data=data_agendamento
+            ).exclude(status='cancelado').order_by('horario', 'ordem')
+            
+            # Adicionar página nova para cada fila (exceto a primeira)
+            if not primeira_fila:
+                elements.append(PageBreak())
+            primeira_fila = False
+            
+            # Tabela de agendamentos
+            if agendamentos.exists():
+                # Nome da fila como primeira linha da tabela
+                fila_row = Paragraph(f"<b>{fila.nome}</b>", ParagraphStyle('FilaNome', parent=styles['Normal'], fontSize=11, textColor=colors.white))
+                data_table = [[fila_row, '', '', '', '']]
+                
+                # Cabeçalho da tabela
+                data_table.append(['Cliente', 'Animal', 'Tipo de Atendimento', 'Horário', 'Status'])
+                
+                # Dados
+                for agendamento in agendamentos:
+                    cliente = agendamento.cliente.nome_completo
+                    animal = agendamento.animal.nome
+                    tipo = agendamento.tipo_atendimento.nome
+                    hora = agendamento.horario.strftime('%H:%M') if agendamento.horario else '-'
+                    status = agendamento.get_status_display()
+                    
+                    data_table.append([cliente, animal, tipo, hora, status])
+                
+                # Criar tabela
+                table = Table(data_table, colWidths=[60*mm, 35*mm, 55*mm, 20*mm, 25*mm])
+                
+                # Estilo da tabela
+                table.setStyle(TableStyle([
+                    # Linha do nome da fila (primeira linha)
+                    ('SPAN', (0, 0), (-1, 0)),  # Mesclar todas as colunas
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#55a7e0')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('ALIGN', (0, 0), (-1, 0), 'LEFT'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, 0), 11),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 8),
+                    ('TOPPADDING', (0, 0), (-1, 0), 8),
+                    ('LEFTPADDING', (0, 0), (-1, 0), 6),
+                    
+                    # Cabeçalho da tabela (segunda linha)
+                    ('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#d0e7f7')),
+                    ('TEXTCOLOR', (0, 1), (-1, 1), colors.black),
+                    ('ALIGN', (0, 1), (-1, 1), 'LEFT'),
+                    ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 1), (-1, 1), 10),
+                    ('BOTTOMPADDING', (0, 1), (-1, 1), 8),
+                    ('TOPPADDING', (0, 1), (-1, 1), 8),
+                    
+                    # Corpo da tabela
+                    ('BACKGROUND', (0, 2), (-1, -1), colors.white),
+                    ('TEXTCOLOR', (0, 2), (-1, -1), colors.black),
+                    ('ALIGN', (0, 2), (-1, -1), 'LEFT'),
+                    ('ALIGN', (3, 2), (3, -1), 'CENTER'),  # Horário centralizado
+                    ('ALIGN', (4, 2), (4, -1), 'CENTER'),  # Status centralizado
+                    ('FONTNAME', (0, 2), (-1, -1), 'Helvetica'),
+                    ('FONTSIZE', (0, 2), (-1, -1), 9),
+                    ('BOTTOMPADDING', (0, 2), (-1, -1), 6),
+                    ('TOPPADDING', (0, 2), (-1, -1), 6),
+                    
+                    # Bordas
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    
+                    # Linhas alternadas (começando da linha 2, que é índice 2)
+                    ('ROWBACKGROUNDS', (0, 2), (-1, -1), [colors.white, colors.HexColor('#f9f9f9')]),
+                ]))
+                
+                elements.append(table)
+                elements.append(Spacer(1, 5*mm))
+        
+        # Gerar PDF com rodapé
+        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        
+        # Retornar resposta
+        pdf_data = buffer.getvalue()
+        buffer.close()
+        
+        response = HttpResponse(pdf_data, content_type='application/pdf')
+        response['Content-Disposition'] = f'inline; filename="relatorio_agenda_{data_agendamento.strftime("%Y%m%d")}.pdf"'
         
         return response
         
