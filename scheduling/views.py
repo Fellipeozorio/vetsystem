@@ -1436,7 +1436,7 @@ def relatorio_agenda_view(request):
         from reportlab.lib.pagesizes import A4
         from reportlab.lib import colors
         from reportlab.lib.units import mm
-        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+        from reportlab.platypus import BaseDocTemplate, PageTemplate, Frame, Table, TableStyle, Paragraph, Spacer, Image, KeepTogether
         from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
         from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
         from io import BytesIO
@@ -1463,92 +1463,82 @@ def relatorio_agenda_view(request):
         # Criar buffer para o PDF
         buffer = BytesIO()
         
-        # Função para adicionar cabeçalho e rodapé
-        def add_page_number(canvas, doc):
-            """Adiciona rodapé com informações em todas as páginas"""
+        # Variável para armazenar total de páginas (será preenchida no build)
+        total_pages = [0]
+        
+        # Função para adicionar cabeçalho e rodapé em todas as páginas
+        def add_header_footer(canvas, doc):
+            """Adiciona cabeçalho e rodapé com informações em todas as páginas"""
             canvas.saveState()
             
-            # Rodapé
+            # CABEÇALHO
+            # Logo
+            if dados_unidade and dados_unidade.logomarca:
+                try:
+                    logo_path = dados_unidade.logomarca.path
+                    if os.path.exists(logo_path):
+                        canvas.drawImage(logo_path, 10*mm, A4[1] - 25*mm, width=15*mm, height=15*mm, preserveAspectRatio=True, mask='auto')
+                except:
+                    pass
+            
+            # Título centralizado
+            canvas.setFont('Helvetica', 12)
+            canvas.setFillColor(colors.black)
+            titulo = f"Agenda - {data_agendamento.strftime('%d/%m/%Y')}"
+            canvas.drawCentredString(A4[0] / 2, A4[1] - 17*mm, titulo)
+            
+            # RODAPÉ
             agora_local = timezone.localtime(timezone.now())
             footer_text = f"Impresso em: {agora_local.strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
-            page_num_text = f"Pág. {doc.page} / {doc.page}"
             
-            # Texto do rodapé à esquerda
+            # Usar total de páginas se disponível
+            if total_pages[0] > 0:
+                page_num_text = f"Pág. {doc.page} / {total_pages[0]}"
+            else:
+                page_num_text = f"Pág. {doc.page}"
+            
             canvas.setFont('Helvetica', 8)
             canvas.setFillColor(colors.grey)
-            canvas.drawString(15*mm, 10*mm, footer_text)
-            
-            # Número da página à direita
-            canvas.drawRightString(A4[0] - 15*mm, 10*mm, page_num_text)
+            canvas.drawString(10*mm, 10*mm, footer_text)
+            canvas.drawRightString(A4[0] - 10*mm, 10*mm, page_num_text)
             
             canvas.restoreState()
         
-        # Criar documento PDF com callback para rodapé
-        doc = SimpleDocTemplate(
+        # Criar documento PDF com BaseDocTemplate
+        doc = BaseDocTemplate(
             buffer,
             pagesize=A4,
             rightMargin=10*mm,
             leftMargin=10*mm,
-            topMargin=10*mm,
+            topMargin=30*mm,  # Espaço para cabeçalho
             bottomMargin=20*mm
         )
+        
+        # Criar frame para o conteúdo
+        frame = Frame(
+            10*mm,  # x
+            20*mm,  # y
+            A4[0] - 20*mm,  # width
+            A4[1] - 50*mm,  # height
+            id='normal'
+        )
+        
+        # Criar template de página com o frame
+        template = PageTemplate(
+            id='AllPages',
+            frames=[frame],
+            onPage=add_header_footer
+        )
+        
+        doc.addPageTemplates([template])
         
         # Container para os elementos do PDF
         elements = []
         
         # Estilos
         styles = getSampleStyleSheet()
-        title_style = ParagraphStyle(
-            'CustomTitle',
-            parent=styles['Heading1'],
-            fontSize=12,
-            textColor=colors.black,
-            spaceAfter=0,
-            alignment=TA_CENTER
-        )
         
-        # CABEÇALHO: Logo à esquerda e título centralizado
-        header_data = []
-        header_widths = []
-        
-        # Preparar logo
-        logo_cell = ""
-        if dados_unidade and dados_unidade.logomarca:
-            try:
-                logo_path = dados_unidade.logomarca.path
-                if os.path.exists(logo_path):
-                    logo_cell = Image(logo_path, width=15*mm, height=15*mm, kind='proportional')
-            except:
-                pass
-        
-        # Título
-        titulo = f"Agenda - {data_agendamento.strftime('%d/%m/%Y')}"
-        titulo_cell = Paragraph(titulo, title_style)
-        
-        # Espaço vazio à direita para balancear
-        espaco_cell = ""
-        
-        # Criar tabela de cabeçalho
-        if logo_cell:
-            header_data = [[logo_cell, titulo_cell, espaco_cell]]
-            header_widths = [20*mm, 155*mm, 20*mm]
-        else:
-            header_data = [[titulo_cell]]
-            header_widths = [195*mm]
-        
-        header_table = Table(header_data, colWidths=header_widths)
-        header_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('ALIGN', (0, 0), (0, 0), 'LEFT'),    # Logo à esquerda
-            ('ALIGN', (1, 0), (1, 0), 'CENTER'),  # Título centralizado
-            ('ALIGN', (2, 0), (2, 0), 'RIGHT'),   # Espaço à direita
-        ]))
-        
-        elements.append(header_table)
-        elements.append(Spacer(1, 5*mm))
-        
-        # Iterar por cada fila
-        primeira_fila = True
+        # Iterar por cada fila - APENAS FILAS COM AGENDAMENTOS
         for fila in filas:
             # Buscar agendamentos da fila nesse dia
             agendamentos = Agendamento.objects.filter(
@@ -1556,12 +1546,7 @@ def relatorio_agenda_view(request):
                 data=data_agendamento
             ).exclude(status='cancelado').order_by('horario', 'ordem')
             
-            # Adicionar página nova para cada fila (exceto a primeira)
-            if not primeira_fila:
-                elements.append(PageBreak())
-            primeira_fila = False
-            
-            # Tabela de agendamentos
+            # APENAS processar filas com agendamentos
             if agendamentos.exists():
                 # Nome da fila como primeira linha da tabela
                 fila_row = Paragraph(f"<b>{fila.nome}</b>", ParagraphStyle('FilaNome', parent=styles['Normal'], fontSize=11, textColor=colors.white))
@@ -1626,8 +1611,39 @@ def relatorio_agenda_view(request):
                 elements.append(table)
                 elements.append(Spacer(1, 5*mm))
         
-        # Gerar PDF com rodapé
-        doc.build(elements, onFirstPage=add_page_number, onLaterPages=add_page_number)
+        # Primeira passagem: construir PDF para contar páginas
+        doc.build(elements)
+        
+        # Armazenar total de páginas
+        total_pages[0] = doc.page
+        
+        # Segunda passagem: reconstruir PDF com número total de páginas correto
+        buffer = BytesIO()
+        doc = BaseDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=10*mm,
+            leftMargin=10*mm,
+            topMargin=30*mm,
+            bottomMargin=20*mm
+        )
+        
+        frame = Frame(
+            10*mm,
+            20*mm,
+            A4[0] - 20*mm,
+            A4[1] - 50*mm,
+            id='normal'
+        )
+        
+        template = PageTemplate(
+            id='AllPages',
+            frames=[frame],
+            onPage=add_header_footer
+        )
+        
+        doc.addPageTemplates([template])
+        doc.build(elements)
         
         # Retornar resposta
         pdf_data = buffer.getvalue()
