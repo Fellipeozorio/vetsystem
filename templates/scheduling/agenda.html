@@ -2228,12 +2228,37 @@ function imprimirFila(filaId, filaNome) {
     window.open(url, '_blank');
 }
 
-function gerarRelatorio() {
-    // Abrir relatório completo da agenda em nova janela
+async function gerarRelatorio() {
+    // Obter data selecionada
     const dataInput = document.getElementById('data');
     const data = dataInput && dataInput.value ? dataInput.value : dataAtual;
-    const url = `/scheduling/agenda/relatorio.php?data=${data}`;
-    window.open(url, '_blank');
+    
+    try {
+        // Fazer requisição para verificar se há dados
+        const response = await fetch(`/scheduling/agenda/relatorio.php?data=${data}`);
+        
+        // Verificar se há erro
+        if (!response.ok) {
+            const errorData = await response.json();
+            showDangerModal(errorData.error || 'Erro ao gerar relatório');
+            return;
+        }
+        
+        // Verificar o tipo de conteúdo
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+            // É um erro retornado como JSON
+            const errorData = await response.json();
+            showDangerModal(errorData.error || 'Nenhum agendamento encontrado para este dia');
+        } else {
+            // É um PDF, abrir em nova janela
+            const url = `/scheduling/agenda/relatorio.php?data=${data}`;
+            window.open(url, '_blank');
+        }
+    } catch (error) {
+        console.error('Erro ao gerar relatório:', error);
+        showDangerModal('Erro ao gerar relatório. Tente novamente.');
+    }
 }
 
 function buscarClientes() {

@@ -1611,6 +1611,12 @@ def relatorio_agenda_view(request):
                 elements.append(table)
                 elements.append(Spacer(1, 5*mm))
         
+        # Verificar se há conteúdo para gerar PDF
+        if not elements:
+            return JsonResponse({
+                'error': 'Nenhum agendamento encontrado para o dia selecionado.'
+            }, status=404)
+        
         # Primeira passagem: construir PDF para contar páginas
         doc.build(elements)
         
