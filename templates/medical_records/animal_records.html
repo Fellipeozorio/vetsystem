@@ -245,6 +245,12 @@
   transition: width .25s ease, flex-basis .25s ease;
 }
 
+/* Container principal das tabs */
+#tabs-container {
+  min-height: 510px;
+  align-items: stretch;
+}
+
 /* LEFT PANEL FIXO */
 .left-panel{
   width:510px;
@@ -264,11 +270,13 @@
   flex:0 0 18px;
   padding:0;
   display:flex;
+  align-self:stretch;
+  min-height: 100%;
 }
 
 .divider-bar{
   width:100%;
-  height:100%;
+  flex: 1;
   cursor:pointer;
   display:flex;
   align-items:center;
@@ -304,6 +312,10 @@
 
 /* remover padding interno das abas */
 .right-panel .card-body {
+  padding: 0;
+}
+
+.left-panel .card-body {
   padding: 0;
 }
 
@@ -354,6 +366,9 @@ document.addEventListener("DOMContentLoaded", function(){
   });
 
 });
+
+// Disponibilizar ID do pet para scripts incluídos (timeline/formulários)
+window.CURRENT_PET_ID = {{ pet.id }};
 </script>
 
 {% endblock %}

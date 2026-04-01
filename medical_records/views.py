@@ -134,11 +134,20 @@ def atendimento_list(request):
 @login_required
 def animal_records(request, pet_id):
     """Página de prontuário do animal."""
+    from cadastros.models import DadosUnidade
+    
     pet = get_object_or_404(Pet, id=pet_id)
+    
+    # Buscar dados da clínica/unidade (singleton)
+    try:
+        clinica = DadosUnidade.objects.first()
+    except DadosUnidade.DoesNotExist:
+        clinica = None
     
     context = {
         'pet': pet,
         'cliente': pet.tutor,
+        'clinica': clinica,
     }
     
     return render(request, 'medical_records/atendimento_clinico_form.html', context)
@@ -161,9 +170,16 @@ from .models import (
 @require_http_methods(["POST"])
 @login_required
 def salvar_atendimento(request, pet_id):
-    """Salvar novo atendimento clínico"""
+    """Salvar novo atendimento clínico ou atualizar existente"""
     try:
         pet = get_object_or_404(Pet, id=pet_id)
+        
+        # Verificar se é edição
+        atendimento_id = request.POST.get('atendimento_id')
+        if atendimento_id:
+            atendimento = get_object_or_404(Atendimento, id=atendimento_id, pet=pet)
+        else:
+            atendimento = Atendimento(pet=pet, usuario=request.user)
         
         # Parse data e hora
         data_hora_str = request.POST.get('data_hora')
@@ -172,16 +188,12 @@ def salvar_atendimento(request, pet_id):
         else:
             data_hora = timezone.now()
         
-        # Criar atendimento
-        atendimento = Atendimento.objects.create(
-            pet=pet,
-            tipo_atendimento_id=request.POST.get('tipo_atendimento_id'),
-            data_hora=data_hora,
-            observacoes=request.POST.get('observacoes', ''),
-            detalhes=request.POST.get('detalhes', ''),
-            obs_retorno=request.POST.get('obs_retorno', ''),
-            usuario=request.user
-        )
+        # Atualizar campos
+        atendimento.tipo_atendimento_id = request.POST.get('tipo_atendimento_id')
+        atendimento.data_hora = data_hora
+        atendimento.observacoes = request.POST.get('observacoes', '')
+        atendimento.detalhes = request.POST.get('detalhes', '')
+        atendimento.obs_retorno = request.POST.get('obs_retorno', '')
         
         # Processar datas de retorno
         if request.POST.get('data_retorno'):
@@ -625,6 +637,277 @@ def deletar_registro(request, pet_id, tipo, registro_id):
             'success': True,
             'message': 'Registro excluído com sucesso!'
         })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["GET"])
+@login_required
+def listar_timeline(request, pet_id):
+    """Listar todos os registros da timeline de um pet"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        registros = []
+        
+        # Buscar todos os tipos de registros
+        for atendimento in Atendimento.objects.filter(pet=pet).select_related('tipo_atendimento', 'usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'atendimento',
+                'id': atendimento.id,
+                'titulo': atendimento.observacoes or 'Atendimento',
+                'descricao': atendimento.tipo_atendimento.nome if atendimento.tipo_atendimento else 'Atendimento',
+                'data': atendimento.data_hora.isoformat(),
+                'usuario': atendimento.usuario.get_full_name() or atendimento.usuario.username,
+                'usuario_avatar': atendimento.usuario.userprofile.avatar.url if hasattr(atendimento.usuario, 'userprofile') and atendimento.usuario.userprofile.avatar else None
+            })
+        
+        for peso in Peso.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'peso',
+                'id': peso.id,
+                'titulo': f'{peso.peso} kg',
+                'descricao': peso.condicao_corporal or 'Peso registrado',
+                'data': peso.data_hora.isoformat(),
+                'usuario': peso.usuario.get_full_name() or peso.usuario.username,
+                'usuario_avatar': peso.usuario.userprofile.avatar.url if hasattr(peso.usuario, 'userprofile') and peso.usuario.userprofile.avatar else None
+            })
+        
+        for patologia in Patologia.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'patologia',
+                'id': patologia.id,
+                'titulo': patologia.diagnostico,
+                'descricao': f'Gravidade: {patologia.gravidade}' if patologia.gravidade else 'Patologia registrada',
+                'data': patologia.data_hora.isoformat(),
+                'usuario': patologia.usuario.get_full_name() or patologia.usuario.username,
+                'usuario_avatar': patologia.usuario.userprofile.avatar.url if hasattr(patologia.usuario, 'userprofile') and patologia.usuario.userprofile.avatar else None
+            })
+        
+        for documento in Documento.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'documento',
+                'id': documento.id,
+                'titulo': documento.titulo,
+                'descricao': f'Tipo: {documento.tipo}',
+                'data': documento.data_hora.isoformat(),
+                'usuario': documento.usuario.get_full_name() or documento.usuario.username,
+                'usuario_avatar': documento.usuario.userprofile.avatar.url if hasattr(documento.usuario, 'userprofile') and documento.usuario.userprofile.avatar else None
+            })
+        
+        for exame in Exame.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'exame',
+                'id': exame.id,
+                'titulo': exame.nome,
+                'descricao': f'Tipo: {exame.tipo}',
+                'data': exame.data_hora.isoformat(),
+                'usuario': exame.usuario.get_full_name() or exame.usuario.username,
+                'usuario_avatar': exame.usuario.userprofile.avatar.url if hasattr(exame.usuario, 'userprofile') and exame.usuario.userprofile.avatar else None
+            })
+        
+        for foto in Foto.objects.filter(pet=pet).select_related('usuario').prefetch_related('arquivos').order_by('-data_hora'):
+            num_arquivos = foto.arquivos.count()
+            registros.append({
+                'tipo': 'fotos',
+                'id': foto.id,
+                'titulo': foto.titulo,
+                'descricao': f'{num_arquivos} foto(s)',
+                'data': foto.data_hora.isoformat(),
+                'usuario': foto.usuario.get_full_name() or foto.usuario.username,
+                'usuario_avatar': foto.usuario.userprofile.avatar.url if hasattr(foto.usuario, 'userprofile') and foto.usuario.userprofile.avatar else None
+            })
+        
+        for vacina in VacinaRegistro.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'vacina',
+                'id': vacina.id,
+                'titulo': vacina.nome,
+                'descricao': f'Lote: {vacina.lote}' if vacina.lote else 'Vacina aplicada',
+                'data': vacina.data_hora.isoformat(),
+                'usuario': vacina.usuario.get_full_name() or vacina.usuario.username,
+                'usuario_avatar': vacina.usuario.userprofile.avatar.url if hasattr(vacina.usuario, 'userprofile') and vacina.usuario.userprofile.avatar else None
+            })
+        
+        for receita in Receita.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'receita',
+                'id': receita.id,
+                'titulo': f'Receita: {receita.tipo}',
+                'descricao': receita.prescricao[:100] if receita.prescricao else 'Receita',
+                'data': receita.data_hora.isoformat(),
+                'usuario': receita.usuario.get_full_name() or receita.usuario.username,
+                'usuario_avatar': receita.usuario.userprofile.avatar.url if hasattr(receita.usuario, 'userprofile') and receita.usuario.userprofile.avatar else None
+            })
+        
+        for observacao in Observacao.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'observacoes',
+                'id': observacao.id,
+                'titulo': observacao.titulo,
+                'descricao': observacao.texto[:100] if observacao.texto else 'Observação',
+                'data': observacao.data_hora.isoformat(),
+                'usuario': observacao.usuario.get_full_name() or observacao.usuario.username,
+                'usuario_avatar': observacao.usuario.userprofile.avatar.url if hasattr(observacao.usuario, 'userprofile') and observacao.usuario.userprofile.avatar else None
+            })
+        
+        for video in Video.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'video',
+                'id': video.id,
+                'titulo': video.titulo,
+                'descricao': video.arquivo.name if video.arquivo else 'Vídeo',
+                'data': video.data_hora.isoformat(),
+                'usuario': video.usuario.get_full_name() or video.usuario.username,
+                'usuario_avatar': video.usuario.userprofile.avatar.url if hasattr(video.usuario, 'userprofile') and video.usuario.userprofile.avatar else None
+            })
+        
+        for internacao in Internacao.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'internacao',
+                'id': internacao.id,
+                'titulo': f'Internação: {internacao.status}',
+                'descricao': internacao.motivo[:100] if internacao.motivo else 'Internação',
+                'data': internacao.data_hora.isoformat(),
+                'usuario': internacao.usuario.get_full_name() or internacao.usuario.username,
+                'usuario_avatar': internacao.usuario.userprofile.avatar.url if hasattr(internacao.usuario, 'userprofile') and internacao.usuario.userprofile.avatar else None
+            })
+        
+        # Ordenar todos os registros por data (mais recente primeiro)
+        registros.sort(key=lambda x: x['data'], reverse=True)
+        
+        return JsonResponse({
+            'success': True,
+            'registros': registros
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=400)
+
+
+@require_http_methods(["GET"])
+@login_required
+def obter_registro(request, pet_id, tipo, registro_id):
+    """Obter detalhes de um registro específico para edição"""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        
+        # Mapear tipo para modelo
+        modelos = {
+            'atendimento': Atendimento,
+            'peso': Peso,
+            'patologia': Patologia,
+            'documento': Documento,
+            'exame': Exame,
+            'fotos': Foto,
+            'vacina': VacinaRegistro,
+            'receita': Receita,
+            'observacoes': Observacao,
+            'video': Video,
+            'internacao': Internacao
+        }
+        
+        modelo = modelos.get(tipo)
+        if not modelo:
+            return JsonResponse({
+                'success': False,
+                'error': 'Tipo de registro inválido'
+            }, status=400)
+        
+        # Buscar registro
+        registro = get_object_or_404(modelo, id=registro_id, pet_id=pet_id)
+        
+        # Montar dados de resposta baseado no tipo
+        dados = {
+            'success': True,
+            'tipo': tipo,
+            'id': registro.id,
+            'data_hora': registro.data_hora.strftime('%Y-%m-%dT%H:%M') if hasattr(registro, 'data_hora') else None
+        }
+        
+        # Dados específicos por tipo
+        if tipo == 'atendimento':
+            dados.update({
+                'tipo_atendimento_id': registro.tipo_atendimento_id,
+                'observacoes': registro.observacoes or '',
+                'detalhes': registro.detalhes or '',
+                'obs_retorno': registro.obs_retorno or '',
+                'data_retorno': registro.data_retorno or '',
+                'hora_retorno': registro.hora_retorno or ''
+            })
+        elif tipo == 'peso':
+            dados.update({
+                'peso': str(registro.peso),
+                'condicao_corporal': registro.condicao_corporal or '',
+                'observacoes': registro.observacoes or ''
+            })
+        elif tipo == 'patologia':
+            dados.update({
+                'diagnostico': registro.diagnostico,
+                'cid': registro.cid or '',
+                'gravidade': registro.gravidade or '',
+                'observacoes': registro.observacoes or ''
+            })
+        elif tipo == 'documento':
+            dados.update({
+                'tipo_doc': registro.tipo or '',
+                'titulo': registro.titulo,
+                'descricao': registro.descricao or ''
+            })
+        elif tipo == 'exame':
+            dados.update({
+                'tipo_exame': registro.tipo or '',
+                'nome': registro.nome,
+                'resultado': registro.resultado or ''
+            })
+        elif tipo == 'fotos':
+            dados.update({
+                'titulo': registro.titulo,
+                'descricao': registro.descricao or ''
+            })
+        elif tipo == 'vacina':
+            dados.update({
+                'nome': registro.nome,
+                'lote': registro.lote or '',
+                'fabricante': registro.fabricante or '',
+                'proxima_dose': registro.proxima_dose or '',
+                'observacoes': registro.observacoes or ''
+            })
+        elif tipo == 'receita':
+            dados.update({
+                'tipo_receita': registro.tipo or '',
+                'prescricao': registro.prescricao,
+                'validade': registro.validade or '',
+                'observacoes': registro.observacoes or ''
+            })
+        elif tipo == 'observacoes':
+            dados.update({
+                'titulo': registro.titulo,
+                'texto': registro.texto,
+                'categoria': registro.categoria or ''
+            })
+        elif tipo == 'video':
+            dados.update({
+                'titulo': registro.titulo,
+                'descricao': registro.descricao or ''
+            })
+        elif tipo == 'internacao':
+            dados.update({
+                'status': registro.status,
+                'gravidade': registro.gravidade or '',
+                'motivo': registro.motivo,
+                'data_entrada': registro.data_entrada,
+                'previsao_alta': registro.previsao_alta or '',
+                'observacoes': registro.observacoes or ''
+            })
+        
+        return JsonResponse(dados)
         
     except Exception as e:
         return JsonResponse({

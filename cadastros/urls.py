@@ -7,6 +7,7 @@ urlpatterns = [
     # ===== API ENDPOINTS =====
     path('api/tipos-atendimento/', views.api_tipos_atendimento_list, name='api_tipos_atendimento_list'),
     path('api/tipos-atendimento/<int:pk>/template/', views.api_tipo_atendimento_template, name='api_tipo_atendimento_template'),
+    path('api/filas-atendimento/', views.api_filas_atendimento_list, name='api_filas_atendimento_list'),
     
     # URLs específicas para tipos de atendimento (devem vir antes das genéricas)
     path('tipos-atendimento/', views.tipos_atendimento_list, name='tipos_atendimento_list'),

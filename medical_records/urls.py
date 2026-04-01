@@ -20,7 +20,13 @@ urlpatterns = [
     path('api/<int:pet_id>/video/', views.salvar_video, name='salvar_video'),
     path('api/<int:pet_id>/internacao/', views.salvar_internacao, name='salvar_internacao'),
     
+    # API endpoints para buscar registros individuais
+    path('api/<int:pet_id>/<str:tipo>/<int:registro_id>/detalhes/', views.obter_registro, name='obter_registro'),
+    
     # API endpoint para deletar registros
     path('api/<int:pet_id>/<str:tipo>/<int:registro_id>/', views.deletar_registro, name='deletar_registro'),
+    
+    # API endpoint para listar registros da timeline
+    path('api/<int:pet_id>/timeline/', views.listar_timeline, name='listar_timeline'),
 ]
 

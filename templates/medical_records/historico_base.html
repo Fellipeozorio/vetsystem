@@ -66,9 +66,9 @@
 </div>
 
 <!-- Conteúdo principal: Timeline (3 cols) + Botões Adicionar / Formulários (9 cols) -->
-<div class="row g-0">
+<div class="row g-0" style="align-items: stretch;">
   <!-- Coluna esquerda: Timeline vertical (3 colunas) -->
-  <div class="col-md-3 border-end" style="max-height: 600px; overflow-y: auto;">
+  <div class="col-md-3" style="max-height: 600px; overflow-y: auto;">
     <ul class="timeline timeline-vertical" id="timeline-list">
       <!-- Registros serão adicionados dinamicamente aqui -->
     </ul>
@@ -81,7 +81,7 @@
   </div>
   
   <!-- Coluna direita: Botões de Adicionar e Formulários -->
-  <div class="col-md-9">
+  <div class="col-md-9" style="border-left: 1px solid #e5e7eb; padding-left: 1rem; min-height: 510px;">
     <h5 class="m-0 mb-3" id="add-buttons-title" style="font-size: 1.1rem;">Adicionar</h5>
     
     <!-- Grid de Botões Adicionar -->
@@ -418,7 +418,7 @@
 /* ===== TIMELINE ===== */
 .timeline-vertical {
   list-style: none;
-  padding: 0;
+  padding: 0 4px;
   margin: 0;
   position: relative;
 }
@@ -536,6 +536,11 @@
 .form-record {
   display: none;
   overflow: visible;
+  transition: opacity 0.15s ease;
+}
+
+#editor-wrapper-atendimento {
+  transition: opacity 0.15s ease;
 }
 
 .form-record-header {
@@ -653,6 +658,7 @@ document.addEventListener('DOMContentLoaded', function() {
   let customStartDate = null;
   let customEndDate = null;
   let currentEditingId = null;
+  let currentEditingType = null;
 
   // ===== MODALS HELPER =====
   window.showSuccessModal = function(title, message) {
@@ -883,39 +889,198 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('.form-record').forEach(form => form.style.display = 'none');
     
     const form = document.getElementById(`form-${tipo}`);
-    if (form) {
-      form.style.display = 'block';
+    if (!form) return;
+    
+    if (editData && editData.id) {
+      // MODO EDIÇÃO - Mostrar formulário escondido e carregar dados
+      currentEditingId = editData.id;
+      currentEditingType = tipo;
       
-      if (editData) {
-        currentEditingId = editData.id;
-        
-        // Preencher dados do formulário
-        if (tipo === 'atendimento' && editData.tipo_id) {
-          const tipoSelect = document.getElementById('tipo-atendimento');
-          if (tipoSelect) tipoSelect.value = editData.tipo_id;
-          const resumo = document.getElementById('resumo-atendimento');
-          if (resumo) resumo.value = editData.titulo || '';
-        } else if (tipo === 'peso' && editData.peso) {
-          const pesoInput = document.getElementById('valor-peso');
-          if (pesoInput) pesoInput.value = editData.peso;
+      // Exibir formulário mas esconder temporariamente com opacity
+      form.style.display = 'block';
+      form.style.opacity = '0';
+      form.style.pointerEvents = 'none';
+      
+      // Carregar dados do registro via API
+      const petId = window.CURRENT_PET_ID;
+      fetch(`/atendimento/api/${petId}/${tipo}/${editData.id}/detalhes/`, {
+        method: 'GET',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        credentials: 'same-origin'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Popular campos baseado no tipo
+          if (tipo === 'atendimento') {
+            // Popular campo hidden com ID
+            const idField = document.getElementById('atendimento-id');
+            if (idField) idField.value = data.id;
+            
+            // Popular observações antes de disparar change
+            if (data.observacoes) {
+              const resumo = document.getElementById('resumo-atendimento');
+              if (resumo) resumo.value = data.observacoes;
+            }
+            
+            // Popular data/hora no span de exibição
+            if (data.data_hora) {
+              const datetimeSpan = document.getElementById('atendimento-datetime');
+              if (datetimeSpan) {
+                // Parsear manualmente a string ISO para evitar conversão de timezone
+                const cleanDate = data.data_hora.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
+                const [datePart, timePart] = cleanDate.split('T');
+                const [year, month, day] = datePart.split('-').map(Number);
+                const [hour, minute] = timePart.split(':').map(Number);
+                // Criar data com componentes locais
+                const dt = new Date(year, month - 1, day, hour, minute);
+                const formatted = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+                datetimeSpan.textContent = formatted;
+                datetimeSpan.dataset.isoDate = data.data_hora;
+              }
+            }
+            
+            if (data.tipo_atendimento_id) {
+              const tipoSelect = document.getElementById('tipo-atendimento');
+              if (tipoSelect) {
+                tipoSelect.value = data.tipo_atendimento_id;
+                // Disparar evento change para carregar campos condicionais e template
+                tipoSelect.dispatchEvent(new Event('change'));
+                
+                // Popular o editor rapidamente
+                if (data.detalhes) {
+                  // Esconder editor temporariamente para evitar flash
+                  const editorWrapper = document.getElementById('editor-wrapper-atendimento');
+                  if (editorWrapper) {
+                    editorWrapper.style.opacity = '0';
+                  }
+                  
+                  setTimeout(() => {
+                    // Tentar popular via HugeRTE se disponível
+                    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('atendimento-editor')) {
+                      HugeRTEEditor.setContent('atendimento-editor', data.detalhes);
+                    } else {
+                      // Fallback para textarea
+                      const editor = document.getElementById('editor-atendimento');
+                      if (editor) editor.value = data.detalhes;
+                    }
+                    
+                    // Mostrar editor após carregar conteúdo
+                    if (editorWrapper) {
+                      editorWrapper.style.opacity = '1';
+                    }
+                  }, 100);
+                }
+              }
+            }
+          } else if (tipo === 'peso') {
+            if (data.peso) {
+              const pesoInput = document.getElementById('valor-peso');
+              if (pesoInput) pesoInput.value = data.peso;
+            }
+            if (data.condicao_corporal) {
+              const condicao = document.getElementById('condicao-peso');
+              if (condicao) condicao.value = data.condicao_corporal;
+            }
+            if (data.observacoes) {
+              const obs = document.getElementById('obs-peso');
+              if (obs) obs.value = data.observacoes;
+            }
+          }
+          
+          // Mostrar formulário rapidamente após popular campos
+          setTimeout(() => {
+            form.style.opacity = '1';
+            form.style.pointerEvents = 'auto';
+          }, 50);
+          
+          // Mostrar botão de excluir
+          const deleteBtn = form.querySelector('.btn-delete-record');
+          if (deleteBtn) deleteBtn.style.display = '';
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao carregar dados do registro:', error);
+        // Mesmo com erro, exibir formulário
+        form.style.opacity = '1';
+        form.style.pointerEvents = 'auto';
+      });
+      
+    } else {
+      // MODO NOVO REGISTRO - Limpar e exibir imediatamente
+      currentEditingId = null;
+      currentEditingType = null;
+      
+      // Limpar campos hidden de ID quando criar novo
+      const idFields = {
+        'atendimento': 'atendimento-id',
+        'peso': 'peso-id',
+        'patologia': 'patologia-id',
+          'documento': 'documento-id',
+          'exame': 'exame-id',
+          'fotos': 'fotos-id',
+          'vacina': 'vacina-id',
+          'receita': 'receita-id',
+          'observacoes': 'observacoes-id',
+          'video': 'video-id',
+          'internacao': 'internacao-id'
+        };
+        const idFieldId = idFields[tipo];
+        if (idFieldId) {
+          const idField = document.getElementById(idFieldId);
+          if (idField) idField.value = '';
         }
         
-        // Mostrar botão de excluir
-        const deleteBtn = form.querySelector('.btn-delete-record');
-        if (deleteBtn) deleteBtn.style.display = '';
-      } else {
-        currentEditingId = null;
+        // Resetar data/hora para atual quando criar novo
+        if (tipo === 'atendimento') {
+          const datetimeSpan = document.getElementById('atendimento-datetime');
+          if (datetimeSpan) {
+            const now = new Date();
+            const formatted = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+            datetimeSpan.textContent = formatted;
+            delete datetimeSpan.dataset.isoDate;
+          }
+          
+          // Limpar campos do formulário
+          const resumo = document.getElementById('resumo-atendimento');
+          if (resumo) resumo.value = '';
+          
+          const tipoSelect = document.getElementById('tipo-atendimento');
+          if (tipoSelect) tipoSelect.value = '';
+          
+          const editor = document.getElementById('editor-atendimento');
+          if (editor) editor.value = '';
+        }
+        
+        // Exibir formulário imediatamente para novo registro
+        form.style.display = 'block';
+        form.style.opacity = '1';
+        form.style.pointerEvents = 'auto';
+        
         const deleteBtn = form.querySelector('.btn-delete-record');
         if (deleteBtn) deleteBtn.style.display = 'none';
       }
-    }
   };
   
   window.hideAllForms = function() {
-    document.querySelectorAll('.form-record').forEach(form => form.style.display = 'none');
+    document.querySelectorAll('.form-record').forEach(form => {
+      form.style.display = 'none';
+      form.style.opacity = '1';
+      form.style.pointerEvents = 'auto';
+    });
+    
+    // Resetar opacity do editor
+    const editorWrapper = document.getElementById('editor-wrapper-atendimento');
+    if (editorWrapper) {
+      editorWrapper.style.opacity = '1';
+    }
+    
     addButtons.style.display = '';
     addButtonsTitle.style.display = '';
     currentEditingId = null;
+    currentEditingType = null;
   };
   
   window.adicionarItemTimeline = function(tipo, titulo, data, descricao, usuario, usuarioAvatar, id = null) {
@@ -929,7 +1094,20 @@ document.addEventListener('DOMContentLoaded', function() {
     const iniciais = usuario ? usuario.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'SY';
     
     // Formatar data e hora: "02/03 às 21:21"
-    const dataObj = new Date(data);
+    // Parsear manualmente a string ISO sem conversão de timezone
+    let dataObj;
+    if (typeof data === 'string' && data.includes('T')) {
+      // Remover timezone e parsear como componentes locais
+      const cleanDate = data.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
+      const [datePart, timePart] = cleanDate.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute, second] = timePart.split(':').map(Number);
+      // Criar data com componentes locais (sem conversão UTC)
+      dataObj = new Date(year, month - 1, day, hour, minute, second || 0);
+    } else {
+      dataObj = new Date(data);
+    }
+    
     const dia = String(dataObj.getDate()).padStart(2, '0');
     const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
     const hora = String(dataObj.getHours()).padStart(2, '0');
@@ -941,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="timeline-event-left">
           <div class="timeline-event-date" style="color: ${config.color};">${dataHoraFormatada}</div>
           <div class="timeline-event-type">${config.label}</div>
-          <div class="timeline-event-title">${titulo}</div>
+          <div class="timeline-event-title">${descricao || titulo}</div>
         </div>
         ${usuarioAvatar ? `<div class="avatar avatar-sm" style="background-image: url(${usuarioAvatar})" title="${usuario || 'Sistema'}"></div>` : `<div class="timeline-event-avatar" title="${usuario || 'Sistema'}">${iniciais}</div>`}
       </div>
@@ -974,15 +1152,38 @@ document.addEventListener('DOMContentLoaded', function() {
   };
 
   window.deleteCurrentRecord = function() {
-    if (!currentEditingId) return;
+    if (!currentEditingId || !currentEditingType) return;
     
     confirmDelete(function() {
-      const recordElement = document.querySelector(`[data-record-id="${currentEditingId}"]`);
-      if (recordElement) {
-        recordElement.remove();
-        hideAllForms();
-        applyFilters();
-      }
+      // Fazer requisição DELETE para o backend
+      const petId = window.CURRENT_PET_ID;
+      
+      fetch(`/atendimento/api/${petId}/${currentEditingType}/${currentEditingId}/`, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        credentials: 'same-origin'
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          // Só remover do DOM se deletou com sucesso no backend
+          const recordElement = document.querySelector(`[data-record-id="${currentEditingId}"]`);
+          if (recordElement) {
+            recordElement.remove();
+            hideAllForms();
+            applyFilters();
+          }
+          showSuccessModal('Sucesso!', data.message || 'Registro excluído com sucesso!');
+        } else {
+          showDangerModal('Erro', data.error || 'Erro ao excluir registro');
+        }
+      })
+      .catch(error => {
+        console.error('Erro ao deletar registro:', error);
+        showDangerModal('Erro', 'Não foi possível excluir o registro');
+      });
     });
   };
 
@@ -1020,6 +1221,62 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 
   applyFilters();
+  
+  // Carregar registros existentes da timeline
+  carregarTimeline();
+  
   console.log('✓ Histórico pronto');
 });
+
+// Função para carregar registros da timeline
+function carregarTimeline() {
+  const petId = window.CURRENT_PET_ID;
+  if (!petId) {
+    console.error('Pet ID não encontrado');
+    return;
+  }
+  
+  fetch(`/atendimento/api/${petId}/timeline/`, {
+    method: 'GET',
+    headers: {
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    credentials: 'same-origin'
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.success && data.registros) {
+      data.registros.forEach(registro => {
+        adicionarItemTimeline(
+          registro.tipo,
+          registro.titulo,
+          registro.data,
+          registro.descricao,
+          registro.usuario,
+          registro.usuario_avatar,
+          registro.id
+        );
+      });
+      console.log(`✓ ${data.registros.length} registros carregados na timeline`);
+    }
+  })
+  .catch(error => {
+    console.error('Erro ao carregar timeline:', error);
+  });
+}
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
 </script>

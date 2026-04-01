@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 from django.db import IntegrityError, transaction
+from django.views.decorators.http import require_GET
 import time
 from .models import (
     Especie, Raca, Pelagem, FilaAtendimento, Patologia,
@@ -767,8 +768,16 @@ def fila_atendimento_delete(request, pk):
 @login_required
 def api_tipos_atendimento_list(request):
     """API: Listar todos os tipos de atendimento (JSON)"""
-    tipos = TipoAtendimento.objects.filter(ativo=True).values('id', 'nome', 'modelo_atendimento')
+    tipos = TipoAtendimento.objects.filter(ativo=True).values('id', 'nome', 'modelo_atendimento', 'duracao_padrao')
     return JsonResponse(list(tipos), safe=False)
+
+
+@login_required
+@require_GET
+def api_filas_atendimento_list(request):
+    """API: Listar todas as filas de atendimento (JSON)"""
+    filas = FilaAtendimento.objects.all().values('id', 'nome', 'codigo', 'permanente')
+    return JsonResponse(list(filas), safe=False)
 
 
 @login_required

@@ -1,3 +1,4 @@
+{% load static %}
 <!-- Formulário de Atendimento -->
 <div id="form-atendimento" class="form-record">
   <!-- Cabeçalho -->
@@ -16,6 +17,9 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="atendimento-id" name="atendimento_id" value="">
+
   <!-- Campos do formulário -->
   <div class="row mb-3">
     <div class="col-md-6">
@@ -33,12 +37,14 @@
   <!-- Campos condicionais (aparecem após selecionar tipo) -->
   <div id="campos-condicionais-atendimento" style="display: none;">
     <!-- Editor de texto HugeRTE -->
-    <div class="mb-3">
+    <div class="mb-3" id="editor-wrapper-atendimento">
       <label class="form-label">Detalhes</label>
       <div id="loading-editor-atendimento" style="height: 300px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #64748b; font-size: 14px;">
         Carregando editor...
       </div>
-      <textarea id="editor-atendimento" style="display: none;"></textarea>
+      <div id="editor-container-atendimento" style="display: none;">
+        <textarea id="editor-atendimento"></textarea>
+      </div>
     </div>
 
     <!-- Upload de arquivos -->
@@ -51,7 +57,7 @@
     </div>
 
     <!-- Tabs -->
-    <ul class="nav nav-tabs mb-3" role="tablist">
+    <ul class="nav nav-tabs border-bottom-0" role="tablist">
       <li class="nav-item" role="presentation">
         <button class="nav-link active" id="agendamento-tab" data-bs-toggle="tab" data-bs-target="#agendamento" type="button">
           <i class="ti ti-calendar me-1"></i>
@@ -60,35 +66,121 @@
       </li>
     </ul>
 
-    <div class="tab-content">
+    <div class="tab-content border p-3">
       <div class="tab-pane fade show active" id="agendamento">
-        <div class="row">
-          <div class="col-md-6 mb-3">
+        <!-- Etapa 1: Seleção de Data -->
+        <div id="etapa-data-retorno">
+          <div class="mb-3">
             <label class="form-label">Data do Retorno</label>
             <input type="date" class="form-control" id="data-retorno">
-          </div>
-          <div class="col-md-6 mb-3">
-            <label class="form-label">Hora do Retorno</label>
-            <input type="time" class="form-control" id="hora-retorno">
+            <small class="text-muted">Selecione a data para continuar</small>
           </div>
         </div>
-        <div class="mb-3">
-          <label class="form-label">Observações do Retorno</label>
-          <textarea class="form-control" id="obs-retorno" rows="3"></textarea>
+        
+        <!-- Etapa 2: Campos Completos (aparecem após selecionar data) -->
+        <div id="etapa-campos-retorno" style="display: none;">
+          
+          <!-- Linha 1: Fila -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <label class="form-label">Fila <span class="text-danger">*</span></label>
+              <select class="form-select" id="fila-retorno" required>
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Linha 2: Veterinário (aparece após selecionar fila) -->
+          <div class="row mb-3" id="row-veterinario-retorno" style="display: none;">
+            <div class="col-12">
+              <label class="form-label">Quem atenderá</label>
+              <select class="form-select" id="profissional-retorno" disabled>
+                <option value="">Veterinário da fila</option>
+              </select>
+              <small class="form-hint text-muted" id="veterinario-fila-info-retorno" style="display: none;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-info-circle" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" /><path d="M12 9h.01" /><path d="M11 12h1v4h1" /></svg>
+                Esta fila é específica deste veterinário
+              </small>
+            </div>
+          </div>
+          
+          <!-- Linha 3: Tipo de Atendimento -->
+          <div class="row mb-3">
+            <div class="col-12">
+              <label class="form-label">Tipo de Atendimento <span class="text-danger">*</span></label>
+              <select class="form-select" id="tipo-retorno" required>
+                <option value="">Selecione...</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Linha 4: Horário e Duração -->
+          <div class="row mb-3">
+            <div class="col-md-8">
+              <label class="form-label">Horário <span class="text-danger">*</span></label>
+              <select class="form-select" id="horario-retorno" required>
+                <option value="">Primeiro selecione o profissional</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Duração <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="duracao-retorno" value="30min" required readonly>
+              <input type="hidden" id="duracao-retorno-valor" value="30">
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">Observações</label>
+            <textarea class="form-control" id="obs-retorno" rows="3"></textarea>
+          </div>
+          
+          <div class="d-grid gap-2">
+            <button type="button" class="btn btn-danger" onclick="excluirRetorno()" id="btn-excluir-retorno">
+              <i class="ti ti-trash"></i> Excluir Retorno
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Botões de ação -->
-    <div class="d-flex justify-content-between align-items-center mt-4">
-      <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
-        <i class="ti ti-trash"></i>
-        Excluir
-      </button>
-      <div class="d-flex gap-2 ms-auto">
-        <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
-        <button type="button" class="btn btn-primary" id="save-atendimento">Salvar Atendimento</button>
+  </div>
+
+  <!-- Modal de Confirmação para Adicionar Fila -->
+  <div class="modal modal-blur fade" id="modalConfirmarAdicionarFilaRetorno" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+      <div class="modal-content">
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-status bg-success"></div>
+        <div class="modal-body text-center py-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="12" cy="12" r="9" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="12" x2="12" y2="16" /></svg>
+          <h3>Adicionar fila ao dia?</h3>
+          <div class="text-muted" id="modal-adicionar-fila-texto-retorno">A fila "<span id="modal-adicionar-fila-nome-retorno"></span>" não existe para o dia <span id="modal-adicionar-fila-data-retorno"></span>, deseja adicioná-la?</div>
+        </div>
+        <div class="modal-footer">
+          <div class="w-100">
+            <div class="row">
+              <div class="col">
+                <button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button>
+              </div>
+              <div class="col">
+                <button type="button" class="btn btn-success w-100" id="btn-confirmar-adicionar-fila-retorno">Confirmar</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+    </div>
+  </div>
+
+  <!-- Botões de ação (sempre visíveis) -->
+  <div class="d-flex justify-content-between align-items-center mt-4">
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
+      <i class="ti ti-trash"></i>
+      Excluir
+    </button>
+    <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
+      <button type="button" class="btn btn-primary" id="save-atendimento">Salvar Atendimento</button>
     </div>
   </div>
 </div>
@@ -103,6 +195,17 @@ document.addEventListener('DOMContentLoaded', function() {
   let uploadedFiles = [];
   
   console.log('Save button found:', saveBtn);
+  
+  // Função auxiliar para converter Date para string ISO local (sem conversão UTC)
+  function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
   
   // Carregar tipos de atendimento
   function loadTiposAtendimento() {
@@ -127,6 +230,9 @@ document.addEventListener('DOMContentLoaded', function() {
       .catch(error => console.error('Erro ao carregar tipos:', error));
   }
   
+  // Carregar tipos imediatamente ao carregar o formulário
+  loadTiposAtendimento();
+  
   // Ao selecionar tipo, mostrar campos condicionais
   tipoAtendimentoSelect?.addEventListener('change', function() {
     const camposCondicionais = document.getElementById('campos-condicionais-atendimento');
@@ -139,19 +245,32 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
   
+  // Função para substituir etiquetas de template com dados reais
+  // Função legada de substituição - agora usa a função global
+  function substituirEtiquetasTemplate(template) {
+    // Usar a função global com o contexto já preparado
+    return window.substituirEtiquetas(template, window.dadosContexto);
+  }
+  
   // Carregar editor HugeRTE
   function loadHubertEditor(tipoId) {
-    console.log('Carregando template do tipo', tipoId);
+    console.log('=== Carregando template do tipo', tipoId, '===');
     
     // Remover editor existente se houver
     if (window.HugeRTEEditor && HugeRTEEditor.getEditor('atendimento-editor')) {
+      console.log('Removendo editor existente...');
       HugeRTEEditor.remove('atendimento-editor');
     }
     
     const loading = document.getElementById('loading-editor-atendimento');
+    const editorContainer = document.getElementById('editor-container-atendimento');
     const textarea = document.getElementById('editor-atendimento');
+    const wrapper = document.getElementById('editor-wrapper-atendimento');
+    
+    // Mostrar loading, esconder editor
     if (loading) loading.style.display = 'flex';
-    if (textarea) textarea.style.display = 'none';
+    if (editorContainer) editorContainer.style.display = 'none';
+    if (wrapper) wrapper.style.display = 'block';
     
     fetch(`/cadastros/api/tipos-atendimento/${tipoId}/template/`, {
       credentials: 'same-origin'
@@ -163,47 +282,81 @@ document.addEventListener('DOMContentLoaded', function() {
         return response.json();
       })
       .then(data => {
-        const templateContent = data.modelo_atendimento || '';
+        let templateContent = data.modelo_atendimento || '';
+        
+        // Substituir etiquetas de template com dados reais
+        templateContent = substituirEtiquetasTemplate(templateContent);
+        
         textarea.value = templateContent;
         
         // Verificar se HugeRTEEditor está disponível
         if (!window.HugeRTEEditor) {
           console.warn('HugeRTEEditor não disponível, usando textarea simples');
           if (loading) loading.style.display = 'none';
-          textarea.style.display = 'block';
-          textarea.rows = 10;
-          textarea.className = 'form-control';
+          if (editorContainer) editorContainer.style.display = 'block';
+          if (textarea) {
+            textarea.style.display = 'block';
+            textarea.rows = 10;
+            textarea.className = 'form-control';
+          }
           return;
         }
         
         console.log('Iniciando HugeRTE...');
+        console.log('Textarea encontrado:', !!textarea);
+        console.log('HugeRTEEditor disponível:', !!window.HugeRTEEditor);
+        
         return HugeRTEEditor.init('#editor-atendimento', {
           height: 300,
           min_height: 300
         }, 'atendimento-editor')
           .then(() => {
-            console.log('✓ HugeRTE carregado e pronto');
+            console.log('✓ HugeRTE inicializado com sucesso');
+            
+            // Esconder loading, mostrar editor
             if (loading) loading.style.display = 'none';
-            // Garantir que o editor fique visível
-            const editorContainer = document.querySelector('.tox-tinymce');
             if (editorContainer) {
               editorContainer.style.display = 'block';
+              console.log('Editor container exibido');
             }
+            
+            // Garantir visibilidade após um pequeno delay
+            setTimeout(() => {
+              const tinymce = document.querySelector('.tox-tinymce');
+              console.log('TinyMCE container encontrado:', !!tinymce);
+              
+              if (tinymce) {
+                tinymce.style.display = 'block !important';
+                tinymce.style.visibility = 'visible';
+                tinymce.style.opacity = '1';
+                console.log('✓ Editor forçado a ficar visível');
+              }
+              
+              if (editorContainer) {
+                editorContainer.style.display = 'block';
+              }
+            }, 200);
           })
           .catch(error => {
-            console.error('Erro ao inicializar HugeRTE:', error);
+            console.error('❌ Erro ao inicializar HugeRTE:', error);
             if (loading) loading.style.display = 'none';
-            textarea.style.display = 'block';
-            textarea.rows = 10;
-            textarea.className = 'form-control';
+            if (editorContainer) editorContainer.style.display = 'block';
+            if (textarea) {
+              textarea.style.display = 'block';
+              textarea.rows = 10;
+              textarea.className = 'form-control';
+            }
           });
       })
       .catch(error => {
-        console.error('Erro ao carregar template:', error);
+        console.error('❌ Erro ao carregar template:', error);
         if (loading) loading.style.display = 'none';
-        textarea.style.display = 'block';
-        textarea.rows = 10;
-        textarea.className = 'form-control';
+        if (editorContainer) editorContainer.style.display = 'block';
+        if (textarea) {
+          textarea.style.display = 'block';
+          textarea.rows = 10;
+          textarea.className = 'form-control';
+        }
       });
   }
   
@@ -250,6 +403,61 @@ document.addEventListener('DOMContentLoaded', function() {
       return;
     }
     
+    // Validar campos de retorno se algum foi preenchido
+    const dataRetornoVal = document.getElementById('data-retorno')?.value;
+    if (dataRetornoVal) {
+      const tipoRetornoVal = document.getElementById('tipo-retorno')?.value;
+      const filaRetornoVal = document.getElementById('fila-retorno')?.value;
+      const profissionalRetornoVal = document.getElementById('profissional-retorno')?.value;
+      const horarioRetornoVal = document.getElementById('horario-retorno')?.value;
+      const duracaoRetornoVal = document.getElementById('duracao-retorno')?.value;
+      
+      if (!tipoRetornoVal) {
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal('Retorno Incompleto', 'Por favor, selecione o tipo de atendimento do retorno');
+        } else {
+          alert('Por favor, selecione o tipo de atendimento do retorno');
+        }
+        return;
+      }
+      
+      if (!filaRetornoVal) {
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal('Retorno Incompleto', 'Por favor, selecione a fila do retorno');
+        } else {
+          alert('Por favor, selecione a fila do retorno');
+        }
+        return;
+      }
+      
+      if (!profissionalRetornoVal) {
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal('Retorno Incompleto', 'Por favor, selecione o profissional do retorno');
+        } else {
+          alert('Por favor, selecione o profissional do retorno');
+        }
+        return;
+      }
+      
+      if (!horarioRetornoVal) {
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal('Retorno Incompleto', 'Por favor, selecione o horário do retorno');
+        } else {
+          alert('Por favor, selecione o horário do retorno');
+        }
+        return;
+      }
+      
+      if (!duracaoRetornoVal || duracaoRetornoVal < 5) {
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal('Retorno Incompleto', 'Por favor, informe uma duração válida (mínimo 5 minutos)');
+        } else {
+          alert('Por favor, informe uma duração válida (mínimo 5 minutos)');
+        }
+        return;
+      }
+    }
+    
     let detalhes = '';
     if (window.HugeRTEEditor && HugeRTEEditor.getEditor('atendimento-editor')) {
       detalhes = HugeRTEEditor.getContent('atendimento-editor') || '';
@@ -259,13 +467,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Preparar FormData
     const formData = new FormData();
+    
+    // Se estiver editando, incluir ID do registro
+    const atendimentoId = document.getElementById('atendimento-id')?.value;
+    if (atendimentoId) {
+      formData.append('atendimento_id', atendimentoId);
+    }
+    
     formData.append('tipo_atendimento_id', tipoId);
     formData.append('observacoes', resumo);
     formData.append('detalhes', detalhes);
     
-    // Data e hora atual
-    const now = new Date();
-    const datetimeStr = now.toISOString().slice(0, 16);
+    // Data e hora
+    let datetimeStr;
+    const datetimeSpan = document.getElementById('atendimento-datetime');
+    if (datetimeSpan && datetimeSpan.dataset.isoDate) {
+      // Se estiver editando e tiver data personalizada, usar ela
+      datetimeStr = datetimeSpan.dataset.isoDate;
+    } else {
+      // Senão usar data/hora atual (local, sem conversão UTC)
+      const now = new Date();
+      datetimeStr = toLocalISOString(now).slice(0, 16);
+    }
     formData.append('data_hora', datetimeStr);
     
     // Dados de retorno se preenchidos
@@ -318,34 +541,28 @@ document.addEventListener('DOMContentLoaded', function() {
     .then(data => {
       console.log('Response data:', data);
       if (data.success) {
-        // Adicionar à timeline
-        const tipoNome = tipoAtendimentoSelect.options[tipoAtendimentoSelect.selectedIndex].text;
-        const datetime = document.getElementById('atendimento-datetime').textContent;
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
-        const isoDate = now.toISOString();
+        // Verificar se há dados de retorno para criar agendamento
+        const dataRetornoVal = document.getElementById('data-retorno')?.value;
+        const tipoRetornoVal = document.getElementById('tipo-retorno')?.value;
+        const filaRetornoVal = document.getElementById('fila-retorno')?.value;
+        const profissionalRetornoVal = document.getElementById('profissional-retorno')?.value;
+        const horarioRetornoVal = document.getElementById('horario-retorno')?.value;
+        const duracaoRetornoVal = document.getElementById('duracao-retorno-valor')?.value;
+        const obsRetornoVal = document.getElementById('obs-retorno')?.value;
         
-        console.log('Adding to timeline:', 'atendimento', resumo || tipoNome, isoDate, tipoNome, usuario, usuarioAvatar, data.id);
-        if (typeof adicionarItemTimeline !== 'undefined') {
-          adicionarItemTimeline('atendimento', resumo || tipoNome, isoDate, tipoNome, usuario, usuarioAvatar, data.id);
-        }
-        
-        if (typeof hideAllForms !== 'undefined') {
-          hideAllForms();
-        }
-        
-        if (typeof showSuccessModal !== 'undefined') {
-          showSuccessModal('Sucesso!', 'Atendimento salvo com sucesso!');
+        // Se tiver dados de retorno completos, criar agendamento
+        if (dataRetornoVal && tipoRetornoVal && filaRetornoVal && profissionalRetornoVal && horarioRetornoVal && duracaoRetornoVal) {
+          criarAgendamentoRetorno(dataRetornoVal, tipoRetornoVal, filaRetornoVal, profissionalRetornoVal, horarioRetornoVal, duracaoRetornoVal, obsRetornoVal)
+            .then(() => finalizarSalvamentoAtendimento(data, tipoAtendimentoSelect, resumo))
+            .catch(err => {
+              console.error('Erro ao criar agendamento de retorno:', err);
+              // Mesmo com erro no retorno, finalizar o salvamento do atendimento
+              finalizarSalvamentoAtendimento(data, tipoAtendimentoSelect, resumo);
+            });
         } else {
-          alert('Atendimento salvo com sucesso!');
+          // Sem retorno, apenas finalizar
+          finalizarSalvamentoAtendimento(data, tipoAtendimentoSelect, resumo);
         }
-        
-        // Resetar form
-        tipoAtendimentoSelect.value = '';
-        document.getElementById('resumo-atendimento').value = '';
-        document.getElementById('campos-condicionais-atendimento').style.display = 'none';
-        uploadedFiles = [];
-        fileBadges.innerHTML = '';
       } else {
         if (typeof showDangerModal !== 'undefined') {
           showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o atendimento');
@@ -364,6 +581,444 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
   
+  // ============================================
+  // FUNÇÕES AUXILIARES DE AGENDAMENTO
+  // ============================================
+  
+  function finalizarSalvamentoAtendimento(data, tipoAtendimentoSelect, resumo) {
+    const tipoNome = tipoAtendimentoSelect.options[tipoAtendimentoSelect.selectedIndex].text;
+    const usuario = '{{ user.get_full_name|default:user.username }}';
+    const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+    
+    // Verificar se é edição ou criação
+    const atendimentoId = document.getElementById('atendimento-id')?.value;
+    
+    if (atendimentoId) {
+      // Se está editando, recarregar a timeline completa
+      console.log('Atualizando timeline após edição');
+      if (typeof carregarTimeline !== 'undefined') {
+        // Limpar timeline atual
+        const timeline = document.querySelector('#timeline-list');
+        if (timeline) timeline.innerHTML = '';
+        // Recarregar
+        carregarTimeline();
+      }
+    } else {
+      // Se está criando novo, adicionar item na timeline
+      // Usar a data/hora que foi enviada ao backend
+      const datetimeSpan = document.getElementById('atendimento-datetime');
+      let isoDate;
+      if (datetimeSpan && datetimeSpan.dataset.isoDate) {
+        isoDate = datetimeSpan.dataset.isoDate;
+      } else {
+        // Usar data/hora atual se não houver personalizada (local, sem conversão UTC)
+        isoDate = toLocalISOString(new Date());
+      }
+      
+      console.log('Adding to timeline:', 'atendimento', resumo || tipoNome, isoDate, tipoNome, usuario, usuarioAvatar, data.id);
+      if (typeof adicionarItemTimeline !== 'undefined') {
+        adicionarItemTimeline('atendimento', resumo || tipoNome, isoDate, tipoNome, usuario, usuarioAvatar, data.id);
+      }
+    }
+    
+    if (typeof hideAllForms !== 'undefined') {
+      hideAllForms();
+    }
+    
+    if (typeof showSuccessModal !== 'undefined') {
+      showSuccessModal('Sucesso!', atendimentoId ? 'Atendimento atualizado com sucesso!' : 'Atendimento salvo com sucesso!');
+    } else {
+      alert(atendimentoId ? 'Atendimento atualizado com sucesso!' : 'Atendimento salvo com sucesso!');
+    }
+    
+    // Resetar form
+    tipoAtendimentoSelect.value = '';
+    document.getElementById('resumo-atendimento').value = '';
+    document.getElementById('campos-condicionais-atendimento').style.display = 'none';
+    document.getElementById('atendimento-id').value = '';
+    
+    // Resetar data/hora para atual
+    const datetimeSpan = document.getElementById('atendimento-datetime');
+    if (datetimeSpan) {
+      const now = new Date();
+      const formatted = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+      datetimeSpan.textContent = formatted;
+      delete datetimeSpan.dataset.isoDate;
+    }
+    
+    // Limpar editor
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('atendimento-editor')) {
+      HugeRTEEditor.setContent('atendimento-editor', '');
+    } else {
+      const editor = document.getElementById('editor-atendimento');
+      if (editor) editor.value = '';
+    }
+    
+    uploadedFiles = [];
+    fileBadges.innerHTML = '';
+    
+    // Limpar campos de retorno
+    document.getElementById('data-retorno').value = '';
+    document.getElementById('etapa-campos-retorno').style.display = 'none';
+  }
+  
+  async function criarAgendamentoRetorno(dataRetorno, tipoRetornoId, filaRetornoId, profissionalRetornoId, horarioRetorno, duracaoRetorno, obsRetorno) {
+    // Validar se a fila está na agenda do dia
+    try {
+      const respFilas = await fetch(`/scheduling/api/filas/${dataRetorno}/`);
+      const filasDisponiveis = await respFilas.json();
+      const filasIds = Array.isArray(filasDisponiveis) ? filasDisponiveis.map(f => String(f.id)) : [];
+      
+      if (!filasIds.includes(String(filaRetornoId))) {
+        // Fila não está na agenda, adicionar automaticamente
+        const respAdicionar = await fetch('/scheduling/api/fila-dia/adicionar/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            fila_id: filaRetornoId,
+            data: dataRetorno
+          })
+        });
+        
+        const dataAdicionar = await respAdicionar.json();
+        if (!dataAdicionar.success) {
+          throw new Error('Não foi possível adicionar a fila à agenda do dia');
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao validar/adicionar fila:', err);
+      throw err;
+    }
+    
+    // Criar agendamento
+    const petId = window.CURRENT_PET_ID;
+    const clienteId = '{{ cliente.id }}';
+    
+    const payload = {
+      tipo_atendimento_id: parseInt(tipoRetornoId),
+      fila_id: parseInt(filaRetornoId),
+      veterinario_id: parseInt(profissionalRetornoId),
+      data: dataRetorno,
+      horario: horarioRetorno === 'sem-horario' ? 'sem-horario' : horarioRetorno,
+      duracao_minutos: parseInt(duracaoRetorno),
+      cliente_id: parseInt(clienteId),
+      animal_id: parseInt(petId),
+      celular_cliente: '{{ cliente.celular|default:"" }}',
+      status: 'agendado',
+      observacoes: obsRetorno || ''
+    };
+    
+    const response = await fetch('/scheduling/api/agendamento/criar/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify(payload),
+      credentials: 'same-origin'
+    });
+    
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Erro ao criar agendamento');
+    }
+    
+    console.log('Agendamento de retorno criado com sucesso:', result.id);
+    return result;
+  }
+  
+  // ============================================
+  // FUNÇÕES DO AGENDAMENTO DE RETORNO
+  // ============================================
+  
+  window.carregarCamposRetorno = async function() {
+    console.log('=== carregarCamposRetorno chamado ===');
+    const dataRetorno = document.getElementById('data-retorno').value;
+    console.log('Data selecionada:', dataRetorno);
+    
+    if (!dataRetorno) {
+      document.getElementById('etapa-campos-retorno').style.display = 'none';
+      return;
+    }
+    
+    // Verificar se a data é válida (dia que a empresa funciona)
+    const data = new Date(dataRetorno + 'T12:00:00');
+    const diaSemana = data.getDay();
+    console.log('Dia da semana:', diaSemana);
+    
+    try {
+      const respDias = await fetch('/scheduling/api/dias-fechados/');
+      if (respDias.ok) {
+        const response = await respDias.json();
+        const diasFechados = response.dias_fechados || response;
+        console.log('Dias fechados:', diasFechados);
+        
+        if (Array.isArray(diasFechados) && diasFechados.includes(diaSemana)) {
+          if (typeof showDangerModal !== 'undefined') {
+            showDangerModal('Data Inválida', 'A clínica não funciona neste dia da semana.');
+          } else {
+            alert('A clínica não funciona neste dia da semana.');
+          }
+          document.getElementById('data-retorno').value = '';
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao verificar dias fechados:', err);
+    }
+    
+    // Mostrar campos
+    console.log('Mostrando campos de retorno...');
+    document.getElementById('etapa-campos-retorno').style.display = 'block';
+    
+    // Carregar tipos de atendimento
+    try {
+      const respTipos = await fetch('/cadastros/api/tipos-atendimento/');
+      if (respTipos.ok) {
+        const tipos = await respTipos.json();
+        const selectTipo = document.getElementById('tipo-retorno');
+        selectTipo.innerHTML = '<option value="">Selecione...</option>';
+        tipos.forEach(t => {
+          const option = document.createElement('option');
+          option.value = t.id;
+          option.textContent = t.nome;
+          if (t.duracao_padrao) {
+            option.setAttribute('data-duracao', t.duracao_padrao);
+          }
+          selectTipo.appendChild(option);
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao carregar tipos:', err);
+    }
+    
+    // Carregar TODAS as filas (não apenas as do dia)
+    try {
+      const respFilas = await fetch('/cadastros/api/filas-atendimento/');
+      if (respFilas.ok) {
+        const filas = await respFilas.json();
+        const selectFila = document.getElementById('fila-retorno');
+        selectFila.innerHTML = '<option value="">Selecione...</option>';
+        filas.forEach(f => {
+          selectFila.innerHTML += `<option value="${f.id}">${f.nome} (${f.codigo})</option>`;
+        });
+      }
+    } catch (err) {
+      console.error('Erro ao carregar filas:', err);
+    }
+    
+    // Carregar horários disponíveis (vazio inicialmente, será preenchido ao selecionar profissional)
+    document.getElementById('horario-retorno').innerHTML = '<option value="">Primeiro selecione o profissional</option>';
+  };
+  
+  window.carregarProfissionaisRetorno = async function() {
+    const filaId = document.getElementById('fila-retorno').value;
+    const rowVet = document.getElementById('row-veterinario-retorno');
+    const selectProf = document.getElementById('profissional-retorno');
+    const infoVetFila = document.getElementById('veterinario-fila-info-retorno');
+    
+    if (!filaId) {
+      rowVet.style.display = 'none';
+      document.getElementById('horario-retorno').innerHTML = '<option value="">Primeiro selecione a fila</option>';
+      return;
+    }
+    
+    // Validar se a fila está na agenda do dia selecionado
+    const dataRetorno = document.getElementById('data-retorno').value;
+    if (dataRetorno) {
+      try {
+        const respFilasDia = await fetch(`/scheduling/api/filas/${dataRetorno}/`);
+        if (respFilasDia.ok) {
+          const filasDia = await respFilasDia.json();
+          const filasDisponiveis = Array.isArray(filasDia) ? filasDia.map(f => String(f.id)) : [];
+          const filaExiste = filasDisponiveis.includes(String(filaId));
+          
+          if (!filaExiste) {
+            // Fila não está na agenda, perguntar se deseja adicionar
+            const selectFila = document.getElementById('fila-retorno');
+            const filaNome = selectFila.options[selectFila.selectedIndex].text;
+            const dataObj = new Date(dataRetorno + 'T12:00:00');
+            const dataFormatada = dataObj.toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' });
+            
+            document.getElementById('modal-adicionar-fila-nome-retorno').textContent = filaNome;
+            document.getElementById('modal-adicionar-fila-data-retorno').textContent = dataFormatada;
+            
+            // Guardar filaId no modal para uso posterior
+            const modalElement = document.getElementById('modalConfirmarAdicionarFilaRetorno');
+            modalElement.dataset.filaId = filaId;
+            
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Erro ao verificar filas do dia:', err);
+      }
+    }
+    
+    // Fila validada/adicionada, carregar veterinários
+    carregarVeterinariosRetorno(filaId);
+  };
+  
+  // Função helper para carregar veterinários (separada para reutilizar após adicionar fila)
+  async function carregarVeterinariosRetorno(filaId) {
+    const rowVet = document.getElementById('row-veterinario-retorno');
+    const selectProf = document.getElementById('profissional-retorno');
+    const infoVetFila = document.getElementById('veterinario-fila-info-retorno');
+    
+    try {
+      const resp = await fetch(`/scheduling/api/fila/${filaId}/detalhes/`);
+      if (resp.ok) {
+        const fila = await resp.json();
+        rowVet.style.display = 'block';
+        
+        if (fila.atribuido_a) {
+          // Fila tem veterinário fixo
+          selectProf.innerHTML = `<option value="${fila.atribuido_a.id}">${fila.atribuido_a.nome}</option>`;
+          selectProf.disabled = true;
+          selectProf.value = fila.atribuido_a.id;
+          infoVetFila.style.display = 'block';
+          // Validar disponibilidade automaticamente
+          validarDisponibilidadeVeterinarioRetorno();
+        } else {
+          // Fila sem veterinário fixo, carregar lista de todos veterinários
+          infoVetFila.style.display = 'none';
+          const respVets = await fetch('/scheduling/api/veterinarios/');
+          if (respVets.ok) {
+            const vets = await respVets.json();
+            selectProf.innerHTML = '<option value="">Selecione...</option>';
+            vets.forEach(v => {
+              selectProf.innerHTML += `<option value="${v.id}">${v.nome}</option>`;
+            });
+            selectProf.disabled = false;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar profissionais:', err);
+    }
+  }
+  
+  window.carregarHorariosRetorno = async function() {
+    const dataRetorno = document.getElementById('data-retorno').value;
+    const profissionalId = document.getElementById('profissional-retorno').value;
+    const duracao = document.getElementById('duracao-retorno-valor').value || 30;
+    
+    if (!dataRetorno || !profissionalId) {
+      document.getElementById('horario-retorno').innerHTML = '<option value="">Primeiro selecione o profissional</option>';
+      return;
+    }
+    
+    try {
+      const resp = await fetch(`/scheduling/api/horarios-disponiveis/?data=${dataRetorno}&veterinario_id=${profissionalId}&duracao=${duracao}`);
+      if (resp.ok) {
+        const response = await resp.json();
+        const selectHorario = document.getElementById('horario-retorno');
+        selectHorario.innerHTML = '<option value="">Selecione...</option>';
+        
+        if (response.horarios && response.horarios.length > 0) {
+          selectHorario.innerHTML += '<option value="sem-horario">Sem horário definido</option>';
+          response.horarios.forEach(h => {
+            selectHorario.innerHTML += `<option value="${h}">${h}</option>`;
+          });
+        } else {
+          const mensagem = response.message || 'Nenhum horário disponível';
+          selectHorario.innerHTML = `<option value="" disabled>${mensagem}</option>`;
+          
+          if (typeof showDangerModal !== 'undefined') {
+            showDangerModal('Profissional Indisponível', mensagem);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao carregar horários:', err);
+    }
+  };
+  
+  // Validar disponibilidade do veterinário ao selecionar
+  window.validarDisponibilidadeVeterinarioRetorno = async function() {
+    const dataRetorno = document.getElementById('data-retorno').value;
+    const profissionalId = document.getElementById('profissional-retorno').value;
+    const selectProf = document.getElementById('profissional-retorno');
+    
+    if (!dataRetorno || !profissionalId) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/scheduling/api/horarios-disponiveis/?data=${encodeURIComponent(dataRetorno)}&veterinario_id=${profissionalId}`);
+      const info = await response.json();
+      
+      if (!info.horarios || info.horarios.length === 0) {
+        // Obter nome do veterinário
+        const veterinarioNome = selectProf.options[selectProf.selectedIndex].text;
+        
+        // Verificar se é veterinário fixo (campo disabled)
+        const isVetFixo = selectProf.disabled;
+        
+        let mensagem = info.message || 'O veterinário não atende neste dia da semana.';
+        let titulo = 'Veterinário Indisponível';
+        
+        if (isVetFixo) {
+          titulo = 'Fila Exclusiva';
+          mensagem = `Esta fila é exclusiva do(a) veterinário(a) ${veterinarioNome}.\n\n${mensagem}`;
+        }
+        
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal(titulo, mensagem);
+        } else {
+          alert(mensagem);
+        }
+        
+        // Limpar seleção de profissional
+        document.getElementById('profissional-retorno').value = '';
+        document.getElementById('horario-retorno').innerHTML = '<option value="">Primeiro selecione o profissional</option>';
+        return;
+      }
+      
+      // Veterinário disponível, carregar horários
+      carregarHorariosRetorno();
+    } catch (err) {
+      console.error('Erro ao validar disponibilidade do veterinário:', err);
+      carregarHorariosRetorno();
+    }
+  };
+  
+  window.excluirRetorno = function() {
+    // Limpar campos de retorno
+    document.getElementById('data-retorno').value = '';
+    document.getElementById('etapa-campos-retorno').style.display = 'none';
+    document.getElementById('horario-retorno').innerHTML = '<option value="">Selecione...</option>';
+    document.getElementById('tipo-retorno').value = '';
+    document.getElementById('fila-retorno').value = '';
+    document.getElementById('profissional-retorno').value = '';
+    document.getElementById('obs-retorno').value = '';
+    
+    if (typeof showSuccessModal !== 'undefined') {
+      showSuccessModal('Retorno Excluído', 'Os dados do retorno foram limpos.');
+    }
+  };
+  
+  // Helper para formatar duração (igual à agenda)
+  function formatarDuracao(minutos) {
+    if (minutos < 60) {
+      return minutos + 'min';
+    } else if (minutos === 60) {
+      return '1h';
+    } else if (minutos % 60 === 0) {
+      return (minutos / 60) + 'h';
+    } else {
+      const horas = Math.floor(minutos / 60);
+      const mins = minutos % 60;
+      return horas + 'h' + mins + 'min';
+    }
+  }
+  
   // Helper para pegar CSRF token
   function getCookie(name) {
     let cookieValue = null;
@@ -379,11 +1034,181 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     return cookieValue;
   }
-
-  // Carregar tipos ao abrir o formulário
-  const btnAtendimento = document.querySelector('.btn-add[data-tipo="atendimento"]');
-  btnAtendimento?.addEventListener('click', function() {
-    loadTiposAtendimento();
+  
+  // Event listeners para agendamento de retorno (adicionados após definição das funções)
+  document.getElementById('data-retorno')?.addEventListener('change', carregarCamposRetorno);
+  document.getElementById('fila-retorno')?.addEventListener('change', carregarProfissionaisRetorno);
+  document.getElementById('profissional-retorno')?.addEventListener('change', validarDisponibilidadeVeterinarioRetorno);
+  document.getElementById('duracao-retorno')?.addEventListener('change', carregarHorariosRetorno);
+  document.getElementById('tipo-retorno')?.addEventListener('change', function() {
+    const option = this.options[this.selectedIndex];
+    const duracao = option.getAttribute('data-duracao');
+    if (duracao) {
+      const duracaoInt = parseInt(duracao);
+      console.log('Duração do tipo:', duracaoInt);
+      // Atualizar campo visível formatado
+      document.getElementById('duracao-retorno').value = formatarDuracao(duracaoInt);
+      // Atualizar campo hidden com valor numérico
+      document.getElementById('duracao-retorno-valor').value = duracaoInt;
+      // Recarregar horários com nova duração
+      carregarHorariosRetorno();
+    }
+  });
+  
+  // Event listener para confirmar adição de fila no modal
+  document.getElementById('btn-confirmar-adicionar-fila-retorno')?.addEventListener('click', async function() {
+    const modalElement = document.getElementById('modalConfirmarAdicionarFilaRetorno');
+    const filaId = modalElement.dataset.filaId;
+    const dataRetorno = document.getElementById('data-retorno').value;
+    
+    if (!filaId || !dataRetorno) {
+      return;
+    }
+    
+    try {
+      const respAdicionar = await fetch('/scheduling/api/fila-dia/adicionar/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+          fila_id: filaId,
+          data: dataRetorno
+        })
+      });
+      
+      const result = await respAdicionar.json();
+      if (result.success) {
+        delete modalElement.dataset.filaId; // Limpar para não resetar fila ao fechar
+        bootstrap.Modal.getInstance(modalElement).hide();
+        // Continuar carregando veterinários
+        carregarVeterinariosRetorno(filaId);
+      } else {
+        if (typeof showDangerModal !== 'undefined') {
+          showDangerModal('Erro', result.error || 'Erro ao adicionar fila');
+        } else {
+          alert('Erro ao adicionar fila: ' + (result.error || 'Erro desconhecido'));
+        }
+      }
+    } catch (err) {
+      console.error('Erro ao adicionar fila:', err);
+      if (typeof showDangerModal !== 'undefined') {
+        showDangerModal('Erro', err.message);
+      } else {
+        alert('Erro ao adicionar fila: ' + err.message);
+      }
+    }
+  });
+  
+  // Event listener para cancelamento do modal de fila (limpar seleção)
+  document.getElementById('modalConfirmarAdicionarFilaRetorno')?.addEventListener('hidden.bs.modal', function() {
+    // Ao fechar modal sem confirmar, limpar seleção de fila
+    if (this.dataset.filaId) {
+      document.getElementById('fila-retorno').value = '';
+      document.getElementById('row-veterinario-retorno').style.display = 'none';
+      delete this.dataset.filaId; // Limpar dataset
+    }
   });
 });
 </script>
+
+<!-- Script global de substituição de etiquetas -->
+<script src="{% static 'js/template-tags.js' %}?v=2.3"></script>
+
+<!-- Contexto de dados para substituição de etiquetas -->
+<script>
+  // Contexto global com dados do paciente, cliente, clínica e usuário
+  window.dadosContexto = {
+    pet: {
+      nome: '{{ pet.nome|escapejs }}',
+      especie_nome: '{{ pet.especie.nome|default:""|escapejs }}',
+      raca_nome: '{{ pet.raca.nome|default:""|escapejs }}',
+      pelagem_nome: '{{ pet.pelagem.nome|default:""|escapejs }}',
+      sexo_display: "{% if pet.sexo == 'M' %}Macho{% elif pet.sexo == 'F' %}Fêmea{% else %}Não informado{% endif %}",
+      esterilizacao_display: "{% if pet.esterilizacao == 'fertil' %}Fértil{% elif pet.esterilizacao == 'castrado' %}Castrado{% elif pet.esterilizacao == 'vasectomizado' %}Vasectomizado{% else %}Não informado{% endif %}",
+      peso: '{{ pet.peso|default:""|escapejs }}',
+      porte: '{{ pet.porte|default:""|escapejs }}',
+      data_nascimento: '{{ pet.data_nascimento|date:"Y-m-d"|default:""|escapejs }}',
+      data_nascimento_formatada: '{{ pet.data_nascimento|date:"d/m/Y"|default:""|escapejs }}',
+      idade_estimada: {{ pet.idade_estimada|default:"null" }},
+      microchip: '{{ pet.microchip|default:""|escapejs }}',
+      codigo: '{{ pet.codigo|default:""|escapejs }}',
+      caracteristicas: '{{ pet.caracteristicas|default:""|escapejs }}',
+      temperamento: '{{ pet.temperamento|default:""|escapejs }}',
+      marcacoes: '{{ pet.marcacoes|default:""|escapejs }}',
+      pedigree_display: '{{ pet.pedigree|yesno:"Sim,Não"|escapejs }}',
+      numero_pedigree: '{{ pet.numero_pedigree|default:""|escapejs }}',
+      status_display: "{% if pet.status == 'vivo' %}Vivo{% elif pet.status == 'obito' %}Óbito{% endif %}"
+    },
+    cliente: {
+      nome_completo: '{{ cliente.nome_completo|default:""|escapejs }}',
+      tipo: '{{ cliente.tipo|default:"PF" }}',
+      tipo_display: "{% if cliente.tipo == 'PF' %}Pessoa Física{% else %}Pessoa Jurídica{% endif %}",
+      cpf: '{{ cliente.cpf|default:""|escapejs }}',
+      cnpj: '{{ cliente.cnpj|default:""|escapejs }}',
+      rg: '{{ cliente.rg|default:""|escapejs }}',
+      celular: '{{ cliente.celular|default:""|escapejs }}',
+      telefone: '{{ cliente.telefone|default:""|escapejs }}',
+      email: '{{ cliente.email|default:""|escapejs }}',
+      endereco_completo: '{{ cliente.endereco_completo|default:""|escapejs }}',
+      endereco: '{{ cliente.endereco|default:""|escapejs }}',
+      numero: '{{ cliente.numero|default:""|escapejs }}',
+      complemento: '{{ cliente.complemento|default:""|escapejs }}',
+      bairro: '{{ cliente.bairro|default:""|escapejs }}',
+      cidade: '{{ cliente.cidade|default:""|escapejs }}',
+      estado: '{{ cliente.estado|default:""|escapejs }}',
+      cep: '{{ cliente.cep|default:""|escapejs }}',
+      codigo: '{{ cliente.codigo|default:""|escapejs }}',
+      data_nascimento_formatada: '{{ cliente.data_aniversario|date:"d/m/Y"|default:""|escapejs }}',
+      data_aniversario_formatada: '{{ cliente.data_aniversario|date:"d/m/Y"|default:""|escapejs }}',
+      profissao: '{{ cliente.profissao|default:""|escapejs }}'
+    },
+    clinica: {
+      {% if clinica %}
+      nome_empreendimento: '{{ clinica.nome_empreendimento|escapejs }}',
+      cnpj: '{{ clinica.cnpj|escapejs }}',
+      inscricao_estadual: '{{ clinica.inscricao_estadual|default:""|escapejs }}',
+      registro_crmv: '{{ clinica.registro_crmv|default:""|escapejs }}',
+      telefone_comercial: '{{ clinica.telefone_comercial|default:""|escapejs }}',
+      celular: '{{ clinica.celular|default:""|escapejs }}',
+      email: '{{ clinica.email|escapejs }}',
+      endereco_completo: '{{ clinica.endereco_completo|escapejs }}',
+      cep: '{{ clinica.cep|default:""|escapejs }}',
+      cidade: '{{ clinica.cidade|default:""|escapejs }}',
+      estado: '{{ clinica.estado|default:""|escapejs }}',
+      bairro: '{{ clinica.bairro|default:""|escapejs }}'
+      {% else %}
+      nome_empreendimento: '',
+      cnpj: '',
+      inscricao_estadual: '',
+      registro_crmv: '',
+      telefone_comercial: '',
+      celular: '',
+      email: '',
+      endereco_completo: '',
+      cep: '',
+      cidade: '',
+      estado: '',
+      bairro: ''
+      {% endif %}
+    },
+    usuario: {
+      nome_completo: '{{ user.get_full_name|default:user.username|escapejs }}',
+      username: '{{ user.username|escapejs }}',
+      email: '{{ user.email|default:""|escapejs }}',
+      {% if user.userprofile %}
+      cpf: '{{ user.userprofile.cpf|default:""|escapejs }}',
+      celular: '{{ user.userprofile.celular|default:""|escapejs }}',
+      crmv: '{{ user.userprofile.crmv|default:""|escapejs }}',
+      perfil_display: '{{ user.userprofile.get_perfil_display|default:""|escapejs }}'
+      {% else %}
+      cpf: '',
+      celular: '',
+      crmv: '',
+      perfil_display: ''
+      {% endif %}
+    }
+  };
+</script>
+

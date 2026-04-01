@@ -621,8 +621,11 @@ def get_fila_detalhes_api(request, pk):
 @require_GET
 def get_veterinarios_api(request):
     """API para buscar lista de veterinários"""
-    # Buscar usuários ativos (pode filtrar por grupo se necessário)
-    veterinarios = User.objects.filter(is_active=True).order_by('first_name', 'last_name')
+    # Buscar usuários ativos que têm configuração de agenda ativa (exibir na agenda)
+    veterinarios = User.objects.filter(
+        is_active=True,
+        config_agenda__ativo=True
+    ).order_by('first_name', 'last_name')
     
     results = []
     for vet in veterinarios:
