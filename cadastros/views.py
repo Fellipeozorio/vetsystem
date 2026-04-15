@@ -781,6 +781,39 @@ def api_filas_atendimento_list(request):
 
 
 @login_required
+@require_GET
+def api_patologias_list(request):
+    """API: Listar todas as patologias ativas (JSON)"""
+    patologias = Patologia.objects.filter(ativo=True).values('id', 'nome', 'codigo', 'descricao').order_by('nome')
+    return JsonResponse(list(patologias), safe=False)
+
+
+@login_required
+@require_GET
+def api_modelos_documento_list(request):
+    """API: Listar todos os modelos de documento ativos (JSON)"""
+    modelos = ModeloDocumento.objects.filter(ativo=True).values('id', 'nome', 'codigo').order_by('nome')
+    return JsonResponse(list(modelos), safe=False)
+
+
+@login_required
+@require_GET
+def api_modelo_documento_detail(request, pk):
+    """API: Obter detalhes completos de um modelo de documento (JSON)"""
+    modelo = get_object_or_404(ModeloDocumento, pk=pk, ativo=True)
+    return JsonResponse({
+        'id': modelo.id,
+        'nome': modelo.nome,
+        'codigo': modelo.codigo,
+        'conteudo_apresentacao': modelo.conteudo_apresentacao or '',
+        'conteudo_encerramento': modelo.conteudo_encerramento or '',
+        'modelo_cabecalho': modelo.modelo_cabecalho,
+        'modelo_info_paciente': modelo.modelo_info_paciente,
+        'modelo_rodape': modelo.modelo_rodape,
+    })
+
+
+@login_required
 def api_tipo_atendimento_template(request, pk):
     """API: Obter template de um tipo de atendimento específico (JSON)"""
     tipo = get_object_or_404(TipoAtendimento, pk=pk)
@@ -1501,3 +1534,165 @@ def documento_delete(request, pk):
     
     # GET não é mais suportado - redirecionar para a lista
     return redirect('cadastros:documentos_list')
+
+
+# ==================== Views específicas para Atributos de Exames ====================
+
+@login_required
+def atributos_exames_list(request):
+    """Listar atributos de exames com filtros por exame e busca por nome"""
+    query = request.GET.get('q', '')
+    exame_id = request.GET.get('exame', '')
+
+    items = AtributoExame.objects.select_related('exame', 'atributo_pai').all()
+
+    if exame_id:
+        items = items.filter(exame_id=exame_id)
+
+    if query:
+        items = items.filter(nome__icontains=query)
+
+    items = items.order_by('exame__nome', 'ordem', 'nome')
+
+    paginator = Paginator(items, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    exames = Exame.objects.filter(ativo=True).order_by('nome')
+
+    context = {
+        'tipo': 'atributos-exames',
+        'label': 'Atributos de Exames',
+        'page_obj': page_obj,
+        'query': query,
+        'exame_id': exame_id,
+        'exames': exames,
+        'tipo_dado_choices': AtributoExame.TIPO_DADO_CHOICES,
+    }
+
+    return render(request, 'cadastros/atributos_exames_list.html', context)
+
+
+@login_required
+def atributo_exame_create(request):
+    """Criar novo atributo de exame via AJAX"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método não permitido'})
+
+    try:
+        exame_id = request.POST.get('exame')
+        nome = request.POST.get('nome', '').strip()
+
+        if not exame_id:
+            return JsonResponse({'success': False, 'error': 'Exame é obrigatório'})
+        if not nome:
+            return JsonResponse({'success': False, 'error': 'Nome é obrigatório'})
+
+        exame = get_object_or_404(Exame, pk=exame_id)
+
+        atributo_pai_id = request.POST.get('atributo_pai') or None
+        largura = request.POST.get('largura') or None
+        if largura is not None:
+            largura = int(largura)
+
+        obj = AtributoExame.objects.create(
+            exame=exame,
+            nome=nome,
+            ordem=int(request.POST.get('ordem') or 1),
+            tipo_dado=request.POST.get('tipo_dado') or None,
+            tamanho=request.POST.get('tamanho') or None,
+            unidade=request.POST.get('unidade') or None,
+            largura=largura,
+            atributo_pai_id=atributo_pai_id,
+            obrigatorio=request.POST.get('obrigatorio') in ('true', '1', 'on', 'True'),
+            opcoes_preenchimento=request.POST.get('opcoes_preenchimento') or None,
+            ativo=request.POST.get('ativo') in ('true', '1', 'on', 'True'),
+        )
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Atributo criado com sucesso!',
+            'id': obj.id,
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def atributo_exame_detail(request, pk):
+    """Retornar dados de um atributo de exame via JSON"""
+    obj = get_object_or_404(AtributoExame, pk=pk)
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': obj.id,
+            'exame': obj.exame_id,
+            'nome': obj.nome,
+            'ordem': obj.ordem,
+            'tipo_dado': obj.tipo_dado or '',
+            'tamanho': obj.tamanho or '',
+            'unidade': obj.unidade or '',
+            'largura': obj.largura or '',
+            'atributo_pai': obj.atributo_pai_id or '',
+            'obrigatorio': obj.obrigatorio,
+            'opcoes_preenchimento': obj.opcoes_preenchimento or '',
+            'ativo': obj.ativo,
+        }
+    })
+
+
+@login_required
+def atributo_exame_update(request, pk):
+    """Atualizar atributo de exame via AJAX"""
+    obj = get_object_or_404(AtributoExame, pk=pk)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método não permitido'})
+
+    try:
+        nome = request.POST.get('nome', '').strip()
+        if not nome:
+            return JsonResponse({'success': False, 'error': 'Nome é obrigatório'})
+
+        exame_id = request.POST.get('exame')
+        if exame_id:
+            obj.exame_id = exame_id
+
+        atributo_pai_id = request.POST.get('atributo_pai') or None
+        largura = request.POST.get('largura') or None
+        if largura is not None:
+            largura = int(largura)
+
+        obj.nome = nome
+        obj.ordem = int(request.POST.get('ordem') or 1)
+        obj.tipo_dado = request.POST.get('tipo_dado') or None
+        obj.tamanho = request.POST.get('tamanho') or None
+        obj.unidade = request.POST.get('unidade') or None
+        obj.largura = largura
+        obj.atributo_pai_id = atributo_pai_id
+        obj.obrigatorio = request.POST.get('obrigatorio') in ('true', '1', 'on', 'True')
+        obj.opcoes_preenchimento = request.POST.get('opcoes_preenchimento') or None
+        obj.ativo = request.POST.get('ativo') in ('true', '1', 'on', 'True')
+        obj.save()
+
+        return JsonResponse({'success': True, 'message': 'Atributo atualizado com sucesso!'})
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def atributo_exame_delete(request, pk):
+    """Excluir atributo de exame via AJAX"""
+    obj = get_object_or_404(AtributoExame, pk=pk)
+
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método não permitido'})
+
+    try:
+        nome = obj.nome
+        obj.delete()
+        return JsonResponse({'success': True, 'message': f'Atributo "{nome}" excluído com sucesso!'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})

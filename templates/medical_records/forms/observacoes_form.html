@@ -16,6 +16,9 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="observacoes-id" name="observacoes_id" value="">
+
   <!-- Campos do formulário -->
   <div class="mb-3">
     <label class="form-label">Título <span class="text-danger">*</span></label>
@@ -53,87 +56,76 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
   const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
-  
+
   document.getElementById('save-observacoes')?.addEventListener('click', function() {
     const titulo = document.getElementById('titulo-observacoes').value;
     const texto = document.getElementById('texto-observacoes').value;
-    
     if (!titulo || !texto) {
       showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
       return;
     }
-    
+
     const formData = new FormData();
     formData.append('titulo', titulo);
     formData.append('texto', texto);
     formData.append('categoria', document.getElementById('categoria-observacoes').value);
-    
+
+    const datetimeSpan = document.getElementById('observacoes-datetime');
     const now = new Date();
-    formData.append('data_hora', now.toISOString().slice(0, 16));
-    
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+    formData.append('data_hora', isoDate.slice(0, 16));
+
+    const observacoesId = document.getElementById('observacoes-id')?.value;
+    if (observacoesId) formData.append('observacoes_id', observacoesId);
+
     const petId = window.CURRENT_PET_ID;
     if (!petId) {
       showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
       return;
     }
-    
+
     fetch(`/atendimento/api/${petId}/observacao/`, {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      },
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
       body: formData,
       credentials: 'same-origin'
     })
     .then(response => {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
-        });
+        return response.text().then(() => { throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.'); });
       }
       return response.json();
     })
     .then(data => {
       if (data.success) {
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const isoDate = now.toISOString();
-        
-        adicionarItemTimeline('observacoes', titulo, isoDate, texto.substring(0, 100), usuario, usuarioAvatar, data.id);
-        
+        if (observacoesId) {
+          const timeline = document.querySelector('#timeline-list');
+          if (timeline) timeline.innerHTML = '';
+          carregarTimeline();
+        } else {
+          adicionarItemTimeline('observacoes', titulo, isoDate, texto.substring(0, 100), '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+        }
         hideAllForms();
-        showSuccessModal('Sucesso!', 'Observação salva com sucesso!');
-        
-        // Resetar
-        document.getElementById('titulo-observacoes').value = '';
-        document.getElementById('texto-observacoes').value = '';
-        document.getElementById('categoria-observacoes').value = '';
+        showSuccessModal('Sucesso!', observacoesId ? 'Observação atualizada com sucesso!' : 'Observação salva com sucesso!');
       } else {
         showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a observação');
       }
     })
     .catch(error => {
-      console.error('Erro:', error);
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-    document.getElementById('texto-observacoes').value = '';
-    document.getElementById('categoria-observacoes').value = '';
-  });
+});
 </script>

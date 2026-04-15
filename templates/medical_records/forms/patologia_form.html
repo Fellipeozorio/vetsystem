@@ -16,32 +16,22 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
-  <!-- Campos do formulário -->
-  <div class="mb-3">
-    <label class="form-label">Diagnóstico <span class="text-danger">*</span></label>
-    <input type="text" class="form-control" id="diagnostico-patologia" required placeholder="Diagnóstico da patologia">
-  </div>
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="patologia-id" name="patologia_id" value="">
 
+  <!-- Campos do formulário -->
   <div class="row mb-3">
-    <div class="col-md-6">
-      <label class="form-label">CID</label>
-      <input type="text" class="form-control" id="cid-patologia" placeholder="Código CID (opcional)">
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">Gravidade</label>
-      <select class="form-select" id="gravidade-patologia">
-        <option value="">Selecione...</option>
-        <option value="leve">Leve</option>
-        <option value="moderada">Moderada</option>
-        <option value="grave">Grave</option>
-        <option value="critica">Crítica</option>
+    <div class="col-9">
+      <label class="form-label">Patologia <span class="text-danger">*</span></label>
+      <select class="form-select" id="select-patologia-cadastro" required>
+        <option value="">Selecione a patologia...</option>
       </select>
     </div>
   </div>
 
-  <div class="mb-3">
-    <label class="form-label">Observações</label>
-    <textarea class="form-control" id="obs-patologia" rows="4" placeholder="Detalhes sobre a patologia"></textarea>
+  <div class="mb-3" id="protocolo-patologia-wrapper" style="display: none;">
+    <label class="form-label fw-semibold" style="color: #6C2C91;">Protocolo padrão</label>
+    <div id="protocolo-patologia-texto" class="p-3 rounded border" style="background: #f8f4fc; color: #4a306a; white-space: pre-wrap; height: 300px; overflow-y: auto; font-size: 0.9rem;"></div>
   </div>
 
   <!-- Botões de ação -->
@@ -59,88 +49,129 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+
+  // Carregar opções do select de patologias do cadastro
+  window._patologiasCache = window._patologiasCache || null;
+
+  function carregarPatologiasSelect(selectedId) {
+    const select = document.getElementById('select-patologia-cadastro');
+    if (!select) return;
+
+    const renderOptions = (patologias) => {
+      select.innerHTML = '<option value="">Selecione a patologia...</option>';
+      patologias.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.nome;
+        opt.dataset.descricao = p.descricao || '';
+        if (selectedId && String(p.id) === String(selectedId)) opt.selected = true;
+        select.appendChild(opt);
+      });
+      // Exibir protocolo da opção selecionada ao carregar em modo edição
+      if (selectedId) select.dispatchEvent(new Event('change'));
+    };
+
+    if (window._patologiasCache) {
+      renderOptions(window._patologiasCache);
+    } else {
+      fetch('/cadastros/api/patologias/', { credentials: 'same-origin' })
+        .then(r => r.json())
+        .then(data => {
+          window._patologiasCache = data;
+          renderOptions(data);
+        });
+    }
+  }
+
+  carregarPatologiasSelect(null);
+
+  // Exibir protocolo ao selecionar patologia
+  document.getElementById('select-patologia-cadastro')?.addEventListener('change', function() {
+    const opt = this.options[this.selectedIndex];
+    const descricao = opt?.dataset.descricao || '';
+    const wrapper = document.getElementById('protocolo-patologia-wrapper');
+    const texto = document.getElementById('protocolo-patologia-texto');
+    if (descricao.trim()) {
+      texto.textContent = descricao;
+      wrapper.style.display = '';
+    } else {
+      wrapper.style.display = 'none';
+    }
+  });
+
   document.getElementById('save-patologia')?.addEventListener('click', function() {
-    const diagnostico = document.getElementById('diagnostico-patologia').value;
-    
-    if (!diagnostico) {
-      showDangerModal('Erro de Validação', 'Por favor, informe o diagnóstico');
+    const select = document.getElementById('select-patologia-cadastro');
+    const patologiaCadastroId = select.value;
+    const diagnostico = select.options[select.selectedIndex]?.textContent || '';
+
+    if (!patologiaCadastroId) {
+      showDangerModal('Erro de Validação', 'Por favor, selecione a patologia');
       return;
     }
-    
+
     const formData = new FormData();
+    formData.append('patologia_cadastro_id', patologiaCadastroId);
     formData.append('diagnostico', diagnostico);
-    formData.append('cid', document.getElementById('cid-patologia').value);
-    formData.append('gravidade', document.getElementById('gravidade-patologia').value);
-    formData.append('observacoes', document.getElementById('obs-patologia').value);
-    
+
+    const datetimeSpan = document.getElementById('patologia-datetime');
     const now = new Date();
-    formData.append('data_hora', now.toISOString().slice(0, 16));
-    
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+    formData.append('data_hora', isoDate.slice(0, 16));
+
+    const patologiaId = document.getElementById('patologia-id')?.value;
+    if (patologiaId) formData.append('patologia_id', patologiaId);
+
     const petId = window.CURRENT_PET_ID;
     if (!petId) {
       showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
       return;
     }
-    
+
     fetch(`/atendimento/api/${petId}/patologia/`, {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      },
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
       body: formData,
       credentials: 'same-origin'
     })
     .then(response => {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
-        });
+        return response.text().then(() => { throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.'); });
       }
       return response.json();
     })
     .then(data => {
       if (data.success) {
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
-        const isoDate = now.toISOString();
-        const gravidade = document.getElementById('gravidade-patologia').value;
-        
-        adicionarItemTimeline('patologia', diagnostico, isoDate, gravidade ? `Gravidade: ${gravidade}` : 'Patologia registrada', usuario, usuarioAvatar, data.id);
-        
+        if (patologiaId) {
+          const timeline = document.querySelector('#timeline-list');
+          if (timeline) timeline.innerHTML = '';
+          carregarTimeline();
+        } else {
+          adicionarItemTimeline('patologia', diagnostico, isoDate, diagnostico, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+        }
         hideAllForms();
-        showSuccessModal('Sucesso!', 'Patologia salva com sucesso!');
-        
-        // Resetar
-        document.getElementById('diagnostico-patologia').value = '';
-        document.getElementById('cid-patologia').value = '';
-        document.getElementById('gravidade-patologia').value = '';
-        document.getElementById('obs-patologia').value = '';
+        showSuccessModal('Sucesso!', patologiaId ? 'Patologia atualizada com sucesso!' : 'Patologia salva com sucesso!');
       } else {
         showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a patologia');
       }
     })
     .catch(error => {
-      console.error('Erro:', error);
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-    document.getElementById('gravidade-patologia').value = '';
-    document.getElementById('obs-patologia').value = '';
-  });
+
+  // Expor função para populate ao editar (chamada pelo showForm do historico_base.html)
+  window._carregarPatologiasSelectComId = carregarPatologiasSelect;
+});
 </script>

@@ -350,18 +350,59 @@ class Exame(BaseCadastro):
 
 
 class AtributoExame(models.Model):
+    TIPO_DADO_CHOICES = [
+        ('alfanumerico', 'Alfanumérico'),
+        ('data', 'Data'),
+        ('decimal', 'Decimal'),
+        ('texto', 'Texto'),
+        ('inteiro', 'Inteiro'),
+    ]
+
     exame = models.ForeignKey(
         Exame,
         on_delete=models.CASCADE,
         related_name='atributos'
     )
+    atributo_pai = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='filhos',
+        verbose_name='Atributo pai'
+    )
 
     nome = models.CharField(max_length=150)
-    unidade = models.CharField(max_length=50, blank=True, null=True)
+    ordem = models.PositiveIntegerField(default=1, verbose_name='Ordem')
+    tipo_dado = models.CharField(
+        max_length=20,
+        choices=TIPO_DADO_CHOICES,
+        blank=True,
+        null=True,
+        verbose_name='Tipo do dado'
+    )
+    tamanho = models.CharField(max_length=20, blank=True, null=True, verbose_name='Tamanho')
+    unidade = models.CharField(max_length=50, blank=True, null=True, verbose_name='Unidade')
+    largura = models.PositiveIntegerField(blank=True, null=True, verbose_name='Largura (px)')
+    obrigatorio = models.BooleanField(default=False, verbose_name='Obrigatório')
+    opcoes_preenchimento = models.TextField(blank=True, null=True, verbose_name='Opções de preenchimento')
+    ativo = models.BooleanField(default=True)
     valor_referencia = models.CharField(max_length=100, blank=True, null=True)
+
+    class Meta:
+        ordering = ['exame', 'ordem', 'nome']
 
     def __str__(self):
         return f"{self.exame.nome} - {self.nome}"
+
+    @property
+    def indent_style(self):
+        depth = 0
+        parent = self.atributo_pai
+        while parent is not None:
+            depth += 1
+            parent = parent.atributo_pai
+        return f"padding-left:{depth * 1.5}rem;" if depth > 0 else ""
 
 
 class ReferenciaExame(models.Model):

@@ -1,0 +1,543 @@
+﻿{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Atributos de Exames - VetSystem{% endblock %}
+
+{% block extra_css %}
+<style>
+  #obrig-sim:checked + label,
+  #ativo-sim:checked + label {
+    background-color: var(--tblr-success);
+    border-color: var(--tblr-success);
+    color: #fff;
+  }
+  #obrig-nao:checked + label,
+  #ativo-nao:checked + label {
+    background-color: var(--tblr-danger);
+    border-color: var(--tblr-danger);
+    color: #fff;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+{% csrf_token %}
+
+<!-- Page Header -->
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Cadastros</div>
+        <h2 class="page-title">Atributos de Exames</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page Body -->
+<div class="page-body">
+  <div class="container-xl">
+
+    <!-- Barra de Filtros -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <div class="d-flex align-items-center gap-2">
+            <!-- Select de Exame -->
+            <select class="form-select" id="select-exame" style="width:240px;" onchange="aplicarFiltroExame(this.value)">
+              <option value="">Selecione um exame...</option>
+              {% for exame in exames %}
+              <option value="{{ exame.id }}" {% if exame_id == exame.id|stringformat:"s" %}selected{% endif %}>{{ exame.nome }}</option>
+              {% endfor %}
+            </select>
+
+            <!-- Input de busca -->
+            <input type="text" class="form-control" id="input-busca" placeholder="Nome" value="{{ query }}" style="width:180px;">
+
+            <!-- Botão Pesquisar (azul) -->
+            <button class="btn btn-primary" type="button" onclick="aplicarBusca()" title="Pesquisar">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon m-0" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" /><path d="M21 21l-6 -6" /></svg>
+            </button>
+
+            <!-- Botão Limpar -->
+            <button class="btn btn-outline-secondary" type="button" onclick="limparFiltros()" title="Limpar filtros">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon m-0" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 14l-4 -4l4 -4" /><path d="M5 10h11a4 4 0 1 1 0 8h-1" /></svg>
+            </button>
+
+            <!-- Botão Adicionar -->
+            <button type="button" class="btn btn-primary ms-1" onclick="abrirFormularioAdicionar()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+              Adicionar
+            </button>
+          </div>
+
+          <!-- Botão Relatório alinhado à direita -->
+          <div class="ms-auto">
+            <a href="#" id="btn-relatorio" class="btn btn-outline-secondary" onclick="gerarRelatorio(); return false;" title="Relatório">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
+              Relatório
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Painel de formulário com Tabs (substitui a lista) -->
+    <div id="painel-form" style="display:none;">
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header">
+              <ul class="nav nav-tabs card-header-tabs" data-bs-toggle="tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                  <a href="#tab-dados" class="nav-link active" data-bs-toggle="tab" aria-selected="true" role="tab">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" /></svg>
+                    <span id="tab-nome-aba">Adicionar</span>
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div class="card-body">
+              <h3 id="titulo-exame-form" class="mb-3"></h3>
+              <div class="tab-content">
+                <div class="tab-pane active show" id="tab-dados">
+                  <form id="form-atributo" novalidate>
+                    <input type="hidden" id="campo-id" name="id" value="">
+                    <input type="hidden" id="campo-exame" name="exame" value="">
+
+                    <!-- Campos em 2 colunas - máx 50% da largura -->
+                    <div class="row g-3" style="max-width:50%;">
+                      <div class="col-6">
+                        <label class="form-label required">Nome</label>
+                        <input type="text" class="form-control" id="campo-nome" name="nome" required>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label required">Ordem</label>
+                        <input type="number" class="form-control" id="campo-ordem" name="ordem" min="1" required style="width:130px;">
+                      </div>
+
+                      <div class="col-6">
+                        <label class="form-label">Tipo do dado</label>
+                        <select class="form-select" id="campo-tipo-dado" name="tipo_dado">
+                          <option value="">Selecione...</option>
+                          {% for value, label in tipo_dado_choices %}
+                          <option value="{{ value }}">{{ label }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label">Tamanho</label>
+                        <input type="text" class="form-control" id="campo-tamanho" name="tamanho" placeholder="Ex: 10" style="width:130px;">
+                      </div>
+
+                      <div class="col-6">
+                        <label class="form-label">Unidade</label>
+                        <input type="text" class="form-control" id="campo-unidade" name="unidade" placeholder="Ex: mg/dL">
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label">Largura (px)</label>
+                        <div class="input-group" style="width:130px;">
+                          <input type="number" class="form-control" id="campo-largura" name="largura" min="1" placeholder="Ex: 200">
+                          <span class="input-group-text">px</span>
+                        </div>
+                      </div>
+
+                      <div class="col-6">
+                        <label class="form-label">Atributo pai</label>
+                        <select class="form-select" id="campo-atributo-pai" name="atributo_pai">
+                          <option value="">Selecione...</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label d-block">Obrigatório</label>
+                        <div class="btn-group" role="group" style="width:130px;">
+                          <input type="radio" class="btn-check" name="obrigatorio" id="obrig-sim" value="True" autocomplete="off">
+                          <label class="btn btn-outline-secondary" for="obrig-sim">Sim</label>
+                          <input type="radio" class="btn-check" name="obrigatorio" id="obrig-nao" value="False" autocomplete="off" checked>
+                          <label class="btn btn-outline-secondary" for="obrig-nao">Não</label>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Opções de preenchimento - largura total da página -->
+                    <div class="row g-3 mt-1">
+                      <div class="col-12">
+                        <label class="form-label">Opções de preenchimento</label>
+                        <textarea class="form-control" id="campo-opcoes" name="opcoes_preenchimento" rows="3" placeholder="Uma opção por linha"></textarea>
+                      </div>
+                    </div>
+
+                    <div class="mt-2">
+                      <label class="form-label d-block">Status</label>
+                      <div class="btn-group" role="group" style="width:130px;">
+                        <input type="radio" class="btn-check" name="ativo" id="ativo-sim" value="True" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary" for="ativo-sim">Ativo</label>
+                        <input type="radio" class="btn-check" name="ativo" id="ativo-nao" value="False" autocomplete="off">
+                        <label class="btn btn-outline-secondary" for="ativo-nao">Inativo</label>
+                      </div>
+                    </div>
+
+                    <div class="d-flex gap-2 mt-3 justify-content-end">
+                      <button type="button" class="btn btn-danger" id="btn-excluir-form" style="display:none;" onclick="excluirDoFormulario()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                        Excluir
+                      </button><button type="button" class="btn btn-outline-secondary" onclick="fecharFormulario()">Cancelar</button>
+                      <button type="submit" class="btn btn-primary">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" /><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /><path d="M14 4l0 4l-6 0l0 -4" /></svg>
+                        Salvar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela (visivel quando formulario esta oculto) -->
+    <div id="painel-lista">
+      {% if not exame_id %}
+      <div class="row">
+        <div class="col-12">
+          <div class="card">
+            <div class="card-body text-center py-5">
+              <div class="empty">
+                <div class="empty-icon">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z" /></svg>
+                </div>
+                <p class="empty-title">Selecione um exame</p>
+                <p class="empty-subtitle text-secondary">Escolha um exame no filtro acima para ver seus atributos.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="row row-cards">
+        <div class="col-12">
+          <div class="card">
+            <div class="table-responsive">
+              <table class="table table-vcenter card-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Unidade</th>
+                    <th>Tipo</th>
+                    <th class="w-1 text-center">Ordem</th>
+                    <th class="w-1 text-center">Status</th>
+                    <th class="w-1 text-center">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for item in page_obj %}
+                  <tr class="cursor-pointer" onclick="editarAtributo({{ item.id }})">
+                    <td>
+                      <span style="{{ item.indent_style }}">{{ item.nome }}</span>
+                    </td>
+                    <td>{{ item.unidade|default:"" }}</td>
+                    <td>
+                      {% if item.tipo_dado %}
+                        {{ item.get_tipo_dado_display }}{% if item.tamanho %} ({{ item.tamanho }}){% endif %}
+                      {% endif %}
+                    </td>
+                    <td class="text-center">{{ item.ordem }}</td>
+                    <td class="text-center">
+                      {% if item.ativo %}
+                        <span class="badge bg-success text-white">Ativo</span>
+                      {% else %}
+                        <span class="badge bg-danger text-white">Inativo</span>
+                      {% endif %}
+                    </td>
+                    <td class="text-center" onclick="event.stopPropagation()">
+                      <div class="btn-list flex-nowrap">
+                        <button class="btn btn-sm btn-icon btn-ghost-secondary" onclick="editarAtributo({{ item.id }})" title="Editar">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+                        </button>
+                        <button class="btn btn-sm btn-icon btn-ghost-danger" onclick="confirmarExclusao({{ item.id }}, '{{ item.nome|escapejs }}')" title="Excluir">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6" class="text-center text-muted py-5">
+                      <div class="empty">
+                        <div class="empty-icon">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /></svg>
+                        </div>
+                        <p class="empty-title">Nenhum atributo encontrado</p>
+                        <p class="empty-subtitle text-secondary">Adicione o primeiro atributo clicando no botao acima.</p>
+                        <div class="empty-action">
+                          <button type="button" class="btn btn-primary" onclick="abrirFormularioAdicionar()">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+                            Adicionar o primeiro atributo
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+
+            {% if page_obj.has_other_pages %}
+            <div class="card-footer d-flex align-items-center">
+              <p class="m-0 text-secondary">
+                Mostrando <span>{{ page_obj.start_index }}</span> a <span>{{ page_obj.end_index }}</span> de <span>{{ page_obj.paginator.count }}</span> registros
+              </p>
+              <ul class="pagination m-0 ms-auto">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% if exame_id %}&exame={{ exame_id }}{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6" /></svg>
+                  </a>
+                </li>
+                {% endif %}
+                {% for num in page_obj.paginator.page_range %}
+                  {% if page_obj.number == num %}
+                  <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                  {% elif num > page_obj.number|add:"-3" and num < page_obj.number|add:"3" %}
+                  <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% if exame_id %}&exame={{ exame_id }}{% endif %}">{{ num }}</a>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% if exame_id %}&exame={{ exame_id }}{% endif %}">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6" /></svg>
+                  </a>
+                </li>
+                {% endif %}
+              </ul>
+            </div>
+            {% endif %}
+
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+</div>
+
+<!-- Modal Sem Exame Selecionado -->
+<div class="modal modal-blur fade" id="modal-sem-exame" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Atenção</h3>
+        <div class="text-secondary">Selecione um exame antes de adicionar um atributo.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <button type="button" class="btn btn-primary w-100" data-bs-dismiss="modal">OK, entendido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Confirmar Exclusao -->
+<div class="modal modal-blur fade" id="modal-excluir" tabindex="-1" role="dialog" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v4" /><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0z" /><path d="M12 16h.01" /></svg>
+        <h3>Confirmar Exclusao</h3>
+        <div class="text-secondary" id="msg-excluir">Tem certeza que deseja excluir este atributo?</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-danger w-100" id="btn-confirmar-excluir">Excluir</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]').value;
+let exclusaoId = null;
+
+function aplicarFiltroExame(exameId) {
+  const url = new URL(window.location.href);
+  if (exameId) { url.searchParams.set('exame', exameId); } else { url.searchParams.delete('exame'); }
+  url.searchParams.delete('page');
+  window.location.href = url.toString();
+}
+
+function aplicarBusca() {
+  const q = document.getElementById('input-busca').value.trim();
+  const url = new URL(window.location.href);
+  if (q) { url.searchParams.set('q', q); } else { url.searchParams.delete('q'); }
+  url.searchParams.delete('page');
+  window.location.href = url.toString();
+}
+
+function limparFiltros() {
+  window.location.href = window.location.pathname;
+}
+
+document.getElementById('input-busca').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') aplicarBusca();
+});
+
+function abrirFormularioAdicionar() {
+  const exameSelect = document.getElementById('select-exame');
+  const exameIdFiltro = exameSelect.value;
+
+  if (!exameIdFiltro) {
+    new bootstrap.Modal(document.getElementById('modal-sem-exame')).show();
+    return;
+  }
+
+  document.getElementById('form-atributo').reset();
+  document.getElementById('campo-id').value = '';
+  document.getElementById('campo-ordem').value = '';
+  document.getElementById('obrig-nao').checked = true;
+  document.getElementById('ativo-sim').checked = true;
+  document.getElementById('campo-atributo-pai').innerHTML = '<option value="">Selecione...</option>';
+
+  const exameNome = exameSelect.options[exameSelect.selectedIndex]?.text || '';
+  document.getElementById('campo-exame').value = exameIdFiltro;
+  document.getElementById('tab-nome-aba').textContent = 'Adicionar';
+  document.getElementById('titulo-exame-form').textContent = exameNome;
+  document.getElementById('btn-excluir-form').style.display = 'none';
+  carregarAtributosPai(exameIdFiltro, '');
+  mostrarFormulario();
+}
+
+function fecharFormulario() { ocultarFormulario(); }
+
+function mostrarFormulario() {
+  document.getElementById('painel-form').style.display = '';
+  document.getElementById('painel-lista').style.display = 'none';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function ocultarFormulario() {
+  document.getElementById('painel-form').style.display = 'none';
+  document.getElementById('painel-lista').style.display = '';
+}
+
+document.getElementById('campo-exame').addEventListener('change', function() {
+  carregarAtributosPai(this.value, document.getElementById('campo-id').value);
+});
+
+function carregarAtributosPai(exameId, excluirId) {
+  const select = document.getElementById('campo-atributo-pai');
+  select.innerHTML = '<option value="">Selecione...</option>';
+  if (!exameId) return;
+  const rows = document.querySelectorAll('#painel-lista tbody tr[onclick]');
+  rows.forEach(row => {
+    const nomeCell = row.cells[0] ? row.cells[0].textContent.trim() : '';
+    const match = row.getAttribute('onclick') ? row.getAttribute('onclick').match(/\d+/) : null;
+    if (!match) return;
+    const rowId = match[0];
+    if (rowId === String(excluirId)) return;
+    const opt = document.createElement('option');
+    opt.value = rowId;
+    opt.textContent = nomeCell;
+    select.appendChild(opt);
+  });
+}
+
+function editarAtributo(id) {
+  fetch('/cadastros/atributos-exames/' + id + '/', { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+  .then(r => r.json())
+  .then(resp => {
+    if (!resp.success) { alert('Erro: ' + resp.error); return; }
+    const d = resp.data;
+    document.getElementById('campo-id').value = d.id;
+    document.getElementById('campo-nome').value = d.nome;
+    document.getElementById('campo-ordem').value = d.ordem;
+    document.getElementById('campo-tipo-dado').value = d.tipo_dado;
+    document.getElementById('campo-tamanho').value = d.tamanho;
+    document.getElementById('campo-unidade').value = d.unidade;
+    document.getElementById('campo-largura').value = d.largura;
+    document.getElementById('campo-exame').value = d.exame;
+    document.getElementById('campo-opcoes').value = d.opcoes_preenchimento;
+    document.getElementById(d.obrigatorio ? 'obrig-sim' : 'obrig-nao').checked = true;
+    document.getElementById(d.ativo ? 'ativo-sim' : 'ativo-nao').checked = true;
+    carregarAtributosPai(d.exame, d.id);
+    setTimeout(() => { document.getElementById('campo-atributo-pai').value = d.atributo_pai; }, 50);
+    const exameSelect = document.getElementById('select-exame');
+    const exameNome = exameSelect.options[exameSelect.selectedIndex]?.text || '';
+    document.getElementById('tab-nome-aba').textContent = 'Editar';
+    document.getElementById('titulo-exame-form').textContent = exameNome;
+    document.getElementById('btn-excluir-form').style.display = '';
+    mostrarFormulario();
+  })
+  .catch(() => alert('Erro ao carregar atributo.'));
+}
+
+document.getElementById('form-atributo').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const id = document.getElementById('campo-id').value;
+  const url = id ? '/cadastros/atributos-exames/' + id + '/editar/' : '/cadastros/atributos-exames/criar/';
+  const formData = new FormData(this);
+  formData.set('csrfmiddlewaretoken', CSRF_TOKEN);
+  formData.set('obrigatorio', document.querySelector('input[name="obrigatorio"]:checked') ? document.querySelector('input[name="obrigatorio"]:checked').value : 'False');
+  formData.set('ativo', document.querySelector('input[name="ativo"]:checked') ? document.querySelector('input[name="ativo"]:checked').value : 'True');
+  fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' }, body: formData })
+  .then(r => r.json())
+  .then(resp => {
+    if (resp.success) {
+      const exameId = document.getElementById('campo-exame').value;
+      const u = new URL(window.location.href);
+      if (exameId) u.searchParams.set('exame', exameId);
+      window.location.href = u.toString();
+    } else { alert('Erro: ' + resp.error); }
+  })
+  .catch(() => alert('Erro ao salvar.'));
+});
+
+function excluirDoFormulario() {
+  const id = document.getElementById('campo-id').value;
+  const nome = document.getElementById('campo-nome').value;
+  if (id) confirmarExclusao(id, nome);
+}
+
+function confirmarExclusao(id, nome) {
+  exclusaoId = id;
+  document.getElementById('msg-excluir').textContent = 'Tem certeza que deseja excluir o atributo "' + nome + '"?';
+  new bootstrap.Modal(document.getElementById('modal-excluir')).show();
+}
+
+document.getElementById('btn-confirmar-excluir').addEventListener('click', function() {
+  if (!exclusaoId) return;
+  fetch('/cadastros/atributos-exames/' + exclusaoId + '/excluir/', { method: 'POST', headers: { 'X-CSRFToken': CSRF_TOKEN, 'X-Requested-With': 'XMLHttpRequest' } })
+  .then(r => r.json())
+  .then(resp => {
+    bootstrap.Modal.getInstance(document.getElementById('modal-excluir')).hide();
+    if (resp.success) { window.location.reload(); } else { alert('Erro: ' + resp.error); }
+  })
+  .catch(() => alert('Erro ao excluir.'));
+});
+
+function gerarRelatorio() {
+  const exameId = document.getElementById('select-exame').value;
+  const base = '/cadastros/atributos-exames/report/';
+  const url = exameId ? base + '?exame=' + encodeURIComponent(exameId) : base;
+  window.open(url, '_blank');
+}
+</script>
+{% endblock %}

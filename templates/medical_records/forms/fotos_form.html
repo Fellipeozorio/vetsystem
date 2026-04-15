@@ -16,6 +16,9 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="fotos-id" name="fotos_id" value="">
+
   <!-- Campos do formulário -->
   <div class="mb-3">
     <label class="form-label">Título <span class="text-danger">*</span></label>
@@ -49,11 +52,21 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
   const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
   let uploadedFilesFotos = [];
   const fileInputFotos = document.getElementById('file-fotos');
   const fileBadgesFotos = document.getElementById('file-badges-fotos');
-  
+
   fileInputFotos?.addEventListener('change', function(e) {
     const files = Array.from(e.target.files);
     files.forEach(file => {
@@ -62,76 +75,68 @@ document.addEventListener('DOMContentLoaded', function() {
         const badge = document.createElement('span');
         badge.className = 'badge bg-secondary';
         badge.innerHTML = `${file.name} <i class="ti ti-x"></i>`;
-        badge.onclick = () => {
-          uploadedFilesFotos = uploadedFilesFotos.filter(f => f.name !== file.name);
-          badge.remove();
-        };
+        badge.onclick = () => { uploadedFilesFotos = uploadedFilesFotos.filter(f => f.name !== file.name); badge.remove(); };
         fileBadgesFotos.appendChild(badge);
       }
     });
     fileInputFotos.value = '';
   });
-  
+
   document.getElementById('save-fotos')?.addEventListener('click', function() {
     const titulo = document.getElementById('titulo-fotos').value;
-    
+    const fotosId = document.getElementById('fotos-id')?.value;
+
     if (!titulo) {
       showDangerModal('Erro de Validação', 'Por favor, informe o título');
       return;
     }
-    
-    if (uploadedFilesFotos.length === 0) {
+    if (!fotosId && uploadedFilesFotos.length === 0) {
       showDangerModal('Erro de Validação', 'Por favor, selecione pelo menos uma foto');
       return;
     }
-    
+
     const formData = new FormData();
     formData.append('titulo', titulo);
     formData.append('descricao', document.getElementById('desc-fotos').value);
-    
-    uploadedFilesFotos.forEach(file => {
-      formData.append('arquivos', file);
-    });
-    
+    uploadedFilesFotos.forEach(file => formData.append('arquivos', file));
+
+    const datetimeSpan = document.getElementById('fotos-datetime');
     const now = new Date();
-    formData.append('data_hora', now.toISOString().slice(0, 16));
-    
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+    formData.append('data_hora', isoDate.slice(0, 16));
+
+    if (fotosId) formData.append('fotos_id', fotosId);
+
     const petId = window.CURRENT_PET_ID;
     if (!petId) {
       showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
       return;
     }
-    
+
     fetch(`/atendimento/api/${petId}/fotos/`, {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      },
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
       body: formData,
       credentials: 'same-origin'
     })
     .then(response => {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
-        });
+        return response.text().then(() => { throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.'); });
       }
       return response.json();
     })
     .then(data => {
       if (data.success) {
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const isoDate = now.toISOString();
-        
-        adicionarItemTimeline('fotos', titulo, isoDate, `${uploadedFilesFotos.length} foto(s)`, usuario, usuarioAvatar, data.id);
-        
+        if (fotosId) {
+          const timeline = document.querySelector('#timeline-list');
+          if (timeline) timeline.innerHTML = '';
+          carregarTimeline();
+        } else {
+          adicionarItemTimeline('fotos', titulo, isoDate, `${uploadedFilesFotos.length} foto(s)`, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+        }
         hideAllForms();
-        showSuccessModal('Sucesso!', 'Fotos salvas com sucesso!');
-        
-        // Resetar
-        document.getElementById('titulo-fotos').value = '';
-        document.getElementById('desc-fotos').value = '';
+        showSuccessModal('Sucesso!', fotosId ? 'Fotos atualizadas com sucesso!' : 'Fotos salvas com sucesso!');
         uploadedFilesFotos = [];
         fileBadgesFotos.innerHTML = '';
       } else {
@@ -139,26 +144,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     })
     .catch(error => {
-      console.error('Erro:', error);
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-    uploadedFilesFotos = [];
-    fileBadgesFotos.innerHTML = '';
-  });
+});
 </script>

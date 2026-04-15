@@ -16,22 +16,14 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="peso-id" name="peso_id" value="">
+
   <!-- Campos do formulário -->
   <div class="row mb-3">
     <div class="col-md-6">
       <label class="form-label">Peso (kg) <span class="text-danger">*</span></label>
-      <input type="number" step="0.01" class="form-control" id="valor-peso" required placeholder="0.00">
-    </div>
-    <div class="col-md-6">
-      <label class="form-label">Condição Corporal</label>
-      <select class="form-select" id="condicao-corporal">
-        <option value="">Selecione...</option>
-        <option value="1">1 - Muito magro</option>
-        <option value="2">2 - Magro</option>
-        <option value="3">3 - Ideal</option>
-        <option value="4">4 - Sobrepeso</option>
-        <option value="5">5 - Obeso</option>
-      </select>
+      <input type="text" inputmode="numeric" class="form-control" id="valor-peso" required placeholder="0,000" autocomplete="off">
     </div>
   </div>
 
@@ -55,87 +47,85 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
+  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+
+  // Máscara de peso: 3 casas decimais com vírgula (ex: 4,500)
+  const pesoInput = document.getElementById('valor-peso');
+  pesoInput?.addEventListener('input', function() {
+    let digits = this.value.replace(/[^0-9]/g, '');
+    if (!digits) { this.value = ''; return; }
+    while (digits.length < 4) digits = '0' + digits;
+    const intPart = digits.slice(0, -3).replace(/^0+/, '') || '0';
+    const decPart = digits.slice(-3);
+    this.value = intPart + ',' + decPart;
+  });
+
   document.getElementById('save-peso')?.addEventListener('click', function() {
     const peso = document.getElementById('valor-peso').value;
-    
     if (!peso) {
       showDangerModal('Erro de Validação', 'Por favor, informe o peso');
       return;
     }
-    
+
     const formData = new FormData();
     formData.append('peso', peso);
-    formData.append('condicao_corporal', document.getElementById('condicao-corporal').value);
     formData.append('observacoes', document.getElementById('obs-peso').value);
-    
+
+    const datetimeSpan = document.getElementById('peso-datetime');
     const now = new Date();
-    formData.append('data_hora', now.toISOString().slice(0, 16));
-    
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+    formData.append('data_hora', isoDate.slice(0, 16));
+
+    const pesoId = document.getElementById('peso-id')?.value;
+    if (pesoId) formData.append('peso_id', pesoId);
+
     const petId = window.CURRENT_PET_ID;
     if (!petId) {
       showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
       return;
     }
-    
+
     fetch(`/atendimento/api/${petId}/peso/`, {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      },
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
       body: formData,
       credentials: 'same-origin'
     })
     .then(response => {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
-        });
+        return response.text().then(() => { throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.'); });
       }
       return response.json();
     })
     .then(data => {
       if (data.success) {
-        const datetime = document.getElementById('peso-datetime').textContent;
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
-        const isoDate = now.toISOString();
-        const condicao = document.getElementById('condicao-corporal').value;
-        
-        adicionarItemTimeline('peso', `Peso: ${peso} kg`, isoDate, condicao ? `Condição corporal: ${condicao}` : 'Pesagem', usuario, usuarioAvatar, data.id);
-        
+        if (pesoId) {
+          const timeline = document.querySelector('#timeline-list');
+          if (timeline) timeline.innerHTML = '';
+          carregarTimeline();
+        } else {
+          adicionarItemTimeline('peso', `${peso} kg`, isoDate, `${peso} kg`, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+        }
         hideAllForms();
-        showSuccessModal('Sucesso!', 'Peso salvo com sucesso!');
-        
-        // Resetar
-        document.getElementById('valor-peso').value = '';
-        document.getElementById('condicao-corporal').value = '';
-        document.getElementById('obs-peso').value = '';
+        showSuccessModal('Sucesso!', pesoId ? 'Peso atualizado com sucesso!' : 'Peso salvo com sucesso!');
       } else {
         showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o peso');
       }
     })
     .catch(error => {
-      console.error('Erro:', error);
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-    document.getElementById('condicao-corporal').value = '';
-    document.getElementById('obs-peso').value = '';
-  });
+});
 </script>

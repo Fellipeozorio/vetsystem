@@ -16,6 +16,9 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="vacina-id" name="vacina_id" value="">
+
   <!-- Campos do formulário -->
   <div class="row mb-3">
     <div class="col-md-6">
@@ -59,91 +62,78 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
   const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
-  
+
   document.getElementById('save-vacina')?.addEventListener('click', function() {
     const nome = document.getElementById('nome-vacina').value;
-    
     if (!nome) {
       showDangerModal('Erro de Validação', 'Por favor, informe o nome da vacina');
       return;
     }
-    
+
     const formData = new FormData();
     formData.append('nome', nome);
     formData.append('lote', document.getElementById('lote-vacina').value);
     formData.append('fabricante', document.getElementById('fabricante-vacina').value);
-    formData.append('proxima_dose', document.getElementById('proxima-dose').value);
+    formData.append('proxima_dose', document.getElementById('proxima-dose-vacina').value);
     formData.append('observacoes', document.getElementById('obs-vacina').value);
-    
+
+    const datetimeSpan = document.getElementById('vacina-datetime');
     const now = new Date();
-    formData.append('data_hora', now.toISOString().slice(0, 16));
-    
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+    formData.append('data_hora', isoDate.slice(0, 16));
+
+    const vacinaId = document.getElementById('vacina-id')?.value;
+    if (vacinaId) formData.append('vacina_id', vacinaId);
+
     const petId = window.CURRENT_PET_ID;
     if (!petId) {
       showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
       return;
     }
-    
+
     fetch(`/atendimento/api/${petId}/vacina/`, {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      },
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
       body: formData,
       credentials: 'same-origin'
     })
     .then(response => {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
-        });
+        return response.text().then(() => { throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.'); });
       }
       return response.json();
     })
     .then(data => {
       if (data.success) {
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const isoDate = now.toISOString();
-        const lote = document.getElementById('lote-vacina').value;
-        
-        adicionarItemTimeline('vacina', nome, isoDate, lote ? `Lote: ${lote}` : 'Vacina aplicada', usuario, usuarioAvatar, data.id);
-        
+        if (vacinaId) {
+          const timeline = document.querySelector('#timeline-list');
+          if (timeline) timeline.innerHTML = '';
+          carregarTimeline();
+        } else {
+          const lote = document.getElementById('lote-vacina').value;
+          adicionarItemTimeline('vacina', nome, isoDate, lote ? `Lote: ${lote}` : 'Vacina aplicada', '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+        }
         hideAllForms();
-        showSuccessModal('Sucesso!', 'Vacina salva com sucesso!');
-        
-        // Resetar
-        document.getElementById('nome-vacina').value = '';
-        document.getElementById('lote-vacina').value = '';
-        document.getElementById('fabricante-vacina').value = '';
-        document.getElementById('proxima-dose').value = '';
-        document.getElementById('obs-vacina').value = '';
+        showSuccessModal('Sucesso!', vacinaId ? 'Vacina atualizada com sucesso!' : 'Vacina salva com sucesso!');
       } else {
         showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a vacina');
       }
     })
     .catch(error => {
-      console.error('Erro:', error);
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-    document.getElementById('proxima-dose-vacina').value = '';
-    document.getElementById('obs-vacina').value = '';
-  });
+});
 </script>

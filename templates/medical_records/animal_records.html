@@ -17,8 +17,7 @@
   <div class="container-xl">
     <div class="row align-items-center">
       <div class="col-auto">
-        <div class="page-pretitle">Prontuário Médico</div>
-        <h2 class="page-title">{{ pet.nome }} ({{ pet.codigo }})</h2>
+        <h2 class="page-title">Prontuário Médico</h2>
       </div>
     </div>
   </div>
@@ -308,6 +307,22 @@
 /* altura mínima dos cards */
 .panel-card{
   min-height:510px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* card-body dentro de panel-card cresce para preencher */
+.panel-card > .card-body {
+  flex: 1;
+}
+
+/* coluna esquerda como flex para card preencher */
+#left-tabs-col {
+  display: flex;
+  flex-direction: column;
+}
+#left-tabs-col .panel-card {
+  flex: 1;
 }
 
 /* remover padding interno das abas */

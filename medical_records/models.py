@@ -113,7 +113,7 @@ class Peso(models.Model):
     """Registro de peso do animal"""
     pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='pesos')
     data_hora = models.DateTimeField()
-    peso = models.DecimalField(max_digits=6, decimal_places=2)
+    peso = models.DecimalField(max_digits=7, decimal_places=3)
     condicao_corporal = models.CharField(max_length=50, blank=True)
     observacoes = models.TextField(blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
@@ -132,6 +132,7 @@ class Peso(models.Model):
 class Patologia(models.Model):
     """Registro de patologia/diagnóstico"""
     pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='patologias')
+    patologia_cadastro = models.ForeignKey('cadastros.Patologia', on_delete=models.PROTECT, null=True, blank=True, verbose_name='Patologia')
     data_hora = models.DateTimeField()
     diagnostico = models.CharField(max_length=200)
     cid = models.CharField(max_length=20, blank=True)
@@ -154,10 +155,19 @@ class Documento(models.Model):
     """Registro de documentos"""
     pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='documentos')
     data_hora = models.DateTimeField()
-    tipo = models.CharField(max_length=100)
-    titulo = models.CharField(max_length=200)
+    modelo_documento = models.ForeignKey(
+        'cadastros.ModeloDocumento',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='documentos_gerados',
+        verbose_name='Modelo de Documento'
+    )
+    conteudo = models.TextField(blank=True, default='', verbose_name='Conteúdo')
+    tipo = models.CharField(max_length=100, blank=True)
+    titulo = models.CharField(max_length=200, blank=True)
     descricao = models.TextField(blank=True)
-    arquivo = models.FileField(upload_to='documentos/')
+    arquivo = models.FileField(upload_to='documentos/', null=True, blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)

@@ -16,6 +16,9 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="video-id" name="video_id" value="">
+
   <!-- Campos do formulário -->
   <div class="mb-3">
     <label class="form-label">Título <span class="text-danger">*</span></label>
@@ -49,11 +52,21 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  function toLocalISOString(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+  }
+
   const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
   let uploadedFileVideo = null;
   const fileInputVideo = document.getElementById('file-video');
   const fileBadgesVideo = document.getElementById('file-badges-video');
-  
+
   fileInputVideo?.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
@@ -62,72 +75,66 @@ document.addEventListener('DOMContentLoaded', function() {
       const badge = document.createElement('span');
       badge.className = 'badge bg-secondary';
       badge.innerHTML = `${file.name} <i class="ti ti-x"></i>`;
-      badge.onclick = () => {
-        uploadedFileVideo = null;
-        fileBadgesVideo.innerHTML = '';
-        fileInputVideo.value = '';
-      };
+      badge.onclick = () => { uploadedFileVideo = null; fileBadgesVideo.innerHTML = ''; fileInputVideo.value = ''; };
       fileBadgesVideo.appendChild(badge);
     }
   });
-  
+
   document.getElementById('save-video')?.addEventListener('click', function() {
     const titulo = document.getElementById('titulo-video').value;
-    
+    const videoId = document.getElementById('video-id')?.value;
+
     if (!titulo) {
       showDangerModal('Erro de Validação', 'Por favor, informe o título');
       return;
     }
-    
-    if (!uploadedFileVideo) {
+    if (!videoId && !uploadedFileVideo) {
       showDangerModal('Erro de Validação', 'Por favor, selecione um vídeo');
       return;
     }
-    
+
     const formData = new FormData();
     formData.append('titulo', titulo);
     formData.append('descricao', document.getElementById('desc-video').value);
-    formData.append('arquivo', uploadedFileVideo);
-    
+    if (uploadedFileVideo) formData.append('arquivo', uploadedFileVideo);
+
+    const datetimeSpan = document.getElementById('video-datetime');
     const now = new Date();
-    formData.append('data_hora', now.toISOString().slice(0, 16));
-    
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+    formData.append('data_hora', isoDate.slice(0, 16));
+
+    if (videoId) formData.append('video_id', videoId);
+
     const petId = window.CURRENT_PET_ID;
     if (!petId) {
       showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
       return;
     }
-    
+
     fetch(`/atendimento/api/${petId}/video/`, {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      },
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
       body: formData,
       credentials: 'same-origin'
     })
     .then(response => {
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
-        });
+        return response.text().then(() => { throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.'); });
       }
       return response.json();
     })
     .then(data => {
       if (data.success) {
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const isoDate = now.toISOString();
-        
-        adicionarItemTimeline('video', titulo, isoDate, uploadedFileVideo.name, usuario, usuarioAvatar, data.id);
-        
+        if (videoId) {
+          const timeline = document.querySelector('#timeline-list');
+          if (timeline) timeline.innerHTML = '';
+          carregarTimeline();
+        } else {
+          adicionarItemTimeline('video', titulo, isoDate, uploadedFileVideo.name, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+        }
         hideAllForms();
-        showSuccessModal('Sucesso!', 'Vídeo salvo com sucesso!');
-        
-        // Resetar
-        document.getElementById('titulo-video').value = '';
-        document.getElementById('desc-video').value = '';
+        showSuccessModal('Sucesso!', videoId ? 'Vídeo atualizado com sucesso!' : 'Vídeo salvo com sucesso!');
         uploadedFileVideo = null;
         fileBadgesVideo.innerHTML = '';
       } else {
@@ -135,26 +142,8 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     })
     .catch(error => {
-      console.error('Erro:', error);
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-    fileBadgesVideo.innerHTML = '';
-    fileInputVideo.value = '';
-  });
+});
 </script>

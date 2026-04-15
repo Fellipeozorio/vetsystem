@@ -68,15 +68,18 @@
 <!-- Conteúdo principal: Timeline (3 cols) + Botões Adicionar / Formulários (9 cols) -->
 <div class="row g-0" style="align-items: stretch;">
   <!-- Coluna esquerda: Timeline vertical (3 colunas) -->
-  <div class="col-md-3" style="max-height: 600px; overflow-y: auto;">
-    <ul class="timeline timeline-vertical" id="timeline-list">
-      <!-- Registros serão adicionados dinamicamente aqui -->
-    </ul>
-    
-    <div class="text-center text-muted" id="no-timeline-records">
-      <i class="ti ti-clipboard-off" style="font-size: 48px; opacity: 0.3;"></i>
-      <p class="small mt-2 mb-0">Nenhum registro encontrado</p>
-      <p class="small text-muted">Adicione um novo registro usando os botões ao lado</p>
+  <div class="col-md-3" id="timeline-col">
+    <!-- wrapper absoluto: preenche a col inteira e rola; não força a altura do row -->
+    <div id="timeline-scroll-wrap">
+      <ul class="timeline timeline-vertical" id="timeline-list">
+        <!-- Registros serão adicionados dinamicamente aqui -->
+      </ul>
+      
+      <div class="text-center text-muted" id="no-timeline-records">
+        <i class="ti ti-clipboard-off" style="font-size: 48px; opacity: 0.3;"></i>
+        <p class="small mt-2 mb-0">Nenhum registro encontrado</p>
+        <p class="small text-muted">Adicione um novo registro usando os botões ao lado</p>
+      </div>
     </div>
   </div>
   
@@ -292,7 +295,20 @@
 
 .col-md-3.border-end {
   padding: 0.5rem !important;
-  min-height: calc(100vh - 250px);
+}
+
+/* timeline-col: altura zero intríseca (filho é absoluto) + min 500px */
+#timeline-col {
+  position: relative;
+  min-height: 500px;
+  overflow: hidden;
+}
+
+/* scroll wrapper preenche o col completamente */
+#timeline-scroll-wrap {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  overflow-y: auto;
 }
 
 .col-md-9 {
@@ -424,7 +440,7 @@
 }
 
 .timeline-event {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
   position: relative;
   z-index: 1;
 }
@@ -434,7 +450,7 @@
   position: absolute;
   left: 16px;
   top: 100%;
-  height: 0.75rem;
+  height: 1px;
   width: 2px;
   background: #e5e7eb;
   z-index: 0;
@@ -445,13 +461,15 @@
 }
 
 .timeline-event-content {
-  background: white;
-  border: 1px solid #e0e0e0;
+  background: transparent;
+  border: none;
   border-left: 4px solid;
-  border-radius: 4px;
-  padding: 0.75rem;
+  border-radius: 0;
+  padding: 0.02rem 0.2rem 0.02rem 0.5rem;
+  margin-left: 0.25rem;
+  margin-right: 0.25rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.15s ease;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -459,16 +477,24 @@
   z-index: 2;
 }
 
-.timeline-event-content:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transform: translateX(2px);
-}
+.timeline-event-content:hover { background: rgba(0,0,0,0.04); }
+.timeline-event-content[data-type="atendimento"]:hover { background: rgba(0,102,204,0.10); }
+.timeline-event-content[data-type="peso"]:hover { background: rgba(139,69,19,0.10); }
+.timeline-event-content[data-type="patologia"]:hover { background: rgba(108,44,145,0.10); }
+.timeline-event-content[data-type="documento"]:hover { background: rgba(144,238,144,0.18); }
+.timeline-event-content[data-type="exame"]:hover { background: rgba(250,128,114,0.15); }
+.timeline-event-content[data-type="fotos"]:hover { background: rgba(0,51,102,0.10); }
+.timeline-event-content[data-type="vacina"]:hover { background: rgba(255,215,0,0.18); }
+.timeline-event-content[data-type="receita"]:hover { background: rgba(147,112,219,0.12); }
+.timeline-event-content[data-type="observacoes"]:hover { background: rgba(108,117,125,0.10); }
+.timeline-event-content[data-type="video"]:hover { background: rgba(0,100,0,0.10); }
+.timeline-event-content[data-type="internacao"]:hover { background: rgba(139,0,0,0.10); }
 
 .timeline-event-left {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0;
 }
 
 .timeline-event-date {
@@ -480,13 +506,12 @@
   font-size: 0.875rem;
   font-weight: 700;
   color: #495057;
-  padding: 0.75rem 0;
-  margin: 1.5rem 0 0.75rem 0;
-  border-bottom: 2px solid #dee2e6;
+  padding-top: 4px;
+  padding-bottom: 2px;
+  margin-bottom: 2px;
+  text-align: left;
   position: relative;
   z-index: 1;
-  background: #f8f9fa;
-  text-align: center;
 }
 
 .timeline-event-type {
@@ -505,13 +530,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   background-color: #0066CC;
   color: white;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   flex-shrink: 0;
   cursor: help;
 }
@@ -751,6 +776,23 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
 
+    // Ocultar separadores de ano sem itens visíveis sob eles
+    document.querySelectorAll('.timeline-date-separator').forEach(sep => {
+      let node = sep.nextSibling;
+      let hasVisible = false;
+      while (node) {
+        if (node.classList) {
+          if (node.classList.contains('timeline-date-separator')) break;
+          if (node.classList.contains('timeline-event') && node.style.display !== 'none') {
+            hasVisible = true;
+            break;
+          }
+        }
+        node = node.nextSibling;
+      }
+      sep.style.display = hasVisible ? '' : 'none';
+    });
+
     noRecords.style.display = visibleCount === 0 ? '' : 'none';
   }
 
@@ -873,13 +915,40 @@ document.addEventListener('DOMContentLoaded', function() {
       document.querySelectorAll('[data-sort]').forEach(b => b.classList.remove('active'));
       this.classList.add('active');
       const order = this.dataset.sort;
+
+      // 1. Coletar apenas os itens de evento, ordenar por data
       const items = Array.from(timelineList.querySelectorAll('.timeline-event'));
       items.sort((a, b) => {
         const dateA = new Date(a.querySelector('.timeline-event-content').dataset.date);
         const dateB = new Date(b.querySelector('.timeline-event-content').dataset.date);
         return order === 'desc' ? dateB - dateA : dateA - dateB;
       });
-      items.forEach(item => timelineList.appendChild(item));
+
+      // 2. Remover todos os separadores e itens existentes
+      timelineList.querySelectorAll('.timeline-date-separator, .timeline-event').forEach(el => el.remove());
+
+      // 3. Reinserir itens com separadores de ano reconstruídos na ordem certa
+      const anosVistos = new Set();
+      items.forEach(item => {
+        const ds = item.querySelector('.timeline-event-content').dataset.date;
+        let ano;
+        if (typeof ds === 'string' && ds.includes('T')) {
+          const clean = ds.replace('Z','').replace(/[+-]\d{2}:\d{2}$/, '');
+          ano = Number(clean.split('T')[0].split('-')[0]);
+        } else {
+          ano = new Date(ds).getFullYear();
+        }
+        if (!anosVistos.has(ano)) {
+          anosVistos.add(ano);
+          const sep = document.createElement('div');
+          sep.className = 'timeline-date-separator';
+          sep.textContent = ano;
+          timelineList.appendChild(sep);
+        }
+        timelineList.appendChild(item);
+      });
+
+      applyFilters();
     });
   });
 
@@ -887,6 +956,10 @@ document.addEventListener('DOMContentLoaded', function() {
     addButtonsTitle.style.display = 'none';
     addButtons.style.display = 'none';
     document.querySelectorAll('.form-record').forEach(form => form.style.display = 'none');
+    
+    // Formulário aberto: timeline expande sem limite (card dita a altura)
+    const timelineListEl = document.getElementById('timeline-list');
+    if (timelineListEl) { timelineListEl.style.maxHeight = 'none'; timelineListEl.style.overflowY = 'auto'; }
     
     const form = document.getElementById(`form-${tipo}`);
     if (!form) return;
@@ -913,89 +986,116 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(response => response.json())
       .then(data => {
         if (data.success) {
-          // Popular campos baseado no tipo
+          // ─── Comum a todos os tipos ────────────────────────────────
+          // Popular campo hidden de ID
+          const idFieldAny = document.getElementById(tipo + '-id');
+          if (idFieldAny) idFieldAny.value = data.id;
+
+          // Popular span de data/hora (parse manual p/ evitar conversão UTC)
+          if (data.data_hora) {
+            const datetimeSpan = document.getElementById(tipo + '-datetime');
+            if (datetimeSpan) {
+              const cleanDate = data.data_hora.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
+              const [datePart, timePart] = cleanDate.split('T');
+              const [year, month, day] = datePart.split('-').map(Number);
+              const [hour, minute] = timePart.split(':').map(Number);
+              const dt = new Date(year, month - 1, day, hour, minute);
+              datetimeSpan.textContent = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+              datetimeSpan.dataset.isoDate = data.data_hora;
+            }
+          }
+
+          // Helper
+          function setVal(id, val) { const el = document.getElementById(id); if (el && val !== undefined && val !== null) el.value = val; }
+
+          // ─── Campos específicos por tipo ───────────────────────────
           if (tipo === 'atendimento') {
-            // Popular campo hidden com ID
-            const idField = document.getElementById('atendimento-id');
-            if (idField) idField.value = data.id;
-            
-            // Popular observações antes de disparar change
             if (data.observacoes) {
               const resumo = document.getElementById('resumo-atendimento');
               if (resumo) resumo.value = data.observacoes;
             }
-            
-            // Popular data/hora no span de exibição
-            if (data.data_hora) {
-              const datetimeSpan = document.getElementById('atendimento-datetime');
-              if (datetimeSpan) {
-                // Parsear manualmente a string ISO para evitar conversão de timezone
-                const cleanDate = data.data_hora.replace('Z', '').replace(/[+-]\d{2}:\d{2}$/, '');
-                const [datePart, timePart] = cleanDate.split('T');
-                const [year, month, day] = datePart.split('-').map(Number);
-                const [hour, minute] = timePart.split(':').map(Number);
-                // Criar data com componentes locais
-                const dt = new Date(year, month - 1, day, hour, minute);
-                const formatted = dt.toLocaleDateString('pt-BR') + ' ' + dt.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
-                datetimeSpan.textContent = formatted;
-                datetimeSpan.dataset.isoDate = data.data_hora;
-              }
-            }
-            
             if (data.tipo_atendimento_id) {
               const tipoSelect = document.getElementById('tipo-atendimento');
               if (tipoSelect) {
                 tipoSelect.value = data.tipo_atendimento_id;
-                // Disparar evento change para carregar campos condicionais e template
                 tipoSelect.dispatchEvent(new Event('change'));
-                
-                // Popular o editor rapidamente
                 if (data.detalhes) {
-                  // Esconder editor temporariamente para evitar flash
                   const editorWrapper = document.getElementById('editor-wrapper-atendimento');
-                  if (editorWrapper) {
-                    editorWrapper.style.opacity = '0';
-                  }
-                  
+                  if (editorWrapper) editorWrapper.style.opacity = '0';
                   setTimeout(() => {
-                    // Tentar popular via HugeRTE se disponível
                     if (window.HugeRTEEditor && HugeRTEEditor.getEditor('atendimento-editor')) {
                       HugeRTEEditor.setContent('atendimento-editor', data.detalhes);
                     } else {
-                      // Fallback para textarea
                       const editor = document.getElementById('editor-atendimento');
                       if (editor) editor.value = data.detalhes;
                     }
-                    
-                    // Mostrar editor após carregar conteúdo
-                    if (editorWrapper) {
-                      editorWrapper.style.opacity = '1';
-                    }
+                    if (editorWrapper) editorWrapper.style.opacity = '1';
                   }, 100);
                 }
               }
             }
           } else if (tipo === 'peso') {
-            if (data.peso) {
-              const pesoInput = document.getElementById('valor-peso');
-              if (pesoInput) pesoInput.value = data.peso;
+            const pesoFormatado = data.peso ? String(data.peso).replace('.', ',') : '';
+            setVal('valor-peso', pesoFormatado);
+            setVal('obs-peso', data.observacoes);
+          } else if (tipo === 'patologia') {
+            // Carregar select com a patologia selecionada e exibir protocolo
+            if (typeof window._carregarPatologiasSelectComId === 'function') {
+              window._carregarPatologiasSelectComId(data.patologia_cadastro_id);
             }
-            if (data.condicao_corporal) {
-              const condicao = document.getElementById('condicao-peso');
-              if (condicao) condicao.value = data.condicao_corporal;
+            // Exibir protocolo padrão se disponível
+            const wrapper = document.getElementById('protocolo-patologia-wrapper');
+            const textoEl = document.getElementById('protocolo-patologia-texto');
+            if (data.patologia_cadastro_descricao && data.patologia_cadastro_descricao.trim()) {
+              if (textoEl) textoEl.textContent = data.patologia_cadastro_descricao;
+              if (wrapper) wrapper.style.display = '';
+            } else {
+              if (wrapper) wrapper.style.display = 'none';
             }
-            if (data.observacoes) {
-              const obs = document.getElementById('obs-peso');
-              if (obs) obs.value = data.observacoes;
+          } else if (tipo === 'vacina') {
+            setVal('nome-vacina', data.nome);
+            setVal('lote-vacina', data.lote);
+            setVal('fabricante-vacina', data.fabricante);
+            setVal('proxima-dose-vacina', data.proxima_dose);
+            setVal('obs-vacina', data.observacoes);
+          } else if (tipo === 'observacoes') {
+            setVal('titulo-observacoes', data.titulo);
+            setVal('texto-observacoes', data.texto);
+            setVal('categoria-observacoes', data.categoria);
+          } else if (tipo === 'receita') {
+            setVal('tipo-receita', data.tipo_receita);
+            setVal('prescricao-receita', data.prescricao);
+            setVal('validade-receita', data.validade);
+            setVal('obs-receita', data.observacoes);
+          } else if (tipo === 'exame') {
+            setVal('tipo-exame', data.tipo_exame);
+            setVal('nome-exame', data.nome);
+            setVal('resultado-exame', data.resultado);
+          } else if (tipo === 'fotos') {
+            setVal('titulo-fotos', data.titulo);
+            setVal('desc-fotos', data.descricao);
+          } else if (tipo === 'documento') {
+            if (typeof window._carregarModeloDocumentoComConteudo === 'function') {
+              window._carregarModeloDocumentoComConteudo(data.modelo_documento_id, data.conteudo);
             }
+          } else if (tipo === 'video') {
+            setVal('titulo-video', data.titulo);
+            setVal('desc-video', data.descricao);
+          } else if (tipo === 'internacao') {
+            setVal('status-internacao', data.status);
+            setVal('gravidade-internacao', data.gravidade);
+            setVal('motivo-internacao', data.motivo);
+            setVal('data-entrada-internacao', data.data_entrada);
+            setVal('previsao-alta-internacao', data.previsao_alta);
+            setVal('obs-internacao', data.observacoes);
           }
-          
+
           // Mostrar formulário rapidamente após popular campos
           setTimeout(() => {
             form.style.opacity = '1';
             form.style.pointerEvents = 'auto';
           }, 50);
-          
+
           // Mostrar botão de excluir
           const deleteBtn = form.querySelector('.btn-delete-record');
           if (deleteBtn) deleteBtn.style.display = '';
@@ -1003,7 +1103,6 @@ document.addEventListener('DOMContentLoaded', function() {
       })
       .catch(error => {
         console.error('Erro ao carregar dados do registro:', error);
-        // Mesmo com erro, exibir formulário
         form.style.opacity = '1';
         form.style.pointerEvents = 'auto';
       });
@@ -1013,55 +1112,57 @@ document.addEventListener('DOMContentLoaded', function() {
       currentEditingId = null;
       currentEditingType = null;
       
-      // Limpar campos hidden de ID quando criar novo
-      const idFields = {
-        'atendimento': 'atendimento-id',
-        'peso': 'peso-id',
-        'patologia': 'patologia-id',
-          'documento': 'documento-id',
-          'exame': 'exame-id',
-          'fotos': 'fotos-id',
-          'vacina': 'vacina-id',
-          'receita': 'receita-id',
-          'observacoes': 'observacoes-id',
-          'video': 'video-id',
-          'internacao': 'internacao-id'
-        };
-        const idFieldId = idFields[tipo];
-        if (idFieldId) {
-          const idField = document.getElementById(idFieldId);
-          if (idField) idField.value = '';
+      // Resetar todos os campos nativos do formulário (form é um <div>, não <form>, então reseta manualmente)
+      form.querySelectorAll('input:not([type="hidden"]), select, textarea').forEach(el => {
+        if (el.type === 'checkbox' || el.type === 'radio') {
+          el.checked = el.defaultChecked;
+        } else {
+          el.value = el.defaultValue || '';
         }
-        
-        // Resetar data/hora para atual quando criar novo
-        if (tipo === 'atendimento') {
-          const datetimeSpan = document.getElementById('atendimento-datetime');
-          if (datetimeSpan) {
-            const now = new Date();
-            const formatted = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
-            datetimeSpan.textContent = formatted;
-            delete datetimeSpan.dataset.isoDate;
-          }
-          
-          // Limpar campos do formulário
-          const resumo = document.getElementById('resumo-atendimento');
-          if (resumo) resumo.value = '';
-          
-          const tipoSelect = document.getElementById('tipo-atendimento');
-          if (tipoSelect) tipoSelect.value = '';
-          
-          const editor = document.getElementById('editor-atendimento');
-          if (editor) editor.value = '';
+      });
+      
+      // Limpar campo hidden de ID
+      const idFields = { atendimento:'atendimento-id', peso:'peso-id', patologia:'patologia-id', documento:'documento-id', exame:'exame-id', fotos:'fotos-id', vacina:'vacina-id', receita:'receita-id', observacoes:'observacoes-id', video:'video-id', internacao:'internacao-id' };
+      const idField = document.getElementById(idFields[tipo]);
+      if (idField) idField.value = '';
+
+      // Resetar spans de data/hora para agora
+      form.querySelectorAll('[id$="-datetime"]').forEach(el => {
+        const now = new Date();
+        el.textContent = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', {hour: '2-digit', minute: '2-digit'});
+        delete el.dataset.isoDate;
+      });
+
+      // Disparar evento change em todos os selects para atualizar visível/oculto
+      form.querySelectorAll('select').forEach(el => {
+        el.dispatchEvent(new Event('change'));
+      });
+      
+      // Limpar editores HugeRTE: derivar instance ID de "editor-foo" -> "foo-editor"
+      form.querySelectorAll('textarea[id^="editor-"]').forEach(el => {
+        el.value = '';
+        if (window.HugeRTEEditor) {
+          const parts = el.id.split('-');
+          // "editor-atendimento" -> "atendimento-editor"
+          const instanceId = parts.slice(1).join('-') + '-editor';
+          try { HugeRTEEditor.setContent(instanceId, ''); } catch(e) {}
         }
-        
-        // Exibir formulário imediatamente para novo registro
-        form.style.display = 'block';
-        form.style.opacity = '1';
-        form.style.pointerEvents = 'auto';
-        
-        const deleteBtn = form.querySelector('.btn-delete-record');
-        if (deleteBtn) deleteBtn.style.display = 'none';
-      }
+      });
+      form.querySelectorAll('textarea[id$="-editor"]').forEach(el => {
+        el.value = '';
+        if (window.HugeRTEEditor) {
+          try { HugeRTEEditor.setContent(el.id, ''); } catch(e) {}
+        }
+      });
+      
+      // Exibir formulário imediatamente para novo registro
+      form.style.display = 'block';
+      form.style.opacity = '1';
+      form.style.pointerEvents = 'auto';
+      
+      const deleteBtn = form.querySelector('.btn-delete-record');
+      if (deleteBtn) deleteBtn.style.display = 'none';
+    }
   };
   
   window.hideAllForms = function() {
@@ -1070,6 +1171,10 @@ document.addEventListener('DOMContentLoaded', function() {
       form.style.opacity = '1';
       form.style.pointerEvents = 'auto';
     });
+    
+    // Formulário fechado: restaurar limite de 500px na timeline
+    const timelineListEl = document.getElementById('timeline-list');
+    if (timelineListEl) timelineListEl.style.maxHeight = '500px';
     
     // Resetar opacity do editor
     const editorWrapper = document.getElementById('editor-wrapper-atendimento');
@@ -1083,7 +1188,7 @@ document.addEventListener('DOMContentLoaded', function() {
     currentEditingType = null;
   };
   
-  window.adicionarItemTimeline = function(tipo, titulo, data, descricao, usuario, usuarioAvatar, id = null) {
+  window.adicionarItemTimeline = function(tipo, titulo, data, descricao, usuario, usuarioAvatar, id = null, appendar = false) {
     const config = tipoConfig[tipo] || tipoConfig.atendimento;
     const recordId = id || Date.now();
     const li = document.createElement('li');
@@ -1121,7 +1226,7 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="timeline-event-type">${config.label}</div>
           <div class="timeline-event-title">${descricao || titulo}</div>
         </div>
-        ${usuarioAvatar ? `<div class="avatar avatar-sm" style="background-image: url(${usuarioAvatar})" title="${usuario || 'Sistema'}"></div>` : `<div class="timeline-event-avatar" title="${usuario || 'Sistema'}">${iniciais}</div>`}
+        ${usuarioAvatar ? `<div class="timeline-event-avatar" style="background-image: url(${usuarioAvatar}); background-size: cover; background-position: center; background-color: transparent;" title="${usuario || 'Sistema'}"></div>` : `<div class="timeline-event-avatar" title="${usuario || 'Sistema'}">${iniciais}</div>`}
       </div>
     `;
     
@@ -1131,22 +1236,50 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inserir separador de ano se necessário
     const ano = dataObj.getFullYear();
-    let separadorExiste = false;
+    const sepExistente = Array.from(timelineList.querySelectorAll('.timeline-date-separator')).find(s => s.textContent === String(ano));
     
-    timelineList.querySelectorAll('.timeline-date-separator').forEach(sep => {
-      if (sep.textContent === String(ano)) {
-        separadorExiste = true;
+    if (appendar) {
+      // Carga inicial (dados já ordenados desc pelo backend): adicionar ao fim
+      if (!sepExistente) {
+        const separador = document.createElement('div');
+        separador.className = 'timeline-date-separator';
+        separador.textContent = ano;
+        timelineList.appendChild(separador);
       }
-    });
-    
-    if (!separadorExiste) {
-      const separador = document.createElement('div');
-      separador.className = 'timeline-date-separator';
-      separador.textContent = ano;
-      timelineList.appendChild(separador);
+      timelineList.appendChild(li);
+    } else {
+      // Novo registro: inserir na posição cronológica correta (ordem desc)
+      const todosItens = Array.from(timelineList.querySelectorAll('.timeline-event'));
+      let pontoInsercao = null;
+      for (const itemExistente of todosItens) {
+        const contentExist = itemExistente.querySelector('.timeline-event-content');
+        if (!contentExist) continue;
+        const ds = contentExist.dataset.date;
+        let dtExist;
+        if (typeof ds === 'string' && ds.includes('T')) {
+          const cleanDs = ds.replace('Z','').replace(/[+-]\d{2}:\d{2}$/, '');
+          const [dpE, tpE] = cleanDs.split('T');
+          const [yE,mE,dE] = dpE.split('-').map(Number);
+          const [hE,minE,sE] = (tpE||'').split(':').map(Number);
+          dtExist = new Date(yE, mE-1, dE, hE||0, minE||0, sE||0);
+        } else {
+          dtExist = new Date(ds);
+        }
+        if (dataObj > dtExist) { pontoInsercao = itemExistente; break; }
+      }
+      if (pontoInsercao) {
+        timelineList.insertBefore(li, pontoInsercao);
+      } else {
+        timelineList.appendChild(li);
+      }
+      if (!sepExistente) {
+        const separador = document.createElement('div');
+        separador.className = 'timeline-date-separator';
+        separador.textContent = ano;
+        timelineList.insertBefore(separador, li);
+      }
     }
     
-    timelineList.appendChild(li);
     applyFilters();
     noRecords.style.display = 'none';
   };
@@ -1175,7 +1308,6 @@ document.addEventListener('DOMContentLoaded', function() {
             hideAllForms();
             applyFilters();
           }
-          showSuccessModal('Sucesso!', data.message || 'Registro excluído com sucesso!');
         } else {
           showDangerModal('Erro', data.error || 'Erro ao excluir registro');
         }
@@ -1213,7 +1345,7 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Atualizar data interna se estiver editando
       if (currentEditingId) {
-        currentDatetimeElement.dataset.isoDate = `${data}T${hora}:00`;
+        currentDatetimeElement.dataset.isoDate = `${data}T${hora}`;
       }
       
       bootstrap.Modal.getInstance(document.getElementById('modal-edit-datetime')).hide();
@@ -1254,7 +1386,8 @@ function carregarTimeline() {
           registro.descricao,
           registro.usuario,
           registro.usuario_avatar,
-          registro.id
+          registro.id,
+          true  // appendar = dados já ordenados desc pelo backend
         );
       });
       console.log(`✓ ${data.registros.length} registros carregados na timeline`);

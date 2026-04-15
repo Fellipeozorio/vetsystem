@@ -174,6 +174,56 @@
     #cliente-autocomplete-results.show {
         display: block;
     }
+
+    /* ===== IMPRESSÃO ===== */
+    @media print {
+        /* Ocultar tudo exceto o conteúdo da agenda */
+        body * { visibility: hidden; }
+        #calendar, #calendar * { visibility: visible; }
+        #calendar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+        }
+
+        /* Ocultar botões de interação, handle de drag e input date */
+        #calendar .btn,
+        #calendar .event-handle,
+        #agenda-date-picker { display: none !important; }
+
+        /* Centralizar o cabeçalho de data */
+        .agenda-nav-header { justify-content: center !important; }
+
+        /* Garantir grid de 4 colunas na impressão */
+        #agenda-content .row { display: flex !important; flex-wrap: wrap !important; }
+        #agenda-content .col-md-3 {
+            width: 25% !important;
+            flex: 0 0 25% !important;
+            max-width: 25% !important;
+            box-sizing: border-box;
+        }
+
+        /* Evitar quebra de página dentro de cards */
+        #agenda-content .card { page-break-inside: avoid; }
+        .event-item { page-break-inside: avoid; overflow: visible !important; }
+
+        /* Quebrar texto longo nas células do evento */
+        .event-item .fw-bold,
+        .event-item .text-muted,
+        .event-item .flex-fill div {
+            white-space: normal !important;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            overflow: visible !important;
+        }
+        /* Remover padding-right que trunca o título */
+        .event-item .fw-bold { padding-right: 0 !important; }
+        /* Ocultar colória de hora (fica absoluta, sobreporia o texto no print) */
+        .event-item [style*="position: absolute"] { position: static !important; text-align: right; }
+
+        @page { size: A4 landscape; margin: 10mm; }
+    }
 </style>
 {% endblock %}
 
@@ -210,7 +260,7 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z" /><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /></svg>
                     </a>
                     
-                    <button type="button" class="btn btn-icon btn-outline-secondary" title="Relatório" onclick="gerarRelatorio()">
+                    <button type="button" id="btn-relatorio" class="btn btn-icon btn-outline-secondary" title="Relatório" onclick="gerarRelatorio()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4" /><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" /><path d="M9 17h6" /><path d="M9 13h6" /></svg>
                     </button>
                 </div>
@@ -1437,6 +1487,7 @@ async function initCalendar() {
         document.getElementById('page-title').textContent = 'Agenda diária';
         document.getElementById('btn-toggle-mode').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="5" width="16" height="16" rx="2" /><line x1="16" y1="3" x2="16" y2="7" /><line x1="8" y1="3" x2="8" y2="7" /><line x1="4" y1="11" x2="20" y2="11" /><rect x="8" y="15" width="2" height="2" /></svg> Modo calendário';
         document.getElementById('dropdown-add-fila').style.display = 'inline-block';
+        document.getElementById('btn-relatorio').style.display = '';
         console.log('Timeline renderizado com sucesso');
         
     } else {
@@ -1526,6 +1577,7 @@ async function initCalendar() {
         document.getElementById('page-title').textContent = 'Calendário';
         document.getElementById('btn-toggle-mode').innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><rect x="4" y="4" width="16" height="4" rx="1" /><rect x="4" y="12" width="6" height="8" rx="1" /><line x="14" y1="12" x2="20" y2="12" /><line x1="14" y1="16" x2="20" y2="16" /><line x1="14" y1="20" x2="20" y2="20" /></svg> Modo agenda diária';
         document.getElementById('dropdown-add-fila').style.display = 'none';
+        document.getElementById('btn-relatorio').style.display = 'none';
     }
 }
 
@@ -1536,12 +1588,17 @@ async function renderizarAgendaDiaria(data, resources) {
     
     // Criar header customizado com navegação
     const headerHTML = `
-        <div class="d-flex justify-content-between align-items-center p-3 border-bottom">
-            <button class="btn btn-outline-secondary" onclick="navegarData(-1)">
+        <div class="d-flex justify-content-between align-items-center p-3 border-bottom agenda-nav-header">
+            <button class="btn btn-icon btn-outline-secondary" onclick="navegarData(-1)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="15 6 9 12 15 18" /></svg>
             </button>
-            <h3 class="m-0" id="data-titulo">${formatarDataExtenso(data)}</h3>
-            <button class="btn btn-outline-secondary" onclick="navegarData(1)">
+            <div class="position-relative text-center">
+                <button type="button" class="btn btn-outline-secondary" id="data-titulo" onclick="abrirSeletorData()">${formatarDataExtenso(data)}</button>
+                <input type="date" id="agenda-date-picker" value="${data}"
+                       style="position:absolute;opacity:0;bottom:-1px;left:0;width:100%;height:1px;pointer-events:none;"
+                       onchange="irParaData(this.value)">
+            </div>
+            <button class="btn btn-icon btn-outline-secondary" onclick="navegarData(1)">
                 <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><polyline points="9 6 15 12 9 18" /></svg>
             </button>
         </div>
@@ -1886,12 +1943,44 @@ function formatarDataExtenso(data) {
     return d.toLocaleDateString('pt-BR', {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'});
 }
 
+function abrirSeletorData() {
+    const picker = document.getElementById('agenda-date-picker');
+    if (!picker) return;
+    if (picker.showPicker) {
+        picker.showPicker();
+    } else {
+        picker.click();
+    }
+}
+
+async function irParaData(dataStr) {
+    if (!dataStr) return;
+    dataAtual = dataStr;
+    const tituloEl = document.getElementById('data-titulo');
+    if (tituloEl) tituloEl.innerHTML = formatarDataExtenso(dataAtual);
+    const picker = document.getElementById('agenda-date-picker');
+    if (picker) picker.value = dataAtual;
+    const response = await fetch(`/scheduling/api/filas/${dataAtual}/`);
+    if (response.ok) {
+        const filas = await response.json();
+        const resources = Array.isArray(filas) ? filas.map(f => ({
+            id: String(f.id),
+            nome: f.nome,
+            permanente: f.permanente,
+            removable: !f.permanente
+        })) : [];
+        await carregarEventosAgendaDiaria(dataAtual, resources);
+    }
+}
+
 async function navegarData(direcao) {
     const d = new Date(dataAtual + 'T12:00:00');
     d.setDate(d.getDate() + direcao);
     dataAtual = getLocalDateString(d);
     
-    document.getElementById('data-titulo').textContent = formatarDataExtenso(dataAtual);
+    document.getElementById('data-titulo').innerHTML = formatarDataExtenso(dataAtual);
+    const picker = document.getElementById('agenda-date-picker');
+    if (picker) picker.value = dataAtual;
     
     // Recarregar filas e eventos - incluir todas as filas (permanentes e adicionadas)
     const response = await fetch(`/scheduling/api/filas/${dataAtual}/`);
@@ -2229,33 +2318,25 @@ function imprimirFila(filaId, filaNome) {
 }
 
 async function gerarRelatorio() {
-    // Obter data selecionada
-    const dataInput = document.getElementById('data');
-    const data = dataInput && dataInput.value ? dataInput.value : dataAtual;
-    
+    const win = window.open('', '_blank');
     try {
-        // Fazer requisição para verificar se há dados
-        const response = await fetch(`/scheduling/agenda/relatorio.php?data=${data}`);
-        
-        // Verificar se há erro
+        const response = await fetch(`/scheduling/agenda/relatorio.php?data=${dataAtual}`);
         if (!response.ok) {
+            win.close();
             const errorData = await response.json();
             showDangerModal(errorData.error || 'Erro ao gerar relatório');
             return;
         }
-        
-        // Verificar o tipo de conteúdo
         const contentType = response.headers.get('content-type');
         if (contentType && contentType.includes('application/json')) {
-            // É um erro retornado como JSON
+            win.close();
             const errorData = await response.json();
             showDangerModal(errorData.error || 'Nenhum agendamento encontrado para este dia');
         } else {
-            // É um PDF, abrir em nova janela
-            const url = `/scheduling/agenda/relatorio.php?data=${data}`;
-            window.open(url, '_blank');
+            win.location.href = `/scheduling/agenda/relatorio.php?data=${dataAtual}`;
         }
     } catch (error) {
+        win.close();
         console.error('Erro ao gerar relatório:', error);
         showDangerModal('Erro ao gerar relatório. Tente novamente.');
     }

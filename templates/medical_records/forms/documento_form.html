@@ -1,3 +1,4 @@
+{% load static %}
 <!-- Formulário de Documento -->
 <div id="form-documento" class="form-record">
   <!-- Cabeçalho -->
@@ -16,161 +17,310 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
-  <!-- Campos do formulário -->
+  <!-- Campo hidden para ID do registro (usado na edição) -->
+  <input type="hidden" id="documento-id" value="">
+
+  <!-- Select do modelo de documento (col-9 = 3/4) -->
   <div class="row mb-3">
-    <div class="col-md-6">
-      <label class="form-label">Tipo de Documento <span class="text-danger">*</span></label>
-      <select class="form-select" id="tipo-documento" required>
-        <option value="">Selecione...</option>
-        <option value="atestado">Atestado</option>
-        <option value="laudo">Laudo</option>
-        <option value="declaracao">Declaração</option>
-        <option value="guia">Guia</option>
-        <option value="outro">Outro</option>
+    <div class="col-9">
+      <label class="form-label">Modelo de Documento <span class="text-danger">*</span></label>
+      <select class="form-select" id="select-modelo-documento">
+        <option value="">Selecione um modelo...</option>
       </select>
     </div>
-    <div class="col-md-6">
-      <label class="form-label">Título do Documento <span class="text-danger">*</span></label>
-      <input type="text" class="form-control" id="titulo-documento" required placeholder="Título ou identificação">
+  </div>
+
+  <!-- Área do editor (aparece ao selecionar modelo) -->
+  <div id="editor-area-documento" style="display:none;">
+    <div class="row">
+      <div class="col-12">
+        <label class="form-label">Conteúdo</label>
+        <div id="loading-editor-documento" style="height:300px;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#64748b;font-size:14px;">
+          Carregando editor...
+        </div>
+        <div id="editor-container-documento" style="display:none;">
+          <textarea id="editor-documento"></textarea>
+        </div>
+      </div>
     </div>
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Descrição</label>
-    <textarea class="form-control" id="desc-documento" rows="3" placeholder="Descrição do documento"></textarea>
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Anexar Arquivo</label>
-    <input type="file" class="form-control" id="file-documento" accept=".pdf,.doc,.docx" multiple>
-    <div id="file-badges-documento" class="file-badges mt-2"></div>
   </div>
 
   <!-- Botões de ação -->
   <div class="d-flex justify-content-between align-items-center mt-4">
-    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
-      <i class="ti ti-trash"></i>
-      Excluir
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display:none;">
+      <i class="ti ti-trash"></i> Excluir
     </button>
     <div class="d-flex gap-2 ms-auto">
+      <button type="button" class="btn btn-outline-secondary" id="btn-imprimir-documento" onclick="imprimirDocumento()" style="display:none;align-items:center;gap:6px;">
+        <i class="ti ti-printer" style="font-size:16px;line-height:1;vertical-align:middle;"></i>
+        <span style="vertical-align:middle;">Imprimir</span>
+      </button>
       <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
       <button type="button" class="btn btn-primary" id="save-documento">Salvar Documento</button>
     </div>
   </div>
 </div>
 
+<!-- Dados da clínica para impressão (globais) -->
+<script>
+window._docClinica = {
+  nome:     '{{ clinica.nome_empreendimento|default:""|escapejs }}',
+  logo:     '{% if clinica and clinica.logomarca %}{{ clinica.logomarca.url }}{% endif %}',
+  endereco: '{{ clinica.endereco|default:""|escapejs }}',
+  bairro:   '{{ clinica.bairro|default:""|escapejs }}',
+  cidade:   '{{ clinica.cidade|default:""|escapejs }}',
+  estado:   '{{ clinica.estado|default:""|escapejs }}',
+  cep:      '{{ clinica.cep|default:""|escapejs }}',
+  telefone: '{{ clinica.telefone_comercial|default:""|escapejs }}',
+  celular:  '{{ clinica.celular|default:""|escapejs }}',
+  email:    '{{ clinica.email|default:""|escapejs }}',
+  cnpj:     '{{ clinica.cnpj|default:""|escapejs }}',
+  crmv:     '{{ clinica.registro_crmv|default:""|escapejs }}'
+};
+window._docModeloAtual = null;
+</script>
+
+<!-- Função de impressão (global) -->
+<script>
+function imprimirDocumento() {
+  if (!window._docModeloAtual) {
+    if (typeof showDangerModal === 'function')
+      showDangerModal('Sem modelo', 'Selecione um modelo de documento antes de imprimir.');
+    return;
+  }
+  const modelo  = window._docModeloAtual;
+  const ctx     = window.dadosContexto || {};
+  const pet     = ctx.pet     || {};
+  const cliente = ctx.cliente || {};
+  const dc      = window._docClinica || {};
+
+  const conteudo = (window.HugeRTEEditor && HugeRTEEditor.getEditor('editor-documento'))
+    ? HugeRTEEditor.getContent('editor-documento')
+    : (document.getElementById('editor-documento') ? document.getElementById('editor-documento').value : '');
+
+  const encerramento = (window.substituirEtiquetas && ctx)
+    ? window.substituirEtiquetas(modelo.conteudo_encerramento || '', ctx)
+    : (modelo.conteudo_encerramento || '');
+
+  // Abre aba em branco antes do fetch para evitar bloqueio de popup
+  const pw = window.open('', '_blank');
+  if (!pw) {
+    if (typeof showDangerModal === 'function')
+      showDangerModal('Popup bloqueado', 'Permita popups para este site e tente novamente.');
+    return;
+  }
+  pw.document.write('<html><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;color:#555;"><p>Gerando PDF...</p></body></html>');
+
+  fetch('/atendimento/imprimir-documento/', {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRFToken': getCookie('csrftoken')
+    },
+    body: JSON.stringify({
+      modelo:      modelo,
+      pet:         pet,
+      cliente:     cliente,
+      clinica:     dc,
+      conteudo:    conteudo,
+      encerramento: encerramento
+    })
+  })
+  .then(r => {
+    if (!r.ok) return r.json().then(e => { throw new Error(e.error || 'Erro ao gerar PDF'); });
+    return r.json();
+  })
+  .then(data => {
+    // Navega o popup para a URL real do servidor — o Chrome usa o último
+    // segmento da URL como nome do arquivo no PDF viewer e no save dialog.
+    pw.location.href = data.url;
+  })
+  .catch(err => {
+    pw.close();
+    if (typeof showDangerModal === 'function')
+      showDangerModal('Erro de impressão', err.message);
+    else
+      alert('Erro ao gerar PDF: ' + err.message);
+  });
+}
+</script>
+
+<!-- Lógica do formulário -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
-  let uploadedFilesDoc = [];
-  const fileInputDoc = document.getElementById('file-documento');
-  const fileBadgesDoc = document.getElementById('file-badges-documento');
-  
-  fileInputDoc?.addEventListener('change', function(e) {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
-      if (!uploadedFilesDoc.find(f => f.name === file.name)) {
-        uploadedFilesDoc.push(file);
-        const badge = document.createElement('span');
-        badge.className = 'badge bg-secondary';
-        badge.innerHTML = `${file.name} <i class="ti ti-x"></i>`;
-        badge.onclick = () => {
-          uploadedFilesDoc = uploadedFilesDoc.filter(f => f.name !== file.name);
-          badge.remove();
-        };
-        fileBadgesDoc.appendChild(badge);
-      }
-    });
-    fileInputDoc.value = '';
+  const selectModelo   = document.getElementById('select-modelo-documento');
+  const editorArea     = document.getElementById('editor-area-documento');
+  const btnImprimir    = document.getElementById('btn-imprimir-documento');
+  let _editorInited    = false;
+  let _modelosCache    = null;
+
+  function toLocalISOString(date) {
+    const p = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
+  }
+
+  function substituirEtiquetasDoc(tmpl) {
+    return (window.substituirEtiquetas && window.dadosContexto)
+      ? window.substituirEtiquetas(tmpl, window.dadosContexto)
+      : tmpl;
+  }
+
+  // Carregar lista de modelos no select
+  function carregarModelos() {
+    fetch('/cadastros/api/modelos-documento/', { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(data => {
+        _modelosCache = data;
+        selectModelo.innerHTML = '<option value="">Selecione um modelo...</option>';
+        data.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = m.nome;
+          selectModelo.appendChild(opt);
+        });
+      })
+      .catch(err => console.error('Erro ao carregar modelos:', err));
+  }
+
+  // Inicializa o HugeRTE e configura etiquetas
+  function initEditorDoc() {
+    const loading   = document.getElementById('loading-editor-documento');
+    const container = document.getElementById('editor-container-documento');
+
+    if (loading) loading.style.display = 'flex';
+    if (container) container.style.display = 'none';
+
+    if (!window.HugeRTEEditor) {
+      if (loading) loading.style.display = 'none';
+      if (container) container.style.display = 'block';
+      _editorInited = true;
+      return Promise.resolve();
+    }
+
+    return HugeRTEEditor.init('#editor-documento', { height: 350, min_height: 350 }, 'editor-documento')
+      .then(() => {
+        if (loading) loading.style.display = 'none';
+        if (container) container.style.display = 'block';
+        _editorInited = true;
+      })
+      .catch(err => {
+        console.error('Erro HugeRTE:', err);
+        if (loading) loading.style.display = 'none';
+        if (container) container.style.display = 'block';
+        _editorInited = true;
+      });
+  }
+
+  // Busca detalhes do modelo e preenche o editor
+  function carregarModelo(modeloId, conteudoOverride) {
+    fetch(`/cadastros/api/modelos-documento/${modeloId}/`, { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(modelo => {
+        window._docModeloAtual = modelo;
+
+        const conteudo = conteudoOverride !== undefined
+          ? conteudoOverride
+          : substituirEtiquetasDoc(modelo.conteudo_apresentacao || '');
+
+        // Mostrar área do editor
+        editorArea.style.display = '';
+        if (btnImprimir) btnImprimir.style.display = '';
+
+        if (!_editorInited) {
+          initEditorDoc().then(() => definirConteudo(conteudo));
+        } else {
+          definirConteudo(conteudo);
+        }
+      })
+      .catch(err => console.error('Erro ao carregar modelo:', err));
+  }
+
+  function definirConteudo(conteudo) {
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('editor-documento')) {
+      HugeRTEEditor.setContent('editor-documento', conteudo);
+    } else {
+      const ta = document.getElementById('editor-documento');
+      if (ta) ta.value = conteudo;
+    }
+  }
+
+  // Select onChange
+  selectModelo.addEventListener('change', function() {
+    const modeloId = this.value;
+    if (!modeloId) {
+      editorArea.style.display = 'none';
+      if (btnImprimir) btnImprimir.style.display = 'none';
+      window._docModeloAtual = null;
+      return;
+    }
+    carregarModelo(modeloId);
   });
-  
+
+  // Exposto para o historico_base (edição de registro existente)
+  window._carregarModeloDocumentoComConteudo = function(modeloId, conteudo) {
+    if (!modeloId) return;
+    selectModelo.value = modeloId;
+    carregarModelo(modeloId, conteudo);
+  };
+
+  // Salvar
   document.getElementById('save-documento')?.addEventListener('click', function() {
-    const tipo = document.getElementById('tipo-documento').value;
-    const titulo = document.getElementById('titulo-documento').value;
-    
-    if (!tipo || !titulo) {
-      showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
+    const modeloId = selectModelo.value;
+    if (!modeloId) {
+      showDangerModal('Erro de Validação', 'Selecione um modelo de documento.');
       return;
     }
-    
-    if (uploadedFilesDoc.length === 0) {
-      showDangerModal('Erro de Validação', 'Por favor, anexe ao menos um arquivo');
-      return;
+
+    let conteudo = '';
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('editor-documento')) {
+      conteudo = HugeRTEEditor.getContent('editor-documento');
+    } else {
+      const ta = document.getElementById('editor-documento');
+      if (ta) conteudo = ta.value;
     }
-    
-    const formData = new FormData();
-    formData.append('tipo', tipo);
-    formData.append('titulo', titulo);
-    formData.append('descricao', document.getElementById('desc-documento').value);
-    formData.append('arquivo', uploadedFilesDoc[0]);
-    
+
+    const documentoId = document.getElementById('documento-id')?.value;
+    const datetimeSpan = document.getElementById('documento-datetime');
     const now = new Date();
-    formData.append('data_hora', now.toISOString().slice(0, 16));
-    
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+
+    const formData = new FormData();
+    formData.append('modelo_documento_id', modeloId);
+    formData.append('conteudo', conteudo);
+    formData.append('data_hora', isoDate.slice(0, 16));
+    if (documentoId) formData.append('documento_id', documentoId);
+
     const petId = window.CURRENT_PET_ID;
-    if (!petId) {
-      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
-      return;
-    }
-    
+    if (!petId) { showDangerModal('Erro', 'ID do animal não encontrado.'); return; }
+
     fetch(`/atendimento/api/${petId}/documento/`, {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': getCookie('csrftoken')
-      },
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
       body: formData,
       credentials: 'same-origin'
     })
-    .then(response => {
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(text => {
-          throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.');
-        });
-      }
-      return response.json();
-    })
+    .then(r => r.json())
     .then(data => {
       if (data.success) {
-        const usuario = '{{ user.get_full_name|default:user.username }}';
-        const isoDate = now.toISOString();
-        
-        adicionarItemTimeline('documento', titulo, isoDate, `Tipo: ${tipo}`, usuario, usuarioAvatar, data.id);
-        
+        const titulo = window._docModeloAtual ? window._docModeloAtual.nome : 'Documento';
+        if (documentoId) {
+          carregarTimeline();
+        } else {
+          const avatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+          adicionarItemTimeline('documento', titulo, isoDate, titulo, '{{ user.get_full_name|default:user.username }}', avatar, data.id);
+        }
         hideAllForms();
-        showSuccessModal('Sucesso!', 'Documento salvo com sucesso!');
-        
-        // Resetar
-        document.getElementById('tipo-documento').value = '';
-        document.getElementById('titulo-documento').value = '';
-        document.getElementById('desc-documento').value = '';
-        uploadedFilesDoc = [];
-        fileBadgesDoc.innerHTML = '';
+        showSuccessModal('Sucesso!', documentoId ? 'Documento atualizado!' : 'Documento salvo com sucesso!');
       } else {
-        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o documento');
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o documento.');
       }
     })
-    .catch(error => {
-      console.error('Erro:', error);
-      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
-    });
+    .catch(err => showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + err.message));
   });
-  
-  function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  }
-    uploadedFilesDoc = [];
-    fileBadgesDoc.innerHTML = '';
-  });
+
+  // Carregar modelos ao inicializar
+  carregarModelos();
+});
 </script>
+

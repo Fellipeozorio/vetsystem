@@ -8,6 +8,9 @@ urlpatterns = [
     path('api/tipos-atendimento/', views.api_tipos_atendimento_list, name='api_tipos_atendimento_list'),
     path('api/tipos-atendimento/<int:pk>/template/', views.api_tipo_atendimento_template, name='api_tipo_atendimento_template'),
     path('api/filas-atendimento/', views.api_filas_atendimento_list, name='api_filas_atendimento_list'),
+    path('api/patologias/', views.api_patologias_list, name='api_patologias_list'),
+    path('api/modelos-documento/', views.api_modelos_documento_list, name='api_modelos_documento_list'),
+    path('api/modelos-documento/<int:pk>/', views.api_modelo_documento_detail, name='api_modelo_documento_detail'),
     
     # URLs específicas para tipos de atendimento (devem vir antes das genéricas)
     path('tipos-atendimento/', views.tipos_atendimento_list, name='tipos_atendimento_list'),
@@ -27,6 +30,13 @@ urlpatterns = [
     path('exames/criar/', views.exame_create, name='exame_create'),
     path('exames/<int:pk>/editar/', views.exame_edit, name='exame_edit'),
     path('exames/<int:pk>/excluir/', views.exame_delete, name='exame_delete'),
+    
+    # URLs específicas para atributos de exames
+    path('atributos-exames/', views.atributos_exames_list, name='atributos_exames_list'),
+    path('atributos-exames/criar/', views.atributo_exame_create, name='atributo_exame_create'),
+    path('atributos-exames/<int:pk>/', views.atributo_exame_detail, name='atributo_exame_detail'),
+    path('atributos-exames/<int:pk>/editar/', views.atributo_exame_update, name='atributo_exame_update'),
+    path('atributos-exames/<int:pk>/excluir/', views.atributo_exame_delete, name='atributo_exame_delete'),
     
     # URLs específicas para receitas
     path('receitas/', views.receitas_list, name='receitas_list'),

@@ -1466,9 +1466,6 @@ def relatorio_agenda_view(request):
         # Criar buffer para o PDF
         buffer = BytesIO()
         
-        # Variável para armazenar total de páginas (será preenchida no build)
-        total_pages = [0]
-        
         # Função para adicionar cabeçalho e rodapé em todas as páginas
         def add_header_footer(canvas, doc):
             """Adiciona cabeçalho e rodapé com informações em todas as páginas"""
@@ -1493,12 +1490,7 @@ def relatorio_agenda_view(request):
             # RODAPÉ
             agora_local = timezone.localtime(timezone.now())
             footer_text = f"Impresso em: {agora_local.strftime('%d/%m/%Y %H:%M')} Por {request.user.get_full_name() or request.user.username}"
-            
-            # Usar total de páginas se disponível
-            if total_pages[0] > 0:
-                page_num_text = f"Pág. {doc.page} / {total_pages[0]}"
-            else:
-                page_num_text = f"Pág. {doc.page}"
+            page_num_text = f"Pág. {doc.page}"
             
             canvas.setFont('Helvetica', 8)
             canvas.setFillColor(colors.grey)
@@ -1555,8 +1547,18 @@ def relatorio_agenda_view(request):
                 fila_row = Paragraph(f"<b>{fila.nome}</b>", ParagraphStyle('FilaNome', parent=styles['Normal'], fontSize=11, textColor=colors.white))
                 data_table = [[fila_row, '', '', '', '']]
                 
+                # Estilos de parágrafo para células com quebra de texto
+                cell_style = ParagraphStyle('CellNormal', parent=styles['Normal'], fontSize=9, wordWrap='CJK')
+                header_style = ParagraphStyle('CellHeader', parent=styles['Normal'], fontSize=10, fontName='Helvetica-Bold')
+                
                 # Cabeçalho da tabela
-                data_table.append(['Cliente', 'Animal', 'Tipo de Atendimento', 'Horário', 'Status'])
+                data_table.append([
+                    Paragraph('Cliente', header_style),
+                    Paragraph('Animal', header_style),
+                    Paragraph('Tipo de Atendimento', header_style),
+                    Paragraph('Horário', header_style),
+                    Paragraph('Status', header_style),
+                ])
                 
                 # Dados
                 for agendamento in agendamentos:
@@ -1566,7 +1568,13 @@ def relatorio_agenda_view(request):
                     hora = agendamento.horario.strftime('%H:%M') if agendamento.horario else '-'
                     status = agendamento.get_status_display()
                     
-                    data_table.append([cliente, animal, tipo, hora, status])
+                    data_table.append([
+                        Paragraph(cliente, cell_style),
+                        Paragraph(animal, cell_style),
+                        Paragraph(tipo, cell_style),
+                        Paragraph(hora, cell_style),
+                        Paragraph(status, cell_style),
+                    ])
                 
                 # Criar tabela
                 table = Table(data_table, colWidths=[60*mm, 35*mm, 55*mm, 20*mm, 25*mm])
@@ -1620,38 +1628,7 @@ def relatorio_agenda_view(request):
                 'error': 'Nenhum agendamento encontrado para o dia selecionado.'
             }, status=404)
         
-        # Primeira passagem: construir PDF para contar páginas
-        doc.build(elements)
-        
-        # Armazenar total de páginas
-        total_pages[0] = doc.page
-        
-        # Segunda passagem: reconstruir PDF com número total de páginas correto
-        buffer = BytesIO()
-        doc = BaseDocTemplate(
-            buffer,
-            pagesize=A4,
-            rightMargin=10*mm,
-            leftMargin=10*mm,
-            topMargin=30*mm,
-            bottomMargin=20*mm
-        )
-        
-        frame = Frame(
-            10*mm,
-            20*mm,
-            A4[0] - 20*mm,
-            A4[1] - 50*mm,
-            id='normal'
-        )
-        
-        template = PageTemplate(
-            id='AllPages',
-            frames=[frame],
-            onPage=add_header_footer
-        )
-        
-        doc.addPageTemplates([template])
+        # Construir PDF
         doc.build(elements)
         
         # Retornar resposta

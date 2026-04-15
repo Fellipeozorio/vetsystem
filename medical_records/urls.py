@@ -28,5 +28,10 @@ urlpatterns = [
     
     # API endpoint para listar registros da timeline
     path('api/<int:pet_id>/timeline/', views.listar_timeline, name='listar_timeline'),
+
+    # Impressão PDF de documento
+    path('imprimir-documento/', views.imprimir_documento_view, name='imprimir_documento'),
+    # Servir PDF temporário com nome de arquivo no path (para Chrome usar nome correto)
+    path('pdf/<str:token>/<path:filename>', views.servir_pdf_temp_view, name='servir_pdf_temp'),
 ]
 
