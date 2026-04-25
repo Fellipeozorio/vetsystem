@@ -10,7 +10,7 @@ import time
 from .models import (
     Especie, Raca, Pelagem, FilaAtendimento, Patologia,
     TipoAtendimento, Vacina, Exame, AtributoExame,
-    ReferenciaExame, ModeloReceita, ModeloDocumento, OrigemCliente,
+    ReferenciaExame, ItemReferenciaExame, ModeloReceita, ModeloDocumento, OrigemCliente,
     ProtocoloVacina, DadosUnidade
 )
 
@@ -1696,3 +1696,212 @@ def atributo_exame_delete(request, pk):
         return JsonResponse({'success': True, 'message': f'Atributo "{nome}" excluído com sucesso!'})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
+
+
+# ===== VALORES DE REFERÊNCIA DE EXAMES =====
+
+@login_required
+def referencias_exames_list(request):
+    """Listar valores de referência de exames com filtros"""
+    query = request.GET.get('q', '')
+    exame_id = request.GET.get('exame', '')
+    especie_id = request.GET.get('especie', '')
+
+    items = ReferenciaExame.objects.select_related('exame', 'especie').all()
+
+    if exame_id:
+        items = items.filter(exame_id=exame_id)
+    if especie_id:
+        items = items.filter(especie_id=especie_id)
+    if query:
+        items = items.filter(nome__icontains=query)
+
+    items = items.order_by('exame__nome', 'especie__nome', 'nome')
+
+    paginator = Paginator(items, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    exames = Exame.objects.filter(ativo=True).order_by('nome')
+    especies = Especie.objects.filter(ativo=True).order_by('nome')
+
+    context = {
+        'tipo': 'referencias-exames',
+        'label': 'Valores de Referência de Exames',
+        'page_obj': page_obj,
+        'query': query,
+        'exame_id': exame_id,
+        'especie_id': especie_id,
+        'exames': exames,
+        'especies': especies,
+    }
+    return render(request, 'cadastros/referencias_exames_list.html', context)
+
+
+@login_required
+def referencia_exame_create(request):
+    """Criar nova referência de exame via AJAX (cabeçalho + itens)"""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método não permitido'})
+    try:
+        exame_id = request.POST.get('exame')
+        especie_id = request.POST.get('especie')
+        nome = request.POST.get('nome', '').strip()
+        idade_inicial = request.POST.get('idade_inicial', 0)
+        idade_final = request.POST.get('idade_final', 0)
+
+        if not exame_id:
+            return JsonResponse({'success': False, 'error': 'Exame é obrigatório'})
+        if not especie_id:
+            return JsonResponse({'success': False, 'error': 'Espécie é obrigatória'})
+        if not nome:
+            return JsonResponse({'success': False, 'error': 'Nome é obrigatório'})
+
+        exame = get_object_or_404(Exame, pk=exame_id)
+        especie = get_object_or_404(Especie, pk=especie_id)
+
+        with transaction.atomic():
+            ref = ReferenciaExame.objects.create(
+                nome=nome,
+                exame=exame,
+                especie=especie,
+                idade_inicial=int(idade_inicial or 0),
+                idade_final=int(idade_final or 0),
+            )
+            # Salvar itens enviados como JSON
+            import json
+            itens_json = request.POST.get('itens', '[]')
+            itens = json.loads(itens_json)
+            for item in itens:
+                atributo_id = item.get('atributo_id')
+                if not atributo_id:
+                    continue
+                atributo = get_object_or_404(AtributoExame, pk=atributo_id)
+                ItemReferenciaExame.objects.create(
+                    referencia=ref,
+                    atributo=atributo,
+                    ref_inicio=item.get('ref_inicio') or None,
+                    ref_fim=item.get('ref_fim') or None,
+                    complemento=item.get('complemento') or None,
+                )
+
+        return JsonResponse({'success': True, 'message': 'Referência criada com sucesso!', 'id': ref.id})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def referencia_exame_detail(request, pk):
+    """Retornar dados de uma referência via JSON"""
+    ref = get_object_or_404(ReferenciaExame, pk=pk)
+    itens = []
+    for item in ref.itens.select_related('atributo').all():
+        itens.append({
+            'id': item.id,
+            'atributo_id': item.atributo_id,
+            'atributo_nome': item.atributo.nome,
+            'unidade': item.atributo.unidade or '',
+            'ref_inicio': item.ref_inicio or '',
+            'ref_fim': item.ref_fim or '',
+            'complemento': item.complemento or '',
+        })
+    return JsonResponse({
+        'success': True,
+        'data': {
+            'id': ref.id,
+            'nome': ref.nome,
+            'exame': ref.exame_id,
+            'especie': ref.especie_id,
+            'idade_inicial': ref.idade_inicial,
+            'idade_final': ref.idade_final,
+            'itens': itens,
+        }
+    })
+
+
+@login_required
+def referencia_exame_update(request, pk):
+    """Atualizar referência de exame via AJAX"""
+    ref = get_object_or_404(ReferenciaExame, pk=pk)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método não permitido'})
+    try:
+        exame_id = request.POST.get('exame')
+        especie_id = request.POST.get('especie')
+        nome = request.POST.get('nome', '').strip()
+        idade_inicial = request.POST.get('idade_inicial', 0)
+        idade_final = request.POST.get('idade_final', 0)
+
+        if not nome:
+            return JsonResponse({'success': False, 'error': 'Nome é obrigatório'})
+
+        with transaction.atomic():
+            ref.nome = nome
+            if exame_id:
+                ref.exame = get_object_or_404(Exame, pk=exame_id)
+            if especie_id:
+                ref.especie = get_object_or_404(Especie, pk=especie_id)
+            ref.idade_inicial = int(idade_inicial or 0)
+            ref.idade_final = int(idade_final or 0)
+            ref.save()
+
+            import json
+            itens_json = request.POST.get('itens', '[]')
+            itens = json.loads(itens_json)
+            # Atualizar/criar itens enviados
+            ids_enviados = []
+            for item in itens:
+                atributo_id = item.get('atributo_id')
+                if not atributo_id:
+                    continue
+                atributo = get_object_or_404(AtributoExame, pk=atributo_id)
+                item_id = item.get('id')
+                if item_id:
+                    obj = ItemReferenciaExame.objects.filter(pk=item_id, referencia=ref).first()
+                    if obj:
+                        obj.ref_inicio = item.get('ref_inicio') or None
+                        obj.ref_fim = item.get('ref_fim') or None
+                        obj.complemento = item.get('complemento') or None
+                        obj.save()
+                        ids_enviados.append(obj.id)
+                        continue
+                novo = ItemReferenciaExame.objects.create(
+                    referencia=ref,
+                    atributo=atributo,
+                    ref_inicio=item.get('ref_inicio') or None,
+                    ref_fim=item.get('ref_fim') or None,
+                    complemento=item.get('complemento') or None,
+                )
+                ids_enviados.append(novo.id)
+            # Remover itens não enviados
+            ref.itens.exclude(id__in=ids_enviados).delete()
+
+        return JsonResponse({'success': True, 'message': 'Referência atualizada com sucesso!'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def referencia_exame_delete(request, pk):
+    """Excluir referência de exame via AJAX"""
+    ref = get_object_or_404(ReferenciaExame, pk=pk)
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Método não permitido'})
+    try:
+        nome = ref.nome
+        ref.delete()
+        return JsonResponse({'success': True, 'message': f'Referência "{nome}" excluída com sucesso!'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+
+@login_required
+def referencia_exame_atributos(request):
+    """Retornar atributos de um exame para montar a tabela de itens"""
+    exame_id = request.GET.get('exame')
+    if not exame_id:
+        return JsonResponse({'success': False, 'error': 'Exame não informado'})
+    atributos = AtributoExame.objects.filter(
+        exame_id=exame_id, ativo=True
+    ).order_by('ordem', 'nome').values('id', 'nome', 'unidade', 'atributo_pai_id')
+    return JsonResponse({'success': True, 'atributos': list(atributos)})

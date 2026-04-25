@@ -406,16 +406,48 @@ class AtributoExame(models.Model):
 
 
 class ReferenciaExame(models.Model):
+    nome = models.CharField(max_length=150, verbose_name='Nome')
     exame = models.ForeignKey(
         Exame,
         on_delete=models.CASCADE,
         related_name='referencias'
     )
+    especie = models.ForeignKey(
+        'Especie',
+        on_delete=models.CASCADE,
+        related_name='referencias_exames',
+        verbose_name='Espécie'
+    )
+    idade_inicial = models.PositiveIntegerField(verbose_name='Idade inicial (meses)')
+    idade_final = models.PositiveIntegerField(verbose_name='Idade final (meses)')
 
-    descricao = models.TextField()
+    class Meta:
+        ordering = ['exame__nome', 'especie__nome', 'nome']
 
     def __str__(self):
-        return f"Referência - {self.exame.nome}"
+        return f"{self.exame.nome} - {self.nome}"
+
+
+class ItemReferenciaExame(models.Model):
+    referencia = models.ForeignKey(
+        ReferenciaExame,
+        on_delete=models.CASCADE,
+        related_name='itens'
+    )
+    atributo = models.ForeignKey(
+        AtributoExame,
+        on_delete=models.CASCADE,
+        related_name='itens_referencia'
+    )
+    ref_inicio = models.CharField(max_length=50, blank=True, null=True, verbose_name='Referência início')
+    ref_fim = models.CharField(max_length=50, blank=True, null=True, verbose_name='Referência fim')
+    complemento = models.CharField(max_length=200, blank=True, null=True, verbose_name='Complemento')
+
+    class Meta:
+        ordering = ['atributo__ordem', 'atributo__nome']
+
+    def __str__(self):
+        return f"{self.referencia} - {self.atributo.nome}"
 
 
 class ModeloReceita(BaseCadastro):

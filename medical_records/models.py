@@ -188,6 +188,12 @@ class Exame(models.Model):
     tipo = models.CharField(max_length=100)
     nome = models.CharField(max_length=200)
     resultado = models.TextField(blank=True)
+    exame_cadastro = models.ForeignKey(
+        'cadastros.Exame', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='registros_prontuario'
+    )
+    itens_resultado = models.TextField(blank=True)  # JSON [{atributo_id, nome, resultado, unidade}]
+    conclusoes = models.TextField(blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
@@ -342,4 +348,65 @@ class Internacao(models.Model):
 
     def __str__(self):
         return f"Internação - {self.pet.nome} ({self.data_entrada.strftime('%d/%m/%Y')})"
+
+
+class ProtocoloVacinaRegistro(models.Model):
+    """Registro de protocolo de vacina para um pet"""
+    STATUS_PROGRAMADA = 'programada'
+    STATUS_INTERROMPIDA = 'interrompida'
+    STATUS_CHOICES = [
+        (STATUS_PROGRAMADA, 'Programada'),
+        (STATUS_INTERROMPIDA, 'Interrompida'),
+    ]
+
+    pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='protocolos_vacina')
+    protocolo = models.ForeignKey(
+        'cadastros.ProtocoloVacina',
+        on_delete=models.PROTECT,
+        related_name='registros_pet'
+    )
+    data_inicial = models.DateField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PROGRAMADA)
+    usuario = models.ForeignKey(User, on_delete=models.PROTECT)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-data_inicial']
+        verbose_name = 'Protocolo de Vacina Registrado'
+        verbose_name_plural = 'Protocolos de Vacinas Registrados'
+
+    def __str__(self):
+        return f"{self.protocolo.vacina.nome} - {self.pet.nome} ({self.data_inicial.strftime('%d/%m/%Y')})"
+
+
+class DoseVacinaRegistro(models.Model):
+    """Dose individual de um protocolo de vacina registrado"""
+    STATUS_PROGRAMADA = 'programada'
+    STATUS_APLICADA = 'aplicada'
+    STATUS_CHOICES = [
+        (STATUS_PROGRAMADA, 'Programada'),
+        (STATUS_APLICADA, 'Aplicada'),
+    ]
+
+    protocolo_registro = models.ForeignKey(
+        ProtocoloVacinaRegistro,
+        on_delete=models.CASCADE,
+        related_name='doses'
+    )
+    numero_dose = models.PositiveIntegerField()
+    data_programada = models.DateField()
+    data_aplicacao = models.DateTimeField(blank=True, null=True)
+    laboratorio = models.CharField(max_length=200, blank=True)
+    lote = models.CharField(max_length=100, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PROGRAMADA)
+
+    class Meta:
+        ordering = ['numero_dose']
+        verbose_name = 'Dose de Vacina'
+        verbose_name_plural = 'Doses de Vacinas'
+
+    def __str__(self):
+        vacina = self.protocolo_registro.protocolo.vacina.nome
+        return f"Dose {self.numero_dose} - {vacina} ({self.data_programada.strftime('%d/%m/%Y')})"
 

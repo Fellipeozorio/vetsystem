@@ -485,6 +485,7 @@
 .timeline-event-content[data-type="exame"]:hover { background: rgba(250,128,114,0.15); }
 .timeline-event-content[data-type="fotos"]:hover { background: rgba(0,51,102,0.10); }
 .timeline-event-content[data-type="vacina"]:hover { background: rgba(255,215,0,0.18); }
+.timeline-event-content[data-type="vacina-dose"]:hover { background: rgba(255,215,0,0.18); }
 .timeline-event-content[data-type="receita"]:hover { background: rgba(147,112,219,0.12); }
 .timeline-event-content[data-type="observacoes"]:hover { background: rgba(108,117,125,0.10); }
 .timeline-event-content[data-type="video"]:hover { background: rgba(0,100,0,0.10); }
@@ -548,6 +549,7 @@
 .timeline-event-content[data-type="exame"] { border-left-color: #FA8072; }
 .timeline-event-content[data-type="fotos"] { border-left-color: #003366; }
 .timeline-event-content[data-type="vacina"] { border-left-color: #FFD700; }
+.timeline-event-content[data-type="vacina-dose"] { border-left-color: #FFD700; }
 .timeline-event-content[data-type="receita"] { border-left-color: #9370DB; }
 .timeline-event-content[data-type="observacoes"] { border-left-color: #6c757d; }
 .timeline-event-content[data-type="video"] { border-left-color: #006400; }
@@ -663,6 +665,7 @@ document.addEventListener('DOMContentLoaded', function() {
     exame: { color: '#FA8072', label: 'Exame', icon: 'ti-test-pipe' },
     fotos: { color: '#003366', label: 'Fotos', icon: 'ti-camera' },
     vacina: { color: '#FFD700', label: 'Vacina', icon: 'ti-vaccine' },
+    'vacina-dose': { color: '#FFD700', label: 'Vacina', icon: 'ti-vaccine' },
     receita: { color: '#9370DB', label: 'Receita', icon: 'ti-edit' },
     observacoes: { color: '#6c757d', label: 'Observações', icon: 'ti-message' },
     video: { color: '#006400', label: 'Vídeo', icon: 'ti-video' },
@@ -698,8 +701,10 @@ document.addEventListener('DOMContentLoaded', function() {
     new bootstrap.Modal(document.getElementById('modal-danger')).show();
   };
 
-  window.confirmDelete = function(callback) {
+  window.confirmDelete = function(callback, message) {
     const modal = new bootstrap.Modal(document.getElementById('modal-confirm-delete'));
+    const msgEl = document.querySelector('#modal-confirm-delete .text-muted');
+    if (msgEl) msgEl.textContent = message || 'Esta ação não pode ser desfeita.';
     document.getElementById('confirm-delete-btn').onclick = function() {
       callback();
       modal.hide();
@@ -765,10 +770,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let visibleCount = 0;
     document.querySelectorAll('.timeline-event').forEach(item => {
       const content = item.querySelector('.timeline-event-content');
-      const tipo = content.dataset.type;
+      const tipoRaw = content.dataset.type;
+      const tipo = tipoRaw === 'vacina-dose' ? 'vacina' : tipoRaw;  // doses filtram como vacina
       const dataAttr = content.dataset.date;
       
-      if (activeFilters.includes(tipo) && isInPeriod(dataAttr)) {
+    if (activeFilters.includes(tipo) && isInPeriod(dataAttr)) {
         item.style.display = '';
         visibleCount++;
       } else {
@@ -976,6 +982,43 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Carregar dados do registro via API
       const petId = window.CURRENT_PET_ID;
+
+      // Tratamento especial para protocolos de vacina: abrir form de dose da próxima dose pendente
+      if (tipo === 'vacina-dose') {
+        if (editData._isDoseId) {
+          // Já temos o DoseVacinaRegistro.id — buscar e preencher o form
+          const tituloEl = document.getElementById('vacina-dose-titulo');
+          if (tituloEl && editData.titulo) tituloEl.textContent = editData.titulo;
+          fetch(`/atendimento/api/${petId}/dose-vacina/${editData.id}/`, {
+            method: 'GET',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            credentials: 'same-origin'
+          })
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(data => {
+            if (data.success && typeof window._preencherFormDose === 'function') window._preencherFormDose(data);
+            setTimeout(() => { form.style.opacity = '1'; form.style.pointerEvents = 'auto'; }, 50);
+          })
+          .catch(err => { console.error('Erro ao carregar dose:', err); form.style.opacity = '1'; form.style.pointerEvents = 'auto'; });
+        } else {
+          // editData.id é o ProtocoloVacinaRegistro.id — resolver para a dose correta primeiro
+          fetch(`/atendimento/api/${petId}/protocolos-vacina/${editData.id}/`, {
+            method: 'GET',
+            headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            credentials: 'same-origin'
+          })
+          .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+          .then(data => {
+            if (!data.success || !data.doses || !data.doses.length) return;
+            const pendente = data.doses.find(d => !d.data_aplicacao_iso);
+            const dose = pendente || data.doses[data.doses.length - 1];
+            showForm('vacina-dose', { id: dose.id, titulo: editData.titulo, _isDoseId: true });
+          })
+          .catch(err => console.error('Erro ao carregar protocolo:', err));
+        }
+        return;
+      }
+
       fetch(`/atendimento/api/${petId}/${tipo}/${editData.id}/detalhes/`, {
         method: 'GET',
         headers: {
@@ -1058,6 +1101,11 @@ document.addEventListener('DOMContentLoaded', function() {
             setVal('fabricante-vacina', data.fabricante);
             setVal('proxima-dose-vacina', data.proxima_dose);
             setVal('obs-vacina', data.observacoes);
+          } else if (tipo === 'vacina-dose') {
+            // Forma de dose via protocolo
+            if (typeof window._preencherFormDose === 'function') {
+              window._preencherFormDose(data);
+            }
           } else if (tipo === 'observacoes') {
             setVal('titulo-observacoes', data.titulo);
             setVal('texto-observacoes', data.texto);
@@ -1068,12 +1116,15 @@ document.addEventListener('DOMContentLoaded', function() {
             setVal('validade-receita', data.validade);
             setVal('obs-receita', data.observacoes);
           } else if (tipo === 'exame') {
-            setVal('tipo-exame', data.tipo_exame);
-            setVal('nome-exame', data.nome);
-            setVal('resultado-exame', data.resultado);
+            if (typeof window._preencherFormExame === 'function') {
+              window._preencherFormExame(data);
+            }
           } else if (tipo === 'fotos') {
             setVal('titulo-fotos', data.titulo);
             setVal('desc-fotos', data.descricao);
+            if (typeof window._preencherFotosExistentes === 'function') {
+              window._preencherFotosExistentes(data.arquivos || []);
+            }
           } else if (tipo === 'documento') {
             if (typeof window._carregarModeloDocumentoComConteudo === 'function') {
               window._carregarModeloDocumentoComConteudo(data.modelo_documento_id, data.conteudo);
@@ -1081,6 +1132,9 @@ document.addEventListener('DOMContentLoaded', function() {
           } else if (tipo === 'video') {
             setVal('titulo-video', data.titulo);
             setVal('desc-video', data.descricao);
+            if (typeof window._preencherVideoExistente === 'function') {
+              window._preencherVideoExistente(data.arquivo_url || '', data.arquivo_nome || '');
+            }
           } else if (tipo === 'internacao') {
             setVal('status-internacao', data.status);
             setVal('gravidade-internacao', data.gravidade);
@@ -1099,12 +1153,20 @@ document.addEventListener('DOMContentLoaded', function() {
           // Mostrar botão de excluir
           const deleteBtn = form.querySelector('.btn-delete-record');
           if (deleteBtn) deleteBtn.style.display = '';
+        } else {
+          // Mesmo com erro no carregamento, formulário deve ficar interativo para permitir excluir
+          form.style.opacity = '1';
+          form.style.pointerEvents = 'auto';
+          const deleteBtn = form.querySelector('.btn-delete-record');
+          if (deleteBtn) deleteBtn.style.display = '';
         }
       })
       .catch(error => {
         console.error('Erro ao carregar dados do registro:', error);
         form.style.opacity = '1';
         form.style.pointerEvents = 'auto';
+        const deleteBtn = form.querySelector('.btn-delete-record');
+        if (deleteBtn) deleteBtn.style.display = '';
       });
       
     } else {
@@ -1224,7 +1286,14 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="timeline-event-left">
           <div class="timeline-event-date" style="color: ${config.color};">${dataHoraFormatada}</div>
           <div class="timeline-event-type">${config.label}</div>
-          <div class="timeline-event-title">${descricao || titulo}</div>
+          ${tipo === 'vacina-dose'
+            ? (function() {
+                const st = (descricao || '').toLowerCase();
+                const cor = st === 'aplicada' ? '#28a745' : (st === 'interrompida' ? '#dc3545' : (st === 'programada' ? '#0d6efd' : '#dc3545'));
+                return `<div class="timeline-event-title">${titulo}<br><span style="color:${cor};font-weight:600;">${descricao}</span></div>`;
+              })()
+            : `<div class="timeline-event-title">${descricao || titulo}</div>`
+          }
         </div>
         ${usuarioAvatar ? `<div class="timeline-event-avatar" style="background-image: url(${usuarioAvatar}); background-size: cover; background-position: center; background-color: transparent;" title="${usuario || 'Sistema'}"></div>` : `<div class="timeline-event-avatar" title="${usuario || 'Sistema'}">${iniciais}</div>`}
       </div>
@@ -1286,12 +1355,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
   window.deleteCurrentRecord = function() {
     if (!currentEditingId || !currentEditingType) return;
+    // Capturar localmente para evitar race condition com closure
+    const recordId = currentEditingId;
+    const recordType = currentEditingType;
     
+    const deleteMsg = (recordType === 'vacina-dose')
+      ? 'O protocolo e todas as doses serão excluídos. Esta ação não pode ser desfeita.'
+      : undefined;
     confirmDelete(function() {
       // Fazer requisição DELETE para o backend
-      const petId = window.CURRENT_PET_ID;
-      
-      fetch(`/atendimento/api/${petId}/${currentEditingType}/${currentEditingId}/`, {
+      const petId = window.CURRENT_PET_ID;      
+      fetch(`/atendimento/api/${petId}/${recordType}/${recordId}/`, {
         method: 'DELETE',
         headers: {
           'X-CSRFToken': getCookie('csrftoken')
@@ -1302,7 +1376,7 @@ document.addEventListener('DOMContentLoaded', function() {
       .then(data => {
         if (data.success) {
           // Só remover do DOM se deletou com sucesso no backend
-          const recordElement = document.querySelector(`[data-record-id="${currentEditingId}"]`);
+          const recordElement = document.querySelector(`[data-record-id="${recordId}"]`);
           if (recordElement) {
             recordElement.remove();
             hideAllForms();
@@ -1316,12 +1390,24 @@ document.addEventListener('DOMContentLoaded', function() {
         console.error('Erro ao deletar registro:', error);
         showDangerModal('Erro', 'Não foi possível excluir o registro');
       });
-    });
+    }, deleteMsg);
   };
 
   document.querySelectorAll('#add-buttons .btn-add').forEach(btn => {
     btn.addEventListener('click', function() {
-      showForm(this.dataset.tipo);
+      const tipo = this.dataset.tipo;
+      if (tipo === 'vacina') {
+        // Navegar para aba de Protocolos e abrir form de adicionar diretamente
+        const tabProtocolos = document.querySelector('a[href="#tab-protocolos"]');
+        if (tabProtocolos) {
+          bootstrap.Tab.getOrCreateInstance(tabProtocolos).show();
+          setTimeout(() => {
+            if (typeof window._abrirAddProtocolo === 'function') window._abrirAddProtocolo();
+          }, 150);
+        }
+        return;
+      }
+      showForm(tipo);
     });
   });
 
@@ -1367,7 +1453,11 @@ function carregarTimeline() {
     console.error('Pet ID não encontrado');
     return;
   }
-  
+
+  // Limpar itens existentes antes de recarregar (evita duplicatas e mantém item excluído visível)
+  const tlEl = document.getElementById('timeline-list');
+  if (tlEl) tlEl.querySelectorAll('.timeline-date-separator, .timeline-event').forEach(el => el.remove());
+
   fetch(`/atendimento/api/${petId}/timeline/`, {
     method: 'GET',
     headers: {

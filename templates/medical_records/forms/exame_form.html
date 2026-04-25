@@ -19,35 +19,71 @@
   <!-- Campo hidden para ID do registro (usado na edição) -->
   <input type="hidden" id="exame-id" name="exame_id" value="">
 
-  <!-- Campos do formulário -->
+  <!-- Select do exame cadastrado (igual ao formulário de documentos) -->
   <div class="row mb-3">
-    <div class="col-md-6">
-      <label class="form-label">Tipo de Exame <span class="text-danger">*</span></label>
-      <select class="form-select" id="tipo-exame" required>
-        <option value="">Selecione...</option>
-        <option value="sangue">Exame de Sangue</option>
-        <option value="urina">Exame de Urina</option>
-        <option value="fezes">Exame de Fezes</option>
-        <option value="imagem">Imagem (Raio-X, Ultrassom)</option>
-        <option value="biopsia">Biópsia</option>
-        <option value="outro">Outro</option>
+    <div class="col-9">
+      <label class="form-label">Exame <span class="text-danger">*</span></label>
+      <select class="form-select" id="select-exame-prontuario" onchange="carregarAtributosExameProntuario()">
+        <option value="">Selecione um exame...</option>
+        {% for exame in exames_cadastro %}
+        <option value="{{ exame.id }}" data-nome="{{ exame.nome|escapejs }}">{{ exame.nome }}</option>
+        {% endfor %}
       </select>
     </div>
-    <div class="col-md-6">
-      <label class="form-label">Nome do Exame <span class="text-danger">*</span></label>
-      <input type="text" class="form-control" id="nome-exame" required placeholder="Ex: Hemograma completo">
+  </div>
+
+  <!-- Select de tabela de referência (condicional: aparece quando há múltiplas referências) -->
+  <div class="row mb-3" id="row-select-referencia" style="display:none;">
+    <div class="col-9">
+      <label class="form-label">Tabela de Referência</label>
+      <select class="form-select" id="select-referencia-exame" onchange="trocarReferenciaExame()">
+      </select>
     </div>
   </div>
 
-  <div class="mb-3">
-    <label class="form-label">Resultado / Observações</label>
-    <textarea class="form-control" id="resultado-exame" rows="4" placeholder="Resultado do exame ou observações"></textarea>
-  </div>
+  <!-- Área que aparece após selecionar o exame -->
+  <div id="exame-area-conteudo" style="display:none;">
 
-  <div class="mb-3">
-    <label class="form-label">Anexar Resultados</label>
-    <input type="file" class="form-control" id="file-exame" accept=".pdf,.jpg,.jpeg,.png" multiple>
-    <div id="file-badges-exame" class="file-badges mt-2"></div>
+    <!-- Tabela de referência -->
+    <div class="mb-3" id="exame-tabela-wrapper">
+      <p class="text-muted fst-italic" id="exame-msg-carregando" style="display:none;">Carregando atributos...</p>
+      <div id="exame-tabela-container" style="display:none;">
+        <div class="table-responsive">
+          <table class="table table-sm table-vcenter" style="font-size:.9rem;">
+            <thead>
+              <tr>
+                <th>Atributo</th>
+                <th style="width:160px;">Resultado</th>
+                <th style="width:160px; padding-left:16px;">Referência</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-exame-atributos">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- HugeRTE - Conclusões -->
+    <div class="mb-3" id="editor-wrapper-exame">
+      <label class="form-label">Conclusões</label>
+      <div id="loading-editor-exame" style="height: 320px; border: 1px solid #e2e8f0; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #64748b; font-size: 14px;">
+        Carregando editor...
+      </div>
+      <div id="editor-container-exame" style="display: none;">
+        <textarea id="editor-exame"></textarea>
+      </div>
+    </div>
+
+    <!-- Upload de arquivos -->
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label class="form-label">Anexos</label>
+        <input type="file" class="form-control" id="file-exame" accept=".pdf,.jpg,.jpeg,.png" multiple>
+        <div id="file-badges-exame" class="file-badges mt-2"></div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Botões de ação -->
@@ -79,7 +115,237 @@ document.addEventListener('DOMContentLoaded', function() {
   let uploadedFilesExame = [];
   const fileInputExame = document.getElementById('file-exame');
   const fileBadgesExame = document.getElementById('file-badges-exame');
+  let itensExame = [];
+  let exameTemReferencia = false;
+  let referenciaAtualId = null;
+  let editorExameInit = false;
 
+  // ── Inicializar HugeRTE para conclusões ──
+  function iniciarEditorExame() {
+    if (editorExameInit) return;
+    editorExameInit = true;
+
+    const loading = document.getElementById('loading-editor-exame');
+    const container = document.getElementById('editor-container-exame');
+
+    if (!window.HugeRTEEditor) {
+      // Fallback: mostrar textarea diretamente
+      if (loading) loading.style.display = 'none';
+      if (container) {
+        container.style.display = 'block';
+        const ta = document.getElementById('editor-exame');
+        if (ta) { ta.style.display = 'block'; ta.rows = 6; ta.className = 'form-control'; }
+      }
+      return;
+    }
+
+    HugeRTEEditor.init('#editor-exame', { height: 320, min_height: 320 }, 'exame-editor')
+      .then(() => {
+        if (loading) loading.style.display = 'none';
+        if (container) container.style.display = 'block';
+      })
+      .catch(() => {
+        if (loading) loading.style.display = 'none';
+        if (container) {
+          container.style.display = 'block';
+          const ta = document.getElementById('editor-exame');
+          if (ta) { ta.style.display = 'block'; ta.rows = 6; ta.className = 'form-control'; }
+        }
+      });
+  }
+
+  function getEditorExameContent() {
+    if (window.HugeRTEEditor) {
+      const c = HugeRTEEditor.getContent('exame-editor');
+      if (c !== null) return c;
+    }
+    const ta = document.getElementById('editor-exame');
+    return ta ? ta.value : '';
+  }
+
+  function setEditorExameContent(html) {
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('exame-editor')) {
+      HugeRTEEditor.setContent('exame-editor', html);
+      return;
+    }
+    const ta = document.getElementById('editor-exame');
+    if (ta) ta.value = html;
+  }
+
+  // ── Carregar atributos ao selecionar exame ──
+  function carregarAtributosExameProntuario() {
+    const select = document.getElementById('select-exame-prontuario');
+    const exameId = select.value;
+    const areaConteudo = document.getElementById('exame-area-conteudo');
+    const tabelaWrapper = document.getElementById('exame-tabela-wrapper');
+    const tabelaContainer = document.getElementById('exame-tabela-container');
+    const msg = document.getElementById('exame-msg-carregando');
+    const tbody = document.getElementById('tbody-exame-atributos');
+
+    if (!exameId) {
+      areaConteudo.style.display = 'none';
+      itensExame = [];
+      exameTemReferencia = false;
+      referenciaAtualId = null;
+      document.getElementById('row-select-referencia').style.display = 'none';
+      return;
+    }
+
+    areaConteudo.style.display = '';
+    tabelaWrapper.style.display = 'none';
+    tabelaContainer.style.display = 'none';
+    msg.style.display = '';
+    tbody.innerHTML = '';
+    itensExame = [];
+
+    iniciarEditorExame();
+
+    const petId = window.CURRENT_PET_ID;
+    _fetchAtributosExame(petId, exameId, null);
+  }
+  window.carregarAtributosExameProntuario = carregarAtributosExameProntuario;
+
+  function trocarReferenciaExame() {
+    const exameId = document.getElementById('select-exame-prontuario').value;
+    const referenciaId = document.getElementById('select-referencia-exame').value;
+    const petId = window.CURRENT_PET_ID;
+    const tabelaWrapper = document.getElementById('exame-tabela-wrapper');
+    const tabelaContainer = document.getElementById('exame-tabela-container');
+    const msg = document.getElementById('exame-msg-carregando');
+    const tbody = document.getElementById('tbody-exame-atributos');
+    tabelaWrapper.style.display = 'none';
+    tabelaContainer.style.display = 'none';
+    msg.style.display = '';
+    tbody.innerHTML = '';
+    itensExame = [];
+    _fetchAtributosExame(petId, exameId, referenciaId || null);
+  }
+  window.trocarReferenciaExame = trocarReferenciaExame;
+
+  function _fetchAtributosExame(petId, exameId, referenciaId) {
+    const tabelaWrapper = document.getElementById('exame-tabela-wrapper');
+    const tabelaContainer = document.getElementById('exame-tabela-container');
+    const msg = document.getElementById('exame-msg-carregando');
+    const tbody = document.getElementById('tbody-exame-atributos');
+    const rowRef = document.getElementById('row-select-referencia');
+    const selectRef = document.getElementById('select-referencia-exame');
+
+    let url = `/atendimento/api/${petId}/exame-atributos/${exameId}/`;
+    if (referenciaId) url += `?referencia_id=${referenciaId}`;
+
+    fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+    .then(r => r.json())
+    .then(resp => {
+      msg.style.display = 'none';
+      if (!resp.success) {
+        tabelaWrapper.style.display = 'none';
+        rowRef.style.display = 'none';
+        return;
+      }
+
+      // Popular select de referências ANTES de verificar atributos
+      referenciaAtualId = resp.referencia_id || null;
+      const refs = resp.referencias || [];
+      if (refs.length >= 1) {
+        selectRef.innerHTML = refs.map(r =>
+          `<option value="${r.id}"${r.id == referenciaAtualId ? ' selected' : ''}>${r.nome}</option>`
+        ).join('');
+        rowRef.style.display = '';
+      } else {
+        rowRef.style.display = 'none';
+      }
+
+      if (!resp.atributos || resp.atributos.length === 0) {
+        // Sem atributos: ocultar tabela mas mantém o select de referências visível se houver
+        tabelaWrapper.style.display = 'none';
+        return;
+      }
+
+      exameTemReferencia = resp.exame_tem_referencia || false;
+      itensExame = resp.atributos.map(a => ({
+        atributo_id: a.id,
+        nome: a.nome,
+        unidade: a.unidade || '',
+        tipo_dado: a.tipo_dado || '',
+        atributo_pai_id: a.atributo_pai_id ?? null,
+        ref_inicio: a.ref_inicio || '',
+        ref_fim: a.ref_fim || '',
+        resultado: '',
+      }));
+      renderizarTabelaExame();
+      tabelaWrapper.style.display = '';
+      tabelaContainer.style.display = '';
+    })
+    .catch(() => {
+      msg.style.display = 'none';
+      tabelaWrapper.style.display = 'none';
+    });
+  }
+
+  function renderizarTabelaExame() {
+    const tbody = document.getElementById('tbody-exame-atributos');
+    tbody.innerHTML = '';
+
+    // Coluna de referência visível se o exame tem referências cadastradas (qualquer espécie)
+    const numColunas = exameTemReferencia ? 3 : 2;
+
+    // Mostrar/ocultar coluna de referência no cabeçalho
+    const table = tbody.closest('table');
+    const thRef = table.querySelector('thead tr th:nth-child(3)');
+    if (thRef) {
+      thRef.style.display = exameTemReferencia ? '' : 'none';
+    }
+
+    itensExame.forEach((item, idx) => {
+      const tr = document.createElement('tr');
+
+      // Linha de grupo: sem pai e tem filhos
+      const ePai = item.atributo_pai_id === null;
+      const temFilhos = ePai && itensExame.some(i => i.atributo_pai_id === item.atributo_id);
+      if (temFilhos) {
+        tr.innerHTML = `<td colspan="${numColunas}"><strong>${item.nome}</strong></td>`;
+        tbody.appendChild(tr);
+        return;
+      }
+
+      // Referência formatada: "início – fim unidade"
+      let refTexto = '';
+      if (item.ref_inicio && item.ref_fim) {
+        refTexto = `${item.ref_inicio} – ${item.ref_fim}`;
+        if (item.unidade) refTexto += ' ' + item.unidade;
+      } else if (item.ref_inicio) {
+        refTexto = item.ref_inicio;
+        if (item.unidade) refTexto += ' ' + item.unidade;
+      } else if (item.ref_fim) {
+        refTexto = item.ref_fim;
+        if (item.unidade) refTexto += ' ' + item.unidade;
+      }
+
+      const inputType = (item.tipo_dado === 'decimal' || item.tipo_dado === 'inteiro') ? 'number' : 'text';
+      const stepAttr = item.tipo_dado === 'decimal' ? 'step="any"' : '';
+      const indent = !ePai ? '&nbsp;&nbsp;&nbsp;&nbsp;' : '';
+
+      const tdRef = exameTemReferencia
+        ? `<td class="text-secondary" style="white-space:nowrap;vertical-align:middle;display:table-cell;padding-left:16px;">${refTexto}</td>`
+        : '';
+
+      tr.innerHTML = `
+        <td style="vertical-align:middle;">${indent}${item.nome}</td>
+        <td style="vertical-align:middle; width:180px;">
+          <div class="input-group">
+            <input type="${inputType}" ${stepAttr} class="form-control"
+              value="${item.resultado}"
+              onchange="itensExame[${idx}].resultado=this.value">
+            ${item.unidade ? `<span class="input-group-text">${item.unidade}</span>` : ''}
+          </div>
+        </td>
+        ${tdRef}
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ── File upload ──
   fileInputExame?.addEventListener('change', function(e) {
     const files = Array.from(e.target.files);
     files.forEach(file => {
@@ -95,18 +361,32 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInputExame.value = '';
   });
 
+  // ── Salvar ──
   document.getElementById('save-exame')?.addEventListener('click', function() {
-    const tipo = document.getElementById('tipo-exame').value;
-    const nome = document.getElementById('nome-exame').value;
-    if (!tipo || !nome) {
-      showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
+    const select = document.getElementById('select-exame-prontuario');
+    const exameCadastroId = select.value;
+    const exameNome = select.options[select.selectedIndex]?.dataset.nome || select.options[select.selectedIndex]?.text || '';
+
+    if (!exameCadastroId) {
+      showDangerModal('Erro de Validação', 'Selecione um exame');
       return;
     }
 
     const formData = new FormData();
-    formData.append('tipo', tipo);
-    formData.append('nome', nome);
-    formData.append('resultado', document.getElementById('resultado-exame').value);
+    formData.append('exame_cadastro_id', exameCadastroId);
+    formData.append('nome', exameNome);
+    formData.append('tipo', '');
+    formData.append('resultado', '');
+    formData.append('itens_resultado', JSON.stringify(itensExame.map(i => ({
+      atributo_id: i.atributo_id,
+      nome: i.nome,
+      unidade: i.unidade,
+      resultado: i.resultado,
+      ref_inicio: i.ref_inicio,
+      ref_fim: i.ref_fim,
+    }))));
+    formData.append('conclusoes', getEditorExameContent());
+
     uploadedFilesExame.forEach(file => formData.append('arquivos', file));
 
     const datetimeSpan = document.getElementById('exame-datetime');
@@ -143,12 +423,13 @@ document.addEventListener('DOMContentLoaded', function() {
           if (timeline) timeline.innerHTML = '';
           carregarTimeline();
         } else {
-          adicionarItemTimeline('exame', nome, isoDate, `Tipo: ${tipo}`, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+          adicionarItemTimeline('exame', exameNome, isoDate, exameNome, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
         }
         hideAllForms();
         showSuccessModal('Sucesso!', exameId ? 'Exame atualizado com sucesso!' : 'Exame salvo com sucesso!');
         uploadedFilesExame = [];
         fileBadgesExame.innerHTML = '';
+        itensExame = [];
       } else {
         showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o exame');
       }
@@ -157,5 +438,38 @@ document.addEventListener('DOMContentLoaded', function() {
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
+
+  // ── Preencher form ao editar ──
+  window._preencherFormExame = function(dados) {
+    document.getElementById('exame-id').value = dados.id || '';
+    const select = document.getElementById('select-exame-prontuario');
+    if (dados.exame_cadastro_id) {
+      select.value = dados.exame_cadastro_id;
+    }
+    if (select.value) {
+      carregarAtributosExameProntuario();
+      const tentarPreencher = (tentativas) => {
+        setTimeout(() => {
+          if (itensExame.length > 0) {
+            try {
+              const itensExistentes = dados.itens_resultado ? JSON.parse(dados.itens_resultado) : [];
+              itensExistentes.forEach(ie => {
+                const idx = itensExame.findIndex(i => i.atributo_id === ie.atributo_id);
+                if (idx >= 0) itensExame[idx].resultado = ie.resultado || '';
+              });
+              renderizarTabelaExame();
+            } catch(e) {}
+          } else if (tentativas > 0) {
+            tentarPreencher(tentativas - 1);
+          }
+        }, 500);
+      };
+      tentarPreencher(6);
+    }
+    if (dados.conclusoes) {
+      setTimeout(() => setEditorExameContent(dados.conclusoes), 1000);
+    }
+  };
 });
 </script>
+

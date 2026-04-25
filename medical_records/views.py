@@ -134,7 +134,7 @@ def atendimento_list(request):
 @login_required
 def animal_records(request, pet_id):
     """Página de prontuário do animal."""
-    from cadastros.models import DadosUnidade
+    from cadastros.models import DadosUnidade, Exame as ExameCadastro
     
     pet = get_object_or_404(Pet, id=pet_id)
     
@@ -144,10 +144,13 @@ def animal_records(request, pet_id):
     except DadosUnidade.DoesNotExist:
         clinica = None
     
+    exames_cadastro = ExameCadastro.objects.filter(ativo=True).order_by('nome')
+    
     context = {
         'pet': pet,
         'cliente': pet.tutor,
         'clinica': clinica,
+        'exames_cadastro': exames_cadastro,
     }
     
     return render(request, 'medical_records/atendimento_clinico_form.html', context)
@@ -163,7 +166,8 @@ from datetime import datetime
 import json
 from .models import (
     Atendimento, Peso, Patologia, Documento, Exame, ExameArquivo,
-    Foto, FotoArquivo, VacinaRegistro, Receita, Observacao, Video, Internacao
+    Foto, FotoArquivo, VacinaRegistro, Receita, Observacao, Video, Internacao,
+    ProtocoloVacinaRegistro, DoseVacinaRegistro
 )
 
 
@@ -375,6 +379,7 @@ def salvar_documento(request, pet_id):
 def salvar_exame(request, pet_id):
     """Salvar exame"""
     try:
+        from cadastros.models import Exame as ExameCadastro
         pet = get_object_or_404(Pet, id=pet_id)
         
         data_hora_str = request.POST.get('data_hora')
@@ -383,23 +388,31 @@ def salvar_exame(request, pet_id):
         else:
             data_hora = timezone.now()
         
+        exame_cadastro_id = request.POST.get('exame_cadastro_id') or None
+        exame_cadastro = None
+        nome = request.POST.get('nome', '')
+        if exame_cadastro_id:
+            exame_cadastro = ExameCadastro.objects.filter(pk=exame_cadastro_id).first()
+            if exame_cadastro:
+                nome = exame_cadastro.nome
+        
         exame_id = request.POST.get('exame_id')
+        campos = dict(
+            data_hora=data_hora,
+            tipo=request.POST.get('tipo', ''),
+            nome=nome,
+            resultado=request.POST.get('resultado', ''),
+            exame_cadastro=exame_cadastro,
+            itens_resultado=request.POST.get('itens_resultado', ''),
+            conclusoes=request.POST.get('conclusoes', ''),
+        )
         if exame_id:
             exame = get_object_or_404(Exame, id=exame_id, pet=pet)
-            exame.data_hora = data_hora
-            exame.tipo = request.POST.get('tipo', '')
-            exame.nome = request.POST.get('nome')
-            exame.resultado = request.POST.get('resultado', '')
+            for k, v in campos.items():
+                setattr(exame, k, v)
             exame.save()
         else:
-            exame = Exame.objects.create(
-                pet=pet,
-                data_hora=data_hora,
-                tipo=request.POST.get('tipo', ''),
-                nome=request.POST.get('nome'),
-                resultado=request.POST.get('resultado', ''),
-                usuario=request.user
-            )
+            exame = Exame.objects.create(pet=pet, usuario=request.user, **campos)
 
         # Processar arquivos múltiplos (sempre adiciona, não substitui)
         arquivos = request.FILES.getlist('arquivos')
@@ -420,6 +433,95 @@ def salvar_exame(request, pet_id):
             'success': False,
             'error': str(e)
         }, status=400)
+
+
+@require_http_methods(["GET"])
+@login_required
+def obter_atributos_exame(request, pet_id, exame_id):
+    """Retorna atributos de um exame com os valores de referência para a espécie/idade do pet."""
+    try:
+        from cadastros.models import Exame as ExameCadastro, AtributoExame, ReferenciaExame
+        from datetime import date
+
+        pet = get_object_or_404(Pet, id=pet_id)
+        exame_cadastro = get_object_or_404(ExameCadastro, id=exame_id, ativo=True)
+
+        # Calcular idade em meses
+        idade_meses = 0
+        if pet.data_nascimento:
+            hoje = date.today()
+            idade_meses = (hoje.year - pet.data_nascimento.year) * 12 + (hoje.month - pet.data_nascimento.month)
+
+        # Espécie do pet (via raça)
+        especie_id = None
+        if pet.especie_id:
+            especie_id = pet.especie_id
+        elif hasattr(pet, 'raca') and pet.raca:
+            especie_id = pet.raca.especie_id
+
+        # Listar todas as referências do exame
+        todas_referencias = list(
+            ReferenciaExame.objects.filter(exame_id=exame_id)
+            .order_by('especie__nome', 'nome')
+            .values('id', 'nome')
+        )
+        exame_tem_referencia = len(todas_referencias) > 0
+
+        # Determinar referência a usar: por referencia_id explícito ou auto-match espécie/idade
+        referencia_id_param = request.GET.get('referencia_id')
+        referencia = None
+        if referencia_id_param:
+            referencia = ReferenciaExame.objects.filter(
+                id=referencia_id_param, exame_id=exame_id
+            ).prefetch_related('itens__atributo').first()
+        if not referencia and especie_id:
+            referencia = ReferenciaExame.objects.filter(
+                exame_id=exame_id,
+                especie_id=especie_id,
+                idade_inicial__lte=idade_meses,
+                idade_final__gte=idade_meses,
+            ).prefetch_related('itens__atributo').first()
+        # Fallback: se ainda sem referência e não havia parâmetro explícito, usar a primeira disponível
+        if not referencia and not referencia_id_param:
+            referencia = ReferenciaExame.objects.filter(
+                exame_id=exame_id
+            ).prefetch_related('itens__atributo').order_by('id').first()
+
+        # Mapear itens da referência por atributo_id
+        ref_map = {}
+        if referencia:
+            for item in referencia.itens.all():
+                ref_map[item.atributo_id] = {
+                    'ref_inicio': item.ref_inicio or '',
+                    'ref_fim': item.ref_fim or '',
+                }
+
+        atributos = AtributoExame.objects.filter(exame_id=exame_id, ativo=True).order_by('ordem', 'nome')
+        resultado = []
+        for a in atributos:
+            ref = ref_map.get(a.id, {})
+            resultado.append({
+                'id': a.id,
+                'nome': a.nome,
+                'unidade': a.unidade or '',
+                'tipo_dado': a.tipo_dado,
+                'atributo_pai_id': a.atributo_pai_id,
+                'ref_inicio': ref.get('ref_inicio', ''),
+                'ref_fim': ref.get('ref_fim', ''),
+            })
+
+        return JsonResponse({
+            'success': True,
+            'exame_nome': exame_cadastro.nome,
+            'referencia_id': referencia.id if referencia else None,
+            'referencia_nome': referencia.nome if referencia else '',
+            'exame_tem_referencia': exame_tem_referencia,
+            'referencias': todas_referencias,
+            'atributos': resultado,
+        })
+
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
 @require_http_methods(["POST"])
@@ -450,6 +552,11 @@ def salvar_fotos(request, pet_id):
                 descricao=request.POST.get('descricao', ''),
                 usuario=request.user
             )
+
+        # Processar múltiplos arquivos a remover
+        ids_remover = request.POST.getlist('remover_arquivo')
+        if ids_remover:
+            FotoArquivo.objects.filter(id__in=ids_remover, foto=foto).delete()
 
         # Processar múltiplas fotos (sempre adiciona, não substitui)
         arquivos = request.FILES.getlist('arquivos')
@@ -633,6 +740,10 @@ def salvar_video(request, pet_id):
             video.data_hora = data_hora
             video.titulo = request.POST.get('titulo')
             video.descricao = request.POST.get('descricao', '')
+            remover_arquivo = request.POST.get('remover_arquivo')
+            if remover_arquivo and video.arquivo:
+                video.arquivo.delete(save=False)
+                video.arquivo = ''
             if 'arquivo' in request.FILES:
                 video.arquivo = request.FILES['arquivo']
             video.save()
@@ -808,12 +919,13 @@ def listar_timeline(request, pet_id):
                 'usuario_avatar': documento.usuario.userprofile.avatar.url if hasattr(documento.usuario, 'userprofile') and documento.usuario.userprofile.avatar else None
             })
         
-        for exame in Exame.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+        for exame in Exame.objects.filter(pet=pet).select_related('usuario', 'exame_cadastro').order_by('-data_hora'):
+            exame_titulo = exame.nome or (exame.exame_cadastro.nome if exame.exame_cadastro else '') or exame.tipo or 'Exame'
             registros.append({
                 'tipo': 'exame',
                 'id': exame.id,
-                'titulo': exame.nome,
-                'descricao': f'Tipo: {exame.tipo}',
+                'titulo': exame_titulo,
+                'descricao': exame_titulo,
                 'data': timezone.localtime(exame.data_hora).isoformat(),
                 'usuario': exame.usuario.get_full_name() or exame.usuario.username,
                 'usuario_avatar': exame.usuario.userprofile.avatar.url if hasattr(exame.usuario, 'userprofile') and exame.usuario.userprofile.avatar else None
@@ -825,7 +937,7 @@ def listar_timeline(request, pet_id):
                 'tipo': 'fotos',
                 'id': foto.id,
                 'titulo': foto.titulo,
-                'descricao': f'{num_arquivos} foto(s)',
+                'descricao': foto.titulo,
                 'data': timezone.localtime(foto.data_hora).isoformat(),
                 'usuario': foto.usuario.get_full_name() or foto.usuario.username,
                 'usuario_avatar': foto.usuario.userprofile.avatar.url if hasattr(foto.usuario, 'userprofile') and foto.usuario.userprofile.avatar else None
@@ -869,7 +981,7 @@ def listar_timeline(request, pet_id):
                 'tipo': 'video',
                 'id': video.id,
                 'titulo': video.titulo,
-                'descricao': video.arquivo.name if video.arquivo else 'Vídeo',
+                'descricao': video.titulo,
                 'data': timezone.localtime(video.data_hora).isoformat(),
                 'usuario': video.usuario.get_full_name() or video.usuario.username,
                 'usuario_avatar': video.usuario.userprofile.avatar.url if hasattr(video.usuario, 'userprofile') and video.usuario.userprofile.avatar else None
@@ -886,6 +998,58 @@ def listar_timeline(request, pet_id):
                 'usuario_avatar': internacao.usuario.userprofile.avatar.url if hasattr(internacao.usuario, 'userprofile') and internacao.usuario.userprofile.avatar else None
             })
         
+        # Protocolos de vacina — um item por protocolo (não por dose)
+        from datetime import datetime as _dt, date as _date
+        today = timezone.localdate()
+        for reg in ProtocoloVacinaRegistro.objects.filter(pet=pet).select_related(
+            'protocolo__vacina', 'usuario'
+        ).prefetch_related('doses').order_by('-data_inicial'):
+            usuario_obj = reg.usuario
+            vacina_nome = reg.protocolo.vacina.nome
+            doses = list(reg.doses.all())
+
+            # Calcular status do protocolo a partir das doses e do status do registro
+            if reg.status == 'interrompida':
+                status_display = 'Interrompida'
+            elif not doses:
+                status_display = 'Programada'
+            elif all(d.data_aplicacao for d in doses):
+                status_display = 'Aplicada'
+            elif any(not d.data_aplicacao and d.data_programada < today for d in doses):
+                status_display = 'Atrasada'
+            else:
+                status_display = 'Programada'
+
+            # Dose de referência para o título (próxima pendente ou última aplicada)
+            doses_nao_aplicadas = [d for d in doses if not d.data_aplicacao]
+            if doses_nao_aplicadas:
+                proximas = [d for d in doses_nao_aplicadas if d.data_programada >= today]
+                dose_ref = min(proximas, key=lambda d: d.numero_dose) if proximas else min(doses_nao_aplicadas, key=lambda d: d.numero_dose)
+            elif doses:
+                dose_ref = max(doses, key=lambda d: d.numero_dose)
+            else:
+                dose_ref = None
+
+            titulo_display = f'{vacina_nome} {dose_ref.numero_dose}° dose' if dose_ref else vacina_nome
+
+            # Data do item: mais recente entre aplicadas; senão criado_em (horário de adicionado)
+            datas_aplicacao = [d.data_aplicacao for d in doses if d.data_aplicacao]
+            if datas_aplicacao:
+                ref_dt = timezone.localtime(max(datas_aplicacao)).isoformat()
+            else:
+                ref_dt = timezone.localtime(reg.criado_em).isoformat()
+
+            registros.append({
+                'tipo': 'vacina-dose',
+                'id': reg.id,
+                'titulo': titulo_display,
+                'descricao': status_display,
+                'data': ref_dt,
+                'usuario': usuario_obj.get_full_name() or usuario_obj.username,
+                'usuario_avatar': usuario_obj.userprofile.avatar.url if hasattr(usuario_obj, 'userprofile') and usuario_obj.userprofile.avatar else None,
+                'status': status_display.lower(),
+            })
+
         # Ordenar todos os registros por data (mais recente primeiro)
         registros.sort(key=lambda x: x['data'], reverse=True)
         
@@ -976,12 +1140,20 @@ def obter_registro(request, pet_id, tipo, registro_id):
             dados.update({
                 'tipo_exame': registro.tipo or '',
                 'nome': registro.nome,
-                'resultado': registro.resultado or ''
+                'resultado': registro.resultado or '',
+                'exame_cadastro_id': registro.exame_cadastro_id or '',
+                'itens_resultado': registro.itens_resultado or '',
+                'conclusoes': registro.conclusoes or '',
             })
         elif tipo == 'fotos':
+            arquivos_fotos = [
+                {'id': a.id, 'url': a.arquivo.url, 'nome': a.arquivo.name.split('/')[-1]}
+                for a in registro.arquivos.all()
+            ]
             dados.update({
                 'titulo': registro.titulo,
-                'descricao': registro.descricao or ''
+                'descricao': registro.descricao or '',
+                'arquivos': arquivos_fotos,
             })
         elif tipo == 'vacina':
             dados.update({
@@ -1005,9 +1177,19 @@ def obter_registro(request, pet_id, tipo, registro_id):
                 'categoria': registro.categoria or ''
             })
         elif tipo == 'video':
+            try:
+                arquivo_url = registro.arquivo.url if registro.arquivo else ''
+            except Exception:
+                arquivo_url = ''
+            try:
+                arquivo_nome = registro.arquivo.name.split('/')[-1] if registro.arquivo else ''
+            except Exception:
+                arquivo_nome = ''
             dados.update({
                 'titulo': registro.titulo,
-                'descricao': registro.descricao or ''
+                'descricao': registro.descricao or '',
+                'arquivo_url': arquivo_url,
+                'arquivo_nome': arquivo_nome,
             })
         elif tipo == 'internacao':
             dados.update({
@@ -1283,4 +1465,262 @@ def servir_pdf_temp_view(request, token, filename):
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{filename}"'
     return response
+
+
+# ========== VACCINE PROTOCOL VIEWS ==========
+
+@require_http_methods(["GET"])
+@login_required
+def listar_tipos_vacina(request, pet_id):
+    """Retorna os tipos de vacina distintos que possuem protocolos cadastrados"""
+    from cadastros.models import Vacina
+    tipos_com_protocolo = (
+        Vacina.objects
+        .filter(ativo=True, protocolos__isnull=False)
+        .values_list('tipo', flat=True)
+        .distinct()
+        .order_by('tipo')
+    )
+    # Mapeia valor -> label usando as choices do model
+    choices_map = dict(Vacina.TIPO_CHOICES)
+    resultado = [
+        {'value': t, 'label': choices_map.get(t, t)}
+        for t in tipos_com_protocolo
+    ]
+    return JsonResponse({'success': True, 'tipos': resultado})
+
+
+def listar_vacinas_disponiveis(request, pet_id):
+    """Lista vacinas e protocolos disponíveis para o pet, filtrados por tipo"""
+    from cadastros.models import Vacina
+    tipo = request.GET.get('tipo', '')
+
+    vacinas = Vacina.objects.filter(ativo=True)
+    if tipo:
+        vacinas = vacinas.filter(tipo=tipo)
+
+    resultados = []
+    for vacina in vacinas.order_by('nome'):
+        for protocolo in vacina.protocolos.order_by('nome'):
+            resultados.append({
+                'protocolo_id': protocolo.id,
+                'vacina_nome': vacina.nome,
+                'protocolo_nome': protocolo.nome,
+                'aplicacao': protocolo.aplicacao,
+                'intervalo_dias': protocolo.intervalo_dias,
+                'label': f'{vacina.nome} — {protocolo.nome}',
+            })
+
+    return JsonResponse({'success': True, 'protocolos': resultados})
+
+
+@require_http_methods(["GET"])
+@login_required
+def listar_protocolos_vacina(request, pet_id):
+    """Lista registros de protocolos de vacina do pet"""
+    pet = get_object_or_404(Pet, id=pet_id)
+    registros = ProtocoloVacinaRegistro.objects.filter(pet=pet).select_related(
+        'protocolo__vacina'
+    ).order_by('-data_inicial')
+
+    lista = []
+    for r in registros:
+        lista.append({
+            'id': r.id,
+            'vacina_nome': r.protocolo.vacina.nome,
+            'protocolo_nome': r.protocolo.nome,
+            'aplicacao': r.protocolo.aplicacao,
+            'intervalo_dias': r.protocolo.intervalo_dias,
+            'data_inicial': r.data_inicial.strftime('%d/%m/%Y'),
+            'status': r.status,
+        })
+
+    return JsonResponse({'success': True, 'registros': lista})
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_protocolo_vacina(request, pet_id):
+    """Criar novo registro de protocolo de vacina com doses"""
+    from cadastros.models import ProtocoloVacina
+    from datetime import date, timedelta
+    pet = get_object_or_404(Pet, id=pet_id)
+
+    protocolo_id = request.POST.get('protocolo_id')
+    data_inicial_str = request.POST.get('data_inicial')
+
+    if not protocolo_id or not data_inicial_str:
+        return JsonResponse({'success': False, 'error': 'Campos obrigatórios não preenchidos'}, status=400)
+
+    protocolo = get_object_or_404(ProtocoloVacina, id=protocolo_id)
+    try:
+        data_inicial = date.fromisoformat(data_inicial_str)
+    except ValueError:
+        return JsonResponse({'success': False, 'error': 'Data inválida'}, status=400)
+
+    registro = ProtocoloVacinaRegistro.objects.create(
+        pet=pet,
+        protocolo=protocolo,
+        data_inicial=data_inicial,
+        status='programada',
+        usuario=request.user,
+    )
+
+    num_doses = int(protocolo.aplicacao) if protocolo.aplicacao != 'indeterminado' else 1
+    for i in range(num_doses):
+        data_dose = data_inicial + timedelta(days=protocolo.intervalo_dias * i)
+        DoseVacinaRegistro.objects.create(
+            protocolo_registro=registro,
+            numero_dose=i + 1,
+            data_programada=data_dose,
+            status='programada',
+        )
+
+    return JsonResponse({
+        'success': True,
+        'id': registro.id,
+        'message': 'Protocolo criado com sucesso!',
+    })
+
+
+@require_http_methods(["GET"])
+@login_required
+def detalhe_protocolo_vacina(request, pet_id, protocolo_id):
+    """Detalhes de um registro de protocolo de vacina"""
+    registro = get_object_or_404(ProtocoloVacinaRegistro, id=protocolo_id, pet_id=pet_id)
+    protocolo = registro.protocolo
+
+    doses = []
+    for dose in registro.doses.all():
+        doses.append({
+            'id': dose.id,
+            'numero_dose': dose.numero_dose,
+            'data_programada': dose.data_programada.strftime('%d/%m/%Y'),
+            'data_programada_iso': dose.data_programada.strftime('%Y-%m-%d'),
+            'data_aplicacao': timezone.localtime(dose.data_aplicacao).strftime('%d/%m/%Y %H:%M') if dose.data_aplicacao else '',
+            'data_aplicacao_iso': timezone.localtime(dose.data_aplicacao).strftime('%Y-%m-%dT%H:%M') if dose.data_aplicacao else '',
+            'laboratorio': dose.laboratorio,
+            'lote': dose.lote,
+            'status': dose.status,
+        })
+
+    return JsonResponse({
+        'success': True,
+        'id': registro.id,
+        'vacina_nome': protocolo.vacina.nome,
+        'protocolo_nome': protocolo.nome,
+        'aplicacao': protocolo.aplicacao,
+        'intervalo_dias': protocolo.intervalo_dias,
+        'data_inicial': registro.data_inicial.strftime('%d/%m/%Y'),
+        'status': registro.status,
+        'doses': doses,
+    })
+
+
+@require_http_methods(["POST"])
+@login_required
+def interromper_protocolo_vacina(request, pet_id, protocolo_id):
+    """Interromper protocolo de vacina"""
+    registro = get_object_or_404(ProtocoloVacinaRegistro, id=protocolo_id, pet_id=pet_id)
+    registro.status = 'interrompida'
+    registro.save()
+    return JsonResponse({'success': True})
+
+
+@require_http_methods(["POST"])
+@login_required
+def retomar_protocolo_vacina(request, pet_id, protocolo_id):
+    """Retomar protocolo de vacina interrompido"""
+    registro = get_object_or_404(ProtocoloVacinaRegistro, id=protocolo_id, pet_id=pet_id)
+    registro.status = 'programada'
+    registro.save()
+    return JsonResponse({'success': True})
+
+
+@require_http_methods(["POST", "DELETE"])
+@login_required
+def deletar_protocolo_vacina(request, pet_id, protocolo_id):
+    """Excluir protocolo de vacina e suas doses"""
+    registro = get_object_or_404(ProtocoloVacinaRegistro, id=protocolo_id, pet_id=pet_id)
+    registro.delete()
+    return JsonResponse({'success': True})
+
+
+@require_http_methods(["POST"])
+@login_required
+def salvar_dose_vacina(request, pet_id, dose_id):
+    """Salvar dados de uma dose de vacina (aplicação, laboratório, lote)"""
+    dose = get_object_or_404(DoseVacinaRegistro, id=dose_id, protocolo_registro__pet_id=pet_id)
+
+    data_aplicacao_str = request.POST.get('data_aplicacao', '')
+    data_programada_str = request.POST.get('data_programada', '')
+    dose.laboratorio = request.POST.get('laboratorio', '')
+    dose.lote = request.POST.get('lote', '')
+
+    if data_programada_str:
+        try:
+            from datetime import date as _date
+            dose.data_programada = _date.fromisoformat(data_programada_str)
+        except ValueError:
+            pass
+
+    if data_aplicacao_str:
+        try:
+            dose.data_aplicacao = timezone.make_aware(
+                datetime.strptime(data_aplicacao_str[:16], '%Y-%m-%dT%H:%M')
+            )
+            dose.status = 'aplicada'
+        except ValueError:
+            pass
+    else:
+        dose.data_aplicacao = None
+        dose.status = 'programada'
+
+    dose.save()
+    # Retornar dados atualizados para o JS atualizar o item na timeline
+    vacina_nome = dose.protocolo_registro.protocolo.vacina.nome
+    data_display = timezone.localtime(dose.data_aplicacao).isoformat() if dose.data_aplicacao else None
+    return JsonResponse({
+        'success': True,
+        'message': 'Dose salva com sucesso!',
+        'dose_id': dose.id,
+        'vacina_nome': vacina_nome,
+        'data_aplicacao_iso': data_display,
+        'status': dose.status,
+    })
+
+
+@require_http_methods(["POST"])
+@login_required
+def excluir_dose_vacina(request, pet_id, dose_id):
+    """Excluir uma dose de vacina de um protocolo"""
+    dose = get_object_or_404(DoseVacinaRegistro, id=dose_id, protocolo_registro__pet_id=pet_id)
+    dose.delete()
+    return JsonResponse({'success': True})
+
+
+@require_http_methods(["GET"])
+@login_required
+def detalhe_dose_vacina(request, pet_id, dose_id):
+    """Detalhes de uma dose para preenchimento do formulário"""
+    dose = get_object_or_404(DoseVacinaRegistro, id=dose_id, protocolo_registro__pet_id=pet_id)
+    registro = dose.protocolo_registro
+    protocolo = registro.protocolo
+    usuario = registro.usuario
+
+    return JsonResponse({
+        'success': True,
+        'id': dose.id,
+        'protocolo_registro_id': registro.id,
+        'vacina_nome': protocolo.vacina.nome,
+        'protocolo_nome': protocolo.nome,
+        'numero_dose': dose.numero_dose,
+        'data_programada': dose.data_programada.strftime('%Y-%m-%d'),
+        'data_programada_display': dose.data_programada.strftime('%d/%m/%Y'),
+        'data_aplicacao': timezone.localtime(dose.data_aplicacao).strftime('%Y-%m-%dT%H:%M') if dose.data_aplicacao else '',
+        'laboratorio': dose.laboratorio,
+        'lote': dose.lote,
+        'status': dose.status,
+        'usuario': usuario.get_full_name() or usuario.username,
+    })
 

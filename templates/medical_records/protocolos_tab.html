@@ -1,5 +1,704 @@
-{% load static %}
-<div class="p-4">
-  <h3>Protocolos</h3>
-  <p class="text-muted">Conteúdo de protocolos em desenvolvimento...</p>
+﻿{% load static %}
+<style>
+#protocolos-lista-container .prot-item {
+  background: none;
+  border: none;
+  padding: 8px 12px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  display: block;
+  transition: background .12s;
+}
+#protocolos-lista-container .prot-item:hover {
+  background: #f3f4f6;
+}
+#protocolos-lista-container .prot-item.active {
+  background: #e8f0fe;
+  color: inherit;
+}
+#protocolos-lista-col + .col-md-8 {
+  position: relative;
+}
+#protocolos-lista-col + .col-md-8::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid rgba(0,0,0,.12);
+  pointer-events: none;
+}
+#prot-doses-tbody tr:hover {
+  background: rgba(0,0,0,.04);
+}
+#prot-doses-tbody tr.dose-tachada td {
+  text-decoration: line-through;
+  opacity: .6;
+}
+#protocolos-detail table thead th {
+  font-weight: 600;
+}
+#protocolos-detail table {
+  table-layout: fixed;
+  width: 100%;
+}
+#protocolos-detail table th,
+#protocolos-detail table td {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#protocolos-detail table th:nth-child(1),
+#protocolos-detail table td:nth-child(1) { width: 10%; }
+#protocolos-detail table th:nth-child(2),
+#protocolos-detail table td:nth-child(2) { width: 18%; }
+#protocolos-detail table th:nth-child(3),
+#protocolos-detail table td:nth-child(3) { width: 18%; }
+#protocolos-detail table th:nth-child(4),
+#protocolos-detail table td:nth-child(4) { width: 28%; }
+#protocolos-detail table th:nth-child(5),
+#protocolos-detail table td:nth-child(5) { width: 14%; }
+#protocolos-detail table th:nth-child(6),
+#protocolos-detail table td:nth-child(6) { width: 12%; }
+</style>
+<div class="row g-0" style="align-items:stretch;margin-top:-0.75rem;">
+
+  <!-- ===== COLUNA ESQUERDA: Vacinas (4 cols = 1/3) ===== -->
+  <div class="col-md-4" id="protocolos-lista-col">
+    <div id="protocolos-scroll-wrap" style="max-height:510px;overflow-y:auto;">
+      <div class="d-flex justify-content-between align-items-center px-3 pb-1">
+        <h5 class="m-0 fw-semibold" style="font-size:1.1rem;">Vacinas</h5>
+        <button type="button" class="btn btn-sm btn-link p-0 text-muted" id="btn-toggle-lista-prot" title="Recolher/Expandir">
+          <i class="ti ti-chevron-up" id="icon-toggle-lista-prot"></i>
+        </button>
+      </div>
+      <div id="protocolos-lista-inner">
+      <div id="protocolos-lista-container">
+        <!-- itens inseridos dinamicamente -->
+      </div>
+      <div id="protocolos-lista-empty" class="text-center text-muted py-4 px-3" style="display:none;">
+        <i class="ti ti-clipboard-off" style="font-size:48px;opacity:.3;"></i>
+        <p class="small mt-2 mb-0">Nenhum protocolo registrado</p>
+      </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== COLUNA DIREITA: Conteudo (8 cols = 2/3) ===== -->
+  <div class="col-md-8" style="padding-left:1rem;padding-right:1rem;min-height:510px;display:flex;flex-direction:column;margin-top:0;">
+
+    <!-- Estado vazio (padrao) -->
+    <div id="protocolos-empty-state" style="background:transparent;padding:.75rem;">
+      <div class="text-center mb-3" style="color:#206bc4;">
+        <i class="ti ti-vaccine" style="font-size:40px;opacity:.8;display:block;margin-bottom:.5rem;"></i>
+        <p class="mb-0" style="font-size:1rem;">Clique ao lado para ver detalhes do protocolo ou no botão <strong>Adicionar</strong> para incluir uma nova.</p>
+      </div>
+      <div class="d-flex gap-2 justify-content-center">
+        <a href="#" class="btn btn-secondary px-2" id="btn-voltar-historico-prot">
+          <i class="ti ti-history me-1"></i>Voltar ao Histórico
+        </a>
+        <button type="button" class="btn btn-outline-primary px-2" id="btn-adicionar-prot-empty">
+          <i class="ti ti-plus me-1"></i>Adicionar
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulario Adicionar -->
+    <div id="protocolos-add-form" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <h5 class="m-0 fw-semibold" style="font-size:1.1rem;">Adicionar</h5>
+        <button type="button" class="btn-close" id="btn-fechar-add-prot"></button>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Tipo <span class="text-danger">*</span></label>
+          <select class="form-select" id="prot-tipo-select" disabled>
+            <option value="">Carregando...</option>
+          </select>
+        </div>
+        <div class="col-12">
+          <label class="form-label">Protocolo <span class="text-danger">*</span></label>
+          <select class="form-select" id="prot-protocolo-select" disabled>
+            <option value="">Selecione o tipo primeiro...</option>
+          </select>
+          <div id="prot-protocolo-loading" class="form-text" style="display:none;">
+            <i class="ti ti-loader ti-spin"></i> Carregando...
+          </div>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Data inicial <span class="text-danger">*</span></label>
+          <input type="date" class="form-control" id="prot-data-inicial">
+        </div>
+      </div>
+
+      <div class="d-flex gap-2 mt-4">
+        <button type="button" class="btn btn-secondary px-2" id="btn-cancelar-prot">
+          <i class="ti ti-x me-1"></i>Cancelar
+        </button>
+        <button type="button" class="btn btn-outline-primary px-2" id="btn-salvar-prot">
+          <i class="ti ti-check me-1"></i>Salvar
+        </button>
+      </div>
+    </div>
+
+    <!-- Formulario Dose (click no item da lista) -->
+    <div id="protocolos-dose-form" style="display:none;">
+      <div class="d-flex justify-content-end mb-1">
+        <button type="button" class="btn-close" id="btn-fechar-dose-form"></button>
+      </div>
+      <h5 class="fw-semibold mb-3" id="prot-dose-form-title" style="font-size:1.05rem;min-height:1.5em;"></h5>
+      <div class="row g-3">
+        <div class="col-md-3">
+          <label class="form-label">Programação</label>
+          <input type="date" class="form-control" id="prot-dose-data-programada" readonly>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Aplicação</label>
+          <input type="datetime-local" class="form-control" id="prot-dose-data-aplicacao">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Laboratório</label>
+          <input type="text" class="form-control" id="prot-dose-laboratorio" placeholder="ex: Zoetis">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Lote</label>
+          <input type="text" class="form-control" id="prot-dose-lote" placeholder="ex: ABC1234">
+        </div>
+      </div>
+      <div class="d-flex gap-2 mt-4">
+        <button type="button" class="btn btn-outline-primary px-2" id="btn-salvar-dose-form"><i class="ti ti-check me-1"></i>Salvar</button>
+        <button type="button" class="btn btn-secondary px-2" id="btn-cancelar-dose-form"><i class="ti ti-x me-1"></i>Cancelar</button>
+        <button type="button" class="btn btn-secondary px-2" id="btn-ver-protocolo">
+          <i class="ti ti-clipboard-list me-1"></i>Ver Protocolos
+        </button>
+        <button type="button" class="btn btn-danger px-2 ms-auto" id="btn-excluir-dose-form"><i class="ti ti-trash me-1"></i>Excluir</button>
+      </div>
+    </div>
+
+    <!-- Detalhe do Protocolo -->
+    <div id="protocolos-detail" style="display:none;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="m-0" id="prot-detail-title" style="font-size:1.1rem;"></h5>
+          <p class="text-muted small mb-0" id="prot-info-doses"></p>
+        </div>
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th><strong>Dose</strong></th>
+            <th><strong>Programação</strong></th>
+            <th><strong>Aplicação</strong></th>
+            <th><strong>Laboratório</strong></th>
+            <th><strong>Lote</strong></th>
+            <th><strong>Ações</strong></th>
+          </tr>
+        </thead>
+        <tbody id="prot-doses-tbody"></tbody>
+      </table>
+
+      <div class="d-flex gap-2 mt-3">
+        <button type="button" class="btn btn-secondary px-2" id="btn-fechar-detail-prot">
+          <i class="ti ti-x me-1"></i>Fechar
+        </button>
+        <div class="ms-auto d-flex gap-2">
+          <button type="button" class="btn btn-outline-primary px-2" id="btn-interromper-prot">
+            <i class="ti ti-ban me-1"></i>Interromper
+          </button>
+          <button type="button" class="btn btn-outline-primary px-2" id="btn-retomar-prot" style="display:none;">
+            <i class="ti ti-refresh me-1"></i>Retomar
+          </button>
+          <button type="button" class="btn btn-danger px-2" id="btn-excluir-prot">
+            <i class="ti ti-trash me-1"></i>Excluir
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /col direita -->
+
+</div><!-- /row -->
+
+<!-- Modal: confirmar interromper protocolo -->
+<div class="modal modal-blur fade" id="modal-confirm-interromper-prot" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-warning"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-warning icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75" /></svg>
+        <h3>Interromper protocolo?</h3>
+        <div class="text-muted">As doses não aplicadas serão exibidas como interrompidas.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-warning w-100" id="confirm-interromper-prot-btn">Interromper</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
+
+<!-- Modal: confirmar excluir protocolo -->
+<div class="modal modal-blur fade" id="modal-confirm-excluir-prot" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-danger"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-danger icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 9v2m0 4v.01" /><path d="M5 19h14a2 2 0 0 0 1.84 -2.75l-7.1 -12.25a2 2 0 0 0 -3.5 0l-7.1 12.25a2 2 0 0 0 1.75 2.75" /></svg>
+        <h3>Excluir protocolo?</h3>
+        <div class="text-muted">O protocolo e todas as doses ser&atilde;o exclu&iacute;dos. Esta a&ccedil;&atilde;o n&atilde;o pode ser desfeita.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-danger w-100" id="confirm-excluir-prot-btn">Excluir</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmar retomar protocolo -->
+<div class="modal modal-blur fade" id="modal-confirm-retomar-prot" tabindex="-1" role="dialog" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      <div class="modal-status bg-success"></div>
+      <div class="modal-body text-center py-4">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon mb-2 text-success icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" /><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" /></svg>
+        <h3>Retomar protocolo?</h3>
+        <div class="text-muted">O protocolo voltará ao status programado.</div>
+      </div>
+      <div class="modal-footer">
+        <div class="w-100">
+          <div class="row">
+            <div class="col"><button type="button" class="btn w-100" data-bs-dismiss="modal">Cancelar</button></div>
+            <div class="col"><button type="button" class="btn btn-success w-100" id="confirm-retomar-prot-btn">Retomar</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const petId = window.CURRENT_PET_ID;
+  let currentProtocoloId = null;
+
+  const listaContainer = document.getElementById('protocolos-lista-container');
+  const listaEmpty     = document.getElementById('protocolos-lista-empty');
+  const emptyState     = document.getElementById('protocolos-empty-state');
+  const addForm        = document.getElementById('protocolos-add-form');
+  const doseForm       = document.getElementById('protocolos-dose-form');
+  const detailPanel    = document.getElementById('protocolos-detail');
+  const tipoSelect     = document.getElementById('prot-tipo-select');
+  const protSelect     = document.getElementById('prot-protocolo-select');
+  const protLoading    = document.getElementById('prot-protocolo-loading');
+  let currentDoseId    = null;
+
+  function showEmpty() {
+    emptyState.style.display  = '';
+    addForm.style.display     = 'none';
+    doseForm.style.display    = 'none';
+    detailPanel.style.display = 'none';
+  }
+  function showAddForm() {
+    emptyState.style.display  = 'none';
+    addForm.style.display     = '';
+    doseForm.style.display    = 'none';
+    detailPanel.style.display = 'none';
+  }
+  function showDoseForm() {
+    emptyState.style.display  = 'none';
+    addForm.style.display     = 'none';
+    doseForm.style.display    = '';
+    detailPanel.style.display = 'none';
+  }
+  function showDetail() {
+    emptyState.style.display  = 'none';
+    addForm.style.display     = 'none';
+    doseForm.style.display    = 'none';
+    detailPanel.style.display = '';
+  }
+
+  function carregarLista() {
+    fetch(`/atendimento/api/${petId}/protocolos-vacina/`, {
+      credentials: 'same-origin',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      listaContainer.innerHTML = '';
+      if (!data.success || !data.registros.length) {
+        listaEmpty.style.display = '';
+        return;
+      }
+      listaEmpty.style.display = 'none';
+      data.registros.forEach(r => listaContainer.appendChild(criarItemLista(r)));
+    })
+    .catch(err => console.error('Erro ao carregar protocolos:', err));
+  }
+
+  function criarItemLista(r) {
+    const badgeColor = r.status === 'programada' ? '#0d6efd' : (r.status === 'interrompida' ? '#dc3545' : '#28a745');
+    const badgeLabel = r.status === 'programada' ? 'Programada' : (r.status === 'interrompida' ? 'Interrompida' : 'Concluida');
+    const infoStr = r.aplicacao !== 'indeterminado'
+      ? `${r.aplicacao}x / ${r.intervalo_dias}d`
+      : `a cada ${r.intervalo_dias}d`;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'prot-item';
+    btn.dataset.id = r.id;
+    btn.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">
+        <div style="min-width:0;">
+          <div class="fw-semibold text-truncate" style="font-size:.875rem;">${r.vacina_nome}</div>
+          <div class="text-truncate" style="font-size:.8rem;color:#6c757d;">${r.protocolo_nome}</div>
+        </div>
+        <div style="flex-shrink:0;text-align:right;">
+          <div style="font-size:.75rem;color:#6c757d;">${r.data_inicial}</div>
+          <span class="badge" style="background:${badgeColor};color:#fff;font-size:.65rem;">${badgeLabel}</span>
+        </div>
+      </div>
+    `;
+    btn.addEventListener('click', () => abrirDetalhe(r.id));
+    return btn;
+  }
+
+  function abrirDetalhe(id) {
+    currentProtocoloId = id;
+    document.querySelectorAll('#protocolos-lista-container .prot-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.id == id);
+    });
+
+    fetch(`/atendimento/api/${petId}/protocolos-vacina/${id}/`, {
+      credentials: 'same-origin',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) return;
+
+      document.getElementById('prot-detail-title').textContent = data.vacina_nome + (data.protocolo_nome ? ' - ' + data.protocolo_nome : '');
+
+      const numDoses = data.aplicacao !== 'indeterminado' ? parseInt(data.aplicacao) : null;
+      document.getElementById('prot-info-doses').textContent = numDoses
+        ? `${numDoses} dose${numDoses > 1 ? 's' : ''} a cada ${data.intervalo_dias} dias`
+        : `Intervalo de ${data.intervalo_dias} dias`;
+
+      const today = new Date(); today.setHours(0,0,0,0);
+      const tbody = document.getElementById('prot-doses-tbody');
+      tbody.innerHTML = '';
+      const isInterrompida = data.status === 'interrompida';
+      // Toggle buttons based on status
+      document.getElementById('btn-interromper-prot').style.display = isInterrompida ? 'none' : '';
+      document.getElementById('btn-retomar-prot').style.display = isInterrompida ? '' : 'none';
+      data.doses.forEach(dose => {
+        const prog = dose.data_programada_iso ? new Date(dose.data_programada_iso + 'T00:00:00') : null;
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.onclick = function() { window._abrirFormDose(dose.id); };
+        if (dose.data_aplicacao_iso) {
+          tr.style.color = '#28a745'; tr.style.fontWeight = '600';
+        } else if (isInterrompida) {
+          tr.classList.add('dose-tachada');
+        }
+        tr.innerHTML = `
+          <td>${dose.numero_dose}ª</td>
+          <td>${dose.data_programada}</td>
+          <td>${(function() {
+            if (!dose.data_aplicacao_iso) return '-';
+            const prog = dose.data_programada_iso ? new Date(dose.data_programada_iso + 'T00:00:00') : null;
+            const aplic = new Date(dose.data_aplicacao_iso);
+            if (!prog) return dose.data_aplicacao;
+            const diffMs = aplic.setHours(0,0,0,0) - prog.setHours(0,0,0,0);
+            const diffDias = Math.round(diffMs / 86400000);
+            if (diffDias === 0) return dose.data_aplicacao;
+            const sinal = diffDias > 0 ? '+' : '';
+            return `${dose.data_aplicacao} <span class="badge" style="background:#6c757d;color:#fff;font-size:.7em;">${sinal}${diffDias}d</span>`;
+          })()}</td>
+          <td>${dose.laboratorio || '-'}</td>
+          <td>${dose.lote || '-'}</td>
+          <td onclick="event.stopPropagation()">
+            <button class="btn btn-sm btn-icon btn-ghost-secondary" title="Editar"
+              onclick="window._abrirFormDose(${dose.id})">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1" /><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z" /><path d="M16 5l3 3" /></svg>
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      showDetail();
+    })
+    .catch(err => console.error('Erro ao carregar detalhe:', err));
+  }
+
+  window._abrirFormDose = function(doseId) {
+    const tab = document.querySelector('a[href="#tab-historico"]');
+    if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+    setTimeout(() => {
+      if (typeof window.showForm === 'function') window.showForm('vacina-dose', { id: doseId, _isDoseId: true });
+    }, 100);
+  };
+
+  window._abrirAddProtocolo = function() {
+    carregarLista();
+    abrirAddForm();
+  };
+
+  window._abrirProtocoloNaAba = function(protocoloRegistroId) {
+    const tab = document.querySelector('a[href="#tab-protocolos"]');
+    if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+    setTimeout(() => { carregarLista(); setTimeout(() => abrirDetalhe(protocoloRegistroId), 200); }, 150);
+  };
+
+  // ===== CARREGAR TIPOS DA API =====
+  function carregarTipos() {
+    fetch(`/atendimento/api/${petId}/vacinas-tipos/`, {
+      credentials: 'same-origin',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      tipoSelect.innerHTML = '<option value="">Selecione o tipo...</option>';
+      if (data.success && data.tipos.length) {
+        data.tipos.forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.value;
+          opt.textContent = t.label;
+          tipoSelect.appendChild(opt);
+        });
+        tipoSelect.disabled = false;
+      } else {
+        tipoSelect.innerHTML = '<option value="">Nenhum tipo cadastrado</option>';
+      }
+    })
+    .catch(() => {
+      tipoSelect.innerHTML = '<option value="">Erro ao carregar tipos</option>';
+    });
+  }
+
+  tipoSelect.addEventListener('change', function() {
+    const tipo = this.value;
+    protSelect.innerHTML = '<option value="">Selecione...</option>';
+    protSelect.disabled = true;
+    if (!tipo) return;
+
+    protLoading.style.display = '';
+    fetch(`/atendimento/api/${petId}/vacinas-disponiveis/?tipo=${encodeURIComponent(tipo)}`, {
+      credentials: 'same-origin',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      protLoading.style.display = 'none';
+      if (data.success && data.protocolos.length) {
+        data.protocolos.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.protocolo_id;
+          opt.textContent = `${p.vacina_nome} — ${p.protocolo_nome}`;
+          opt.dataset.aplicacao = p.aplicacao;
+          opt.dataset.intervalo = p.intervalo_dias;
+          protSelect.appendChild(opt);
+        });
+        protSelect.disabled = false;
+      } else {
+        protSelect.innerHTML = '<option value="">Nenhum protocolo encontrado para este tipo</option>';
+      }
+    })
+    .catch(() => { protLoading.style.display = 'none'; });
+  });
+
+  document.getElementById('btn-salvar-prot').addEventListener('click', function() {
+    const tipo        = tipoSelect.value;
+    const protId      = protSelect.value;
+    const dataInicial = document.getElementById('prot-data-inicial').value;
+
+    if (!tipo || !protId || !dataInicial) {
+      if (typeof showDangerModal === 'function') showDangerModal('Campos obrigatorios', 'Preencha Tipo, Protocolo e Data inicial.');
+      else alert('Preencha Tipo, Protocolo e Data inicial.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('protocolo_id', protId);
+    formData.append('data_inicial', dataInicial);
+
+    fetch(`/atendimento/api/${petId}/protocolos-vacina/salvar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        carregarLista();
+        if (typeof carregarTimeline === 'function') carregarTimeline();
+        setTimeout(() => abrirDetalhe(data.id), 300);
+      } else {
+        if (typeof showDangerModal === 'function') showDangerModal('Erro', data.error || 'Erro ao salvar protocolo.');
+        else alert(data.error || 'Erro ao salvar protocolo.');
+      }
+    })
+    .catch(err => console.error('Erro ao salvar protocolo:', err));
+  });
+
+  function abrirAddForm() {
+    carregarTipos();
+    protSelect.innerHTML = '<option value="">Selecione o tipo primeiro...</option>';
+    protSelect.disabled = true;
+    document.getElementById('prot-data-inicial').value = new Date().toISOString().split('T')[0];
+    showAddForm();
+  }
+
+  document.getElementById('btn-adicionar-prot-empty').addEventListener('click', function(e) { e.preventDefault(); abrirAddForm(); });
+  document.getElementById('btn-cancelar-prot').addEventListener('click', showEmpty);
+  document.getElementById('btn-fechar-add-prot').addEventListener('click', showEmpty);
+  document.getElementById('btn-fechar-detail-prot').addEventListener('click', showEmpty);
+  document.getElementById('btn-fechar-dose-form').addEventListener('click', showEmpty);
+  document.getElementById('btn-cancelar-dose-form').addEventListener('click', showEmpty);
+  document.getElementById('btn-ver-protocolo').addEventListener('click', showDetail);
+
+  document.getElementById('btn-excluir-dose-form').addEventListener('click', function() {
+    if (!currentDoseId) return;
+    if (typeof confirmDelete !== 'function') {
+      if (!confirm('Excluir esta dose? Esta ação não pode ser desfeita.')) return;
+      executarExcluirDose();
+    } else {
+      confirmDelete(executarExcluirDose);
+    }
+    function executarExcluirDose() {
+      fetch(`/atendimento/api/${petId}/dose-vacina/${currentDoseId}/excluir/`, {
+        method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }, body: new FormData(), credentials: 'same-origin'
+      })
+      .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(data => {
+        if (data.success) {
+          carregarLista();
+          if (typeof carregarTimeline === 'function') carregarTimeline();
+          showEmpty();
+          currentDoseId = null;
+        } else {
+          if (typeof showDangerModal === 'function') showDangerModal('Erro', data.error || 'Erro ao excluir dose.');
+          else alert(data.error || 'Erro ao excluir dose.');
+        }
+      })
+      .catch(err => {
+        console.error('Erro ao excluir dose:', err);
+        if (typeof showDangerModal === 'function') showDangerModal('Erro', 'Não foi possível excluir a dose.');
+        else alert('Não foi possível excluir a dose.');
+      });
+    }
+  });
+
+  document.getElementById('btn-salvar-dose-form').addEventListener('click', function() {
+    if (!currentDoseId) return;
+    const formData = new FormData();
+    formData.append('data_aplicacao', document.getElementById('prot-dose-data-aplicacao').value);
+    formData.append('laboratorio', document.getElementById('prot-dose-laboratorio').value);
+    formData.append('lote', document.getElementById('prot-dose-lote').value);
+    fetch(`/atendimento/api/${petId}/dose-vacina/${currentDoseId}/salvar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCookie('csrftoken') },
+      body: formData,
+      credentials: 'same-origin'
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.success) {
+        carregarLista();
+        // Atualizar apenas o item específico na timeline (não recarregar tudo)
+        if (typeof adicionarItemTimeline === 'function') {
+          const existingItem = document.querySelector(`li.timeline-event[data-record-id="${currentDoseId}"]`);
+          const usuarioTitle = existingItem?.querySelector('.timeline-event-avatar')?.getAttribute('title') || '';
+          const usuarioAvatar = existingItem?.querySelector('.timeline-event-avatar[style]')
+            ?.style?.backgroundImage?.replace(/url\(["']?(.*?)["']?\)/, '$1') || null;
+          if (existingItem) existingItem.remove();
+          if (data.data_aplicacao_iso) {
+            adicionarItemTimeline('vacina-dose', data.vacina_nome, data.data_aplicacao_iso, data.vacina_nome, usuarioTitle, usuarioAvatar, currentDoseId);
+          }
+        }
+      } else {
+        alert(data.error || 'Erro ao salvar dose.');
+      }
+    })
+    .catch(err => console.error('Erro ao salvar dose:', err));
+  });
+
+  document.getElementById('btn-voltar-historico-prot').addEventListener('click', function(e) {
+    e.preventDefault();
+    const tab = document.querySelector('a[href="#tab-historico"]');
+    if (tab) bootstrap.Tab.getOrCreateInstance(tab).show();
+  });
+
+  // Toggle recolher/expandir lista esquerda
+  document.getElementById('btn-toggle-lista-prot').addEventListener('click', function() {
+    const inner = document.getElementById('protocolos-lista-inner');
+    const icon = document.getElementById('icon-toggle-lista-prot');
+    const collapsed = inner.style.display === 'none';
+    inner.style.display = collapsed ? '' : 'none';
+    icon.className = collapsed ? 'ti ti-chevron-up' : 'ti ti-chevron-down';
+  });
+
+  document.getElementById('btn-interromper-prot').addEventListener('click', function() {
+    if (!currentProtocoloId) return;
+    const modal = new bootstrap.Modal(document.getElementById('modal-confirm-interromper-prot'));
+    document.getElementById('confirm-interromper-prot-btn').onclick = function() {
+      modal.hide();
+      fetch(`/atendimento/api/${petId}/protocolos-vacina/${currentProtocoloId}/interromper/`, {
+        method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }, body: new FormData(), credentials: 'same-origin'
+      }).then(r => r.json()).then(data => {
+        if (data.success) { carregarLista(); abrirDetalhe(currentProtocoloId); if (typeof carregarTimeline === 'function') carregarTimeline(); }
+      });
+    };
+    modal.show();
+  });
+
+  document.getElementById('btn-retomar-prot').addEventListener('click', function() {
+    if (!currentProtocoloId) return;
+    const modal = new bootstrap.Modal(document.getElementById('modal-confirm-retomar-prot'));
+    document.getElementById('confirm-retomar-prot-btn').onclick = function() {
+      modal.hide();
+      fetch(`/atendimento/api/${petId}/protocolos-vacina/${currentProtocoloId}/retomar/`, {
+        method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }, body: new FormData(), credentials: 'same-origin'
+      }).then(r => r.json()).then(data => {
+        if (data.success) { carregarLista(); abrirDetalhe(currentProtocoloId); if (typeof carregarTimeline === 'function') carregarTimeline(); }
+      });
+    };
+    modal.show();
+  });
+
+  document.getElementById('btn-excluir-prot').addEventListener('click', function() {
+    if (!currentProtocoloId) return;
+    const modal = new bootstrap.Modal(document.getElementById('modal-confirm-excluir-prot'));
+    document.getElementById('confirm-excluir-prot-btn').onclick = function() {
+      modal.hide();
+      fetch(`/atendimento/api/${petId}/protocolos-vacina/${currentProtocoloId}/excluir/`, {
+        method: 'POST', headers: { 'X-CSRFToken': getCookie('csrftoken') }, body: new FormData(), credentials: 'same-origin'
+      }).then(r => r.json()).then(data => {
+        if (data.success) { carregarLista(); if (typeof carregarTimeline === 'function') carregarTimeline(); showEmpty(); currentProtocoloId = null; }
+      });
+    };
+    modal.show();
+  });
+
+  const tabLink = document.querySelector('a[href="#tab-protocolos"]');
+  if (tabLink) tabLink.addEventListener('shown.bs.tab', carregarLista);
+  if (document.getElementById('tab-protocolos')?.classList.contains('active')) carregarLista();
+
+});
+</script>

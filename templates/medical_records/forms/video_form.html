@@ -30,11 +30,39 @@
     <textarea class="form-control" id="desc-video" rows="3" placeholder="Descrição do vídeo"></textarea>
   </div>
 
+  <!-- Vídeo já salvo (exibido ao editar) -->
+  <div id="video-existente-wrapper" class="mb-3" style="display:none;" data-remove="false">
+    <label class="form-label">Vídeo Salvo</label>
+    <div id="video-existente-card" class="d-flex align-items-center gap-2 p-2 border rounded bg-light">
+      <i class="ti ti-video" style="font-size:32px;color:#006400;"></i>
+      <span id="video-existente-nome" class="flex-grow-1 text-truncate"></span>
+      <button type="button" class="btn btn-outline-primary btn-sm" id="video-existente-play" title="Assistir">
+        <i class="ti ti-player-play"></i>
+      </button>
+      <a id="video-existente-download" href="" download class="btn btn-outline-secondary btn-sm" title="Baixar">
+        <i class="ti ti-download"></i>
+      </a>
+      <button type="button" class="btn btn-outline-danger btn-sm" id="video-existente-remover" title="Remover vídeo">
+        <i class="ti ti-trash"></i>
+      </button>
+    </div>
+    <small class="text-muted" id="video-existente-hint">Para substituir, selecione um novo arquivo abaixo.</small>
+  </div>
+
   <div class="mb-3">
-    <label class="form-label">Selecionar Vídeo <span class="text-danger">*</span></label>
-    <input type="file" class="form-control" id="file-video" accept="video/*" required>
+    <label class="form-label">Adicionar Vídeo</label>
+    <input type="file" class="form-control" id="file-video" accept="video/*">
     <small class="text-muted">Formatos aceitos: MP4, AVI, MOV</small>
     <div id="file-badges-video" class="file-badges mt-2"></div>
+  </div>
+
+  <!-- Lightbox modal para vídeo -->
+  <div id="video-lightbox" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;gap:12px;">
+    <video id="video-lightbox-player" controls style="max-width:90vw;max-height:80vh;border-radius:8px;box-shadow:0 4px 32px #000;"></video>
+    <div class="d-flex gap-2">
+      <a id="video-lightbox-download" href="" download class="btn btn-primary btn-sm"><i class="ti ti-download me-1"></i>Baixar</a>
+      <button type="button" class="btn btn-secondary btn-sm" id="video-lightbox-fechar"><i class="ti ti-x me-1"></i>Fechar</button>
+    </div>
   </div>
 
   <!-- Botões de ação -->
@@ -80,6 +108,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 
+  // Lightbox para vídeo
+  document.getElementById('video-lightbox-fechar')?.addEventListener('click', function() {
+    const lb = document.getElementById('video-lightbox');
+    document.getElementById('video-lightbox-player').pause();
+    lb.style.display = 'none';
+  });
+  document.getElementById('video-lightbox')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+      document.getElementById('video-lightbox-player').pause();
+      this.style.display = 'none';
+    }
+  });
+
   document.getElementById('save-video')?.addEventListener('click', function() {
     const titulo = document.getElementById('titulo-video').value;
     const videoId = document.getElementById('video-id')?.value;
@@ -88,8 +129,14 @@ document.addEventListener('DOMContentLoaded', function() {
       showDangerModal('Erro de Validação', 'Por favor, informe o título');
       return;
     }
+    const videoExistenteWrapper = document.getElementById('video-existente-wrapper');
+    const videoMarcadoRemover = videoExistenteWrapper?.dataset.remove === 'true';
     if (!videoId && !uploadedFileVideo) {
       showDangerModal('Erro de Validação', 'Por favor, selecione um vídeo');
+      return;
+    }
+    if (videoId && videoMarcadoRemover && !uploadedFileVideo) {
+      showDangerModal('Erro de Validação', 'Selecione um novo vídeo para substituir o removido');
       return;
     }
 
@@ -104,6 +151,7 @@ document.addEventListener('DOMContentLoaded', function() {
     formData.append('data_hora', isoDate.slice(0, 16));
 
     if (videoId) formData.append('video_id', videoId);
+    if (videoMarcadoRemover) formData.append('remover_arquivo', '1');
 
     const petId = window.CURRENT_PET_ID;
     if (!petId) {
@@ -131,12 +179,18 @@ document.addEventListener('DOMContentLoaded', function() {
           if (timeline) timeline.innerHTML = '';
           carregarTimeline();
         } else {
-          adicionarItemTimeline('video', titulo, isoDate, uploadedFileVideo.name, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+          adicionarItemTimeline('video', titulo, isoDate, titulo, '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
         }
         hideAllForms();
         showSuccessModal('Sucesso!', videoId ? 'Vídeo atualizado com sucesso!' : 'Vídeo salvo com sucesso!');
         uploadedFileVideo = null;
         fileBadgesVideo.innerHTML = '';
+        const wrapper = document.getElementById('video-existente-wrapper');
+        wrapper.style.display = 'none';
+        wrapper.dataset.remove = 'false';
+        document.getElementById('video-existente-nome').textContent = '';
+        document.getElementById('video-existente-card').style.opacity = '1';
+        document.getElementById('video-existente-remover').style.display = '';
       } else {
         showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar o vídeo');
       }
@@ -145,5 +199,34 @@ document.addEventListener('DOMContentLoaded', function() {
       showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
     });
   });
+
+  // Preencher vídeo existente ao editar
+  window._preencherVideoExistente = function(url, nome) {
+    const wrapper = document.getElementById('video-existente-wrapper');
+    if (!url) {
+      wrapper.style.display = 'none';
+      return;
+    }
+    wrapper.dataset.remove = 'false';
+    document.getElementById('video-existente-card').style.opacity = '1';
+    document.getElementById('video-existente-nome').textContent = nome || 'vídeo';
+    document.getElementById('video-existente-download').href = url;
+    document.getElementById('video-existente-remover').style.display = '';
+    document.getElementById('video-existente-remover').onclick = function() {
+      wrapper.dataset.remove = 'true';
+      document.getElementById('video-existente-card').style.opacity = '0.35';
+      this.style.display = 'none';
+      document.getElementById('video-existente-hint').textContent = 'Vídeo marcado para remoção. Selecione um novo arquivo abaixo.';
+    };
+    document.getElementById('video-existente-play').onclick = function() {
+      const lb = document.getElementById('video-lightbox');
+      const player = document.getElementById('video-lightbox-player');
+      player.src = url;
+      document.getElementById('video-lightbox-download').href = url;
+      lb.style.display = 'flex';
+      player.play();
+    };
+    wrapper.style.display = '';
+  };
 });
 </script>

@@ -69,9 +69,9 @@ class AtributoExameAdmin(admin.ModelAdmin):
 
 
 class ReferenciaExameAdmin(admin.ModelAdmin):
-    list_display = ('descricao', 'exame')
-    list_filter = ('exame',)
-    search_fields = ('descricao', 'exame__nome')
+    list_display = ('nome', 'exame', 'especie')
+    list_filter = ('exame', 'especie')
+    search_fields = ('nome', 'exame__nome', 'especie__nome')
 
 
 admin.site.register(AtributoExame, AtributoExameAdmin)

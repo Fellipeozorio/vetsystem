@@ -37,6 +37,14 @@ urlpatterns = [
     path('atributos-exames/<int:pk>/', views.atributo_exame_detail, name='atributo_exame_detail'),
     path('atributos-exames/<int:pk>/editar/', views.atributo_exame_update, name='atributo_exame_update'),
     path('atributos-exames/<int:pk>/excluir/', views.atributo_exame_delete, name='atributo_exame_delete'),
+
+    # URLs específicas para valores de referência de exames
+    path('referencias-exames/', views.referencias_exames_list, name='referencias_exames_list'),
+    path('referencias-exames/criar/', views.referencia_exame_create, name='referencia_exame_create'),
+    path('referencias-exames/atributos/', views.referencia_exame_atributos, name='referencia_exame_atributos'),
+    path('referencias-exames/<int:pk>/', views.referencia_exame_detail, name='referencia_exame_detail'),
+    path('referencias-exames/<int:pk>/editar/', views.referencia_exame_update, name='referencia_exame_update'),
+    path('referencias-exames/<int:pk>/excluir/', views.referencia_exame_delete, name='referencia_exame_delete'),
     
     # URLs específicas para receitas
     path('receitas/', views.receitas_list, name='receitas_list'),
