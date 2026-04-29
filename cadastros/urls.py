@@ -11,6 +11,8 @@ urlpatterns = [
     path('api/patologias/', views.api_patologias_list, name='api_patologias_list'),
     path('api/modelos-documento/', views.api_modelos_documento_list, name='api_modelos_documento_list'),
     path('api/modelos-documento/<int:pk>/', views.api_modelo_documento_detail, name='api_modelo_documento_detail'),
+    path('api/modelos-receita/', views.api_modelos_receita_list, name='api_modelos_receita_list'),
+    path('api/modelos-receita/<int:pk>/', views.api_modelo_receita_detail, name='api_modelo_receita_detail'),
     
     # URLs específicas para tipos de atendimento (devem vir antes das genéricas)
     path('tipos-atendimento/', views.tipos_atendimento_list, name='tipos_atendimento_list'),

@@ -42,9 +42,15 @@ urlpatterns = [
     
     # API endpoint para listar registros da timeline
     path('api/<int:pet_id>/timeline/', views.listar_timeline, name='listar_timeline'),
+    # API endpoint para listar registros da linha do tempo (dados completos)
+    path('api/<int:pet_id>/linha-tempo-completa/', views.listar_timeline_completa, name='listar_timeline_completa'),
+    # API endpoint para listar agenda do pet
+    path('api/<int:pet_id>/agenda/', views.listar_agenda_pet, name='listar_agenda_pet'),
 
     # Impressão PDF de documento
     path('imprimir-documento/', views.imprimir_documento_view, name='imprimir_documento'),
+    # Impressão PDF de receita
+    path('imprimir-receita/', views.imprimir_receita_view, name='imprimir_receita'),
     # Servir PDF temporário com nome de arquivo no path (para Chrome usar nome correto)
     path('pdf/<str:token>/<path:filename>', views.servir_pdf_temp_view, name='servir_pdf_temp'),
 ]

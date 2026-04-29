@@ -1,5 +1,484 @@
 {% load static %}
-<div class="p-4">
-  <h3>Linha do Tempo</h3>
-  <p class="text-muted">Conteúdo da linha do tempo em desenvolvimento...</p>
+
+<style>
+/* ---- Linha do Tempo ---- */
+#lt-container {
+  position: relative;
+  padding: 24px 16px 48px;
+}
+
+/* Linha vertical — centro do círculo: 100px (col-esq) + 19px (raio) = 119px relativo ao item */
+#lt-container::before {
+  display: none;
+}
+
+/* Linha vertical — todos os itens incluindo o último */
+.lt-item::before {
+  content: '';
+  position: absolute;
+  left: 119px;
+  top: 21px; /* centro do círculo: 2px margin-top + 19px raio */
+  height: calc(100% + 28px); /* estende abaixo do card */
+  width: 2px;
+  background: #dee2e6;
+  z-index: 0;
+}
+
+/* (separador de ano removido — ano exibido por item) */
+
+/* Item da linha do tempo */
+.lt-item {
+  display: flex;
+  align-items: flex-start;
+  position: relative;
+  margin-bottom: 28px;
+  z-index: 1;
+}
+
+/* Lado esquerdo — data */
+.lt-item-left {
+  width: 100px;
+  min-width: 100px;
+  text-align: right;
+  padding-right: 14px;
+  padding-top: 4px;
+  flex-shrink: 0;
+}
+.lt-item-date-year {
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: #adb5bd;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+.lt-item-date-dm {
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Círculo central */
+.lt-item-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 2px #dee2e6;
+  margin-top: 2px;
+}
+.lt-item-circle i {
+  font-size: 1rem;
+  color: #fff;
+}
+
+/* Lado direito — card */
+.lt-item-right {
+  flex: 1;
+  min-width: 0;
+  margin-left: 14px;
+}
+
+.lt-card {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0,0,0,.09);
+  background: #fff;
+}
+.lt-card-header {
+  padding: 10px 14px 10px;
+  color: #fff;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.lt-card-header::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 14px;
+  width: 0;
+  height: 0;
+  border-top: 7px solid transparent;
+  border-bottom: 7px solid transparent;
+  border-right: 8px solid var(--lt-arrow-color, #0066CC);
+}
+.lt-card-type {
+  display: none;
+}
+.lt-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
+  flex: 1;
+}
+.lt-card-meta {
+  flex-shrink: 0;
+}
+.lt-card-meta-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  overflow: hidden;
+}
+.lt-card-meta-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lt-card-meta-text {
+  font-size: 0.78rem;
+  color: #495057;
+  padding: 8px 14px 4px;
+}
+
+.lt-card-body {
+  padding: 0;
+}
+.lt-card-fields {
+  padding: 10px 14px 12px;
+}
+
+/* Grid de campos */
+.lt-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 14px;
+}
+.lt-fields.lt-fields-single {
+  grid-template-columns: 1fr;
+}
+.lt-field {
+  min-width: 0;
+}
+.lt-field-label {
+  display: none;
+}
+.lt-field-value {
+  font-size: 0.78rem;
+  color: #212529;
+  word-break: break-word;
+}
+.lt-field-value.lt-html-content {
+  font-size: 0.78rem;
+  color: #212529;
+}
+.lt-field-value.lt-html-content * {
+  font-size: inherit !important;
+  max-width: 100%;
+}
+.lt-field-value.lt-html-content img {
+  max-width: 100%;
+  height: auto;
+}
+/* Tabelas dentro do conteúdo HTML (conclusões, etc.) */
+.lt-field-value.lt-html-content table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.78rem;
+}
+.lt-field-value.lt-html-content table th,
+.lt-field-value.lt-html-content table td {
+  border: 1px solid #dee2e6;
+  padding: 3px 6px;
+}
+.lt-field-value.lt-html-content table th {
+  background: #f8f9fa;
+  font-weight: 600;
+}
+
+/* Fotos */
+.lt-fotos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+.lt-fotos-grid img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid #dee2e6;
+}
+
+/* Anexos */
+.lt-anexos {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 6px;
+}
+.lt-anexo-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: #0066cc;
+}
+.lt-anexo-item i {
+  font-size: 0.85rem;
+}
+
+/* Video */
+.lt-video-wrap {
+  margin-top: 6px;
+  max-width: 100%;
+}
+.lt-video-wrap video {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+/* Loading / empty */
+#lt-loading, #lt-empty {
+  text-align: center;
+  padding: 48px 16px;
+  color: #868e96;
+}
+</style>
+
+<div id="lt-loading" class="p-5 text-center text-muted">
+  <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+  Carregando linha do tempo...
 </div>
+<div id="lt-empty" style="display:none;">
+  <i class="ti ti-calendar-off" style="font-size:2.5rem; display:block; margin-bottom:8px;"></i>
+  Nenhum registro encontrado.
+</div>
+
+<div id="lt-container" style="display:none;"></div>
+
+<script>
+(function () {
+  const tipoConfig = {
+    atendimento:  { color: '#0066CC', label: 'Atendimento',   icon: 'ti-first-aid-kit' },
+    peso:         { color: '#8B4513', label: 'Peso',           icon: 'ti-weight' },
+    patologia:    { color: '#6C2C91', label: 'Patologia',      icon: 'ti-virus' },
+    documento:    { color: '#5a8f5a', label: 'Documento',      icon: 'ti-file-text' },
+    exame:        { color: '#e07060', label: 'Exame',          icon: 'ti-test-pipe' },
+    fotos:        { color: '#003366', label: 'Fotos',          icon: 'ti-camera' },
+    vacina:       { color: '#c8960c', label: 'Vacina',         icon: 'ti-vaccine' },
+    'vacina-dose': { color: '#c8960c', label: 'Vacina',        icon: 'ti-vaccine' },
+    receita:      { color: '#7b52b8', label: 'Receita',        icon: 'ti-edit' },
+    observacoes:  { color: '#5a6470', label: 'Observações',    icon: 'ti-message' },
+    video:        { color: '#006400', label: 'Vídeo',          icon: 'ti-video' },
+    internacao:   { color: '#8B0000', label: 'Internação',     icon: 'ti-report-medical' },
+  };
+
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  function parseLocalDate(iso) {
+    if (!iso) return new Date();
+    const clean = iso.replace('Z','').replace(/[+-]\d{2}:\d{2}$/, '');
+    const [dp, tp] = clean.split('T');
+    const [y,mo,d] = dp.split('-').map(Number);
+    const [h=0, mi=0, s=0] = (tp||'').split(':').map(Number);
+    return new Date(y, mo-1, d, h, mi, s);
+  }
+
+  function escapeHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escapeAttr(s) {
+    return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function renderCampos(campos, extras, titulo) {
+    if (!campos || campos.length === 0) return '';
+
+    // Filtrar campo cujo valor seja igual ao título (já exibido no header)
+    const camposFiltrados = campos.filter(c => c.valor && String(c.valor).trim() && String(c.valor).trim() !== String(titulo||'').trim());
+    const htmlCampos = camposFiltrados.filter(c => c.html);
+    const simpleCampos = camposFiltrados.filter(c => !c.html);
+
+    let html = '';
+
+    if (simpleCampos.length > 0) {
+      const cols = simpleCampos.length === 1 ? 'lt-fields-single' : '';
+      html += `<div class="lt-fields ${cols}">`;
+      simpleCampos.forEach(c => {
+        html += `<div class="lt-field">
+          <div class="lt-field-label">${escapeHtml(c.label)}</div>
+          <div class="lt-field-value">${escapeHtml(c.valor)}</div>
+        </div>`;
+      });
+      html += '</div>';
+    }
+
+    htmlCampos.forEach(c => {
+      html += `<div class="lt-field mt-2">
+        <div class="lt-field-label">${escapeHtml(c.label)}</div>
+        <div class="lt-field-value lt-html-content">${c.valor}</div>
+      </div>`;
+    });
+
+    // Fotos
+    if (extras && extras.fotos && extras.fotos.length) {
+      html += `<div class="lt-fotos-grid">`;
+      extras.fotos.forEach(url => {
+        html += `<img src="${escapeAttr(url)}" alt="Foto" onclick="window.open(this.src,'_blank')">`;
+      });
+      html += '</div>';
+    }
+
+    // Anexos
+    if (extras && extras.anexos && extras.anexos.length) {
+      html += `<div class="lt-anexos">`;
+      extras.anexos.forEach(a => {
+        html += `<a class="lt-anexo-item" href="${escapeAttr(a.url)}" target="_blank" rel="noopener">
+          <i class="ti ti-paperclip"></i>${escapeHtml(a.nome)}
+        </a>`;
+      });
+      html += '</div>';
+    }
+
+    // Vídeo
+    if (extras && extras.video_url) {
+      html += `<div class="lt-video-wrap">
+        <video controls preload="metadata" src="${escapeAttr(extras.video_url)}"></video>
+      </div>`;
+    }
+
+    return html;
+  }
+
+  function buildTimeline(registros) {
+    const container = document.getElementById('lt-container');
+    container.innerHTML = '';
+
+    if (!registros || registros.length === 0) {
+      document.getElementById('lt-empty').style.display = '';
+      return;
+    }
+    document.getElementById('lt-empty').style.display = 'none';
+    container.style.display = '';
+
+    registros.forEach(reg => {
+      try {
+      const cfg = tipoConfig[reg.tipo] || tipoConfig.atendimento;
+      const dt = parseLocalDate(reg.data);
+      const year = dt.getFullYear();
+      const day  = String(dt.getDate()).padStart(2,'0');
+      const month = MESES[dt.getMonth()];
+      const hour  = String(dt.getHours()).padStart(2,'0');
+      const min   = String(dt.getMinutes()).padStart(2,'0');
+
+      // Avatar do usuário
+      let avatarHtml;
+      if (reg.usuario_avatar) {
+        avatarHtml = `<div class="lt-card-meta-avatar"><img src="${escapeAttr(reg.usuario_avatar)}" alt="${escapeHtml(reg.usuario)}"/></div>`;
+      } else {
+        const iniciais = (reg.usuario || 'SY').split(' ').map(n => n[0]).join('').substring(0,2).toUpperCase();
+        avatarHtml = `<div class="lt-card-meta-avatar">${iniciais}</div>`;
+      }
+      const dateLabel = `${day}/${String(dt.getMonth()+1).padStart(2,'0')}/${year} às ${hour}:${min}`;
+      const metaTextHtml = `<div class="lt-card-meta-text">Por ${escapeHtml(reg.usuario || 'Sistema')} em ${dateLabel}</div>`;
+
+      // Campos do corpo
+      const bodyHtml = renderCampos(reg.campos, reg, reg.titulo);
+
+      const item = document.createElement('div');
+      item.className = 'lt-item';
+      item.innerHTML = `
+        <div class="lt-item-left">
+          <div class="lt-item-date-year">${year}</div>
+          <div class="lt-item-date-dm" style="color:${cfg.color}">${day}/${String(dt.getMonth()+1).padStart(2,'0')}</div>
+        </div>
+
+        <div class="lt-item-circle" style="background:${cfg.color};" title="${escapeAttr(cfg.label)}">
+          <i class="ti ${cfg.icon}"></i>
+        </div>
+
+        <div class="lt-item-right">
+          <div class="lt-card">
+            <div class="lt-card-header" style="background:${cfg.color}; --lt-arrow-color:${cfg.color};" title="${escapeAttr(cfg.label)}">
+              <div class="lt-card-title">${escapeHtml(reg.titulo)}</div>
+              <div class="lt-card-meta">${avatarHtml}</div>
+            </div>
+            <div class="lt-card-body">
+              ${metaTextHtml}
+              ${bodyHtml ? `<div class="lt-card-fields">${bodyHtml}</div>` : ''}
+            </div>
+          </div>
+        </div>
+      `;
+      container.appendChild(item);
+      } catch (e) {
+        console.error('[Linha do Tempo] Erro ao renderizar item:', reg, e);
+      }
+    });
+  }
+
+  function loadLinhaDoTempo() {
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) return;
+
+    document.getElementById('lt-loading').style.display = '';
+    document.getElementById('lt-empty').style.display = 'none';
+    document.getElementById('lt-container').style.display = 'none';
+
+    fetch(`/atendimento/api/${petId}/linha-tempo-completa/`, {credentials: 'same-origin'})
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('lt-loading').style.display = 'none';
+        if (data.success) {
+          if (!data.registros || data.registros.length === 0) {
+            document.getElementById('lt-empty').style.display = '';
+          } else {
+            buildTimeline(data.registros);
+          }
+        } else {
+          document.getElementById('lt-empty').innerHTML =
+            '<i class="ti ti-alert-circle" style="font-size:2rem;display:block;margin-bottom:8px;color:#dc3545;"></i>Erro ao carregar dados.';
+          document.getElementById('lt-empty').style.display = '';
+        }
+      })
+      .catch(() => {
+        document.getElementById('lt-loading').style.display = 'none';
+        document.getElementById('lt-empty').innerHTML =
+          '<i class="ti ti-wifi-off" style="font-size:2rem;display:block;margin-bottom:8px;"></i>Erro de conexão.';
+        document.getElementById('lt-empty').style.display = '';
+      });
+  }
+
+  // Expor globalmente para outros módulos chamarem ao salvar registros
+  window.reloadLinhaDoTempo = loadLinhaDoTempo;
+
+  // Recarregar sempre que a aba for ativada (sem guard)
+  const tabTrigger = document.querySelector('[data-bs-target="#tab-linha-tempo"], [href="#tab-linha-tempo"]');
+  if (tabTrigger) {
+    tabTrigger.addEventListener('shown.bs.tab', function () {
+      loadLinhaDoTempo();
+    });
+  }
+
+  // Carregar se já ativo na inicialização
+  function checkActive() {
+    const pane = document.getElementById('tab-linha-tempo');
+    if (pane && pane.classList.contains('active')) {
+      loadLinhaDoTempo();
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkActive);
+  } else {
+    checkActive();
+  }
+})();
+</script>

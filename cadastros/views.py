@@ -814,6 +814,31 @@ def api_modelo_documento_detail(request, pk):
 
 
 @login_required
+@require_GET
+def api_modelos_receita_list(request):
+    """API: Listar todos os modelos de receita ativos (JSON)"""
+    modelos = ModeloReceita.objects.filter(ativo=True).values('id', 'nome', 'codigo').order_by('nome')
+    return JsonResponse(list(modelos), safe=False)
+
+
+@login_required
+@require_GET
+def api_modelo_receita_detail(request, pk):
+    """API: Obter detalhes completos de um modelo de receita (JSON)"""
+    modelo = get_object_or_404(ModeloReceita, pk=pk, ativo=True)
+    return JsonResponse({
+        'id': modelo.id,
+        'nome': modelo.nome,
+        'codigo': modelo.codigo,
+        'conteudo_apresentacao': modelo.conteudo_apresentacao or '',
+        'conteudo_encerramento': modelo.conteudo_encerramento or '',
+        'modelo_cabecalho': modelo.modelo_cabecalho,
+        'modelo_info_paciente': modelo.modelo_info_paciente,
+        'modelo_rodape': modelo.modelo_rodape,
+    })
+
+
+@login_required
 def api_tipo_atendimento_template(request, pk):
     """API: Obter template de um tipo de atendimento específico (JSON)"""
     tipo = get_object_or_404(TipoAtendimento, pk=pk)

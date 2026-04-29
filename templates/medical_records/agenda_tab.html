@@ -1,5 +1,157 @@
 {% load static %}
-<div class="p-4">
-  <h3>Agenda</h3>
-  <p class="text-muted">Conteúdo de agenda em desenvolvimento...</p>
+<style>
+#ag-table-wrap { overflow-x: auto; }
+#ag-table { font-size: 0.82rem; table-layout: auto; }
+#ag-table thead th {
+  background: #f8f9fa;
+  font-weight: 600;
+  white-space: nowrap;
+  border-bottom: 2px solid #dee2e6;
+}
+#ag-table td { vertical-align: middle; white-space: nowrap; }
+/* Coluna Tipo pode quebrar linha para evitar scroll horizontal em telas grandes */
+@media (min-width: 768px) {
+  #ag-table td.col-tipo { white-space: normal; word-break: break-word; min-width: 120px; max-width: 200px; }
+}
+/* Linha atendida: fundo verde claro, texto verde */
+#ag-table tr.row-atendido td {
+  background: #d1fae5;
+  color: #166534;
+}
+.ag-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+.badge-agendado   { background: #dbeafe; color: #1d4ed8; }
+.badge-espera     { background: #fef9c3; color: #854d0e; }
+.badge-em_atendimento { background: #e0f2fe; color: #0369a1; }
+.badge-atendido   { background: #d1fae5; color: #166534; }
+.badge-cancelado  { background: #fee2e2; color: #991b1b; }
+.badge-atrasado   { background: #ffe4cc; color: #9a3412; }
+</style>
+
+<div class="p-3">
+  <div id="ag-loading" class="text-center text-muted py-4">
+    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+    Carregando agenda...
+  </div>
+  <div id="ag-empty" class="text-center text-muted py-4" style="display:none;">
+    <i class="ti ti-calendar-off" style="font-size:2rem; display:block; margin-bottom:6px;"></i>
+    Nenhum agendamento encontrado.
+  </div>
+  <div id="ag-table-wrap" style="display:none;">
+    <table class="table table-bordered table-hover mb-0" id="ag-table">
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Tipo</th>
+          <th>Profissional</th>
+          <th>Status</th>
+          <th title="Minutos de atraso na chegada">Atraso</th>
+          <th title="Minutos de espera até o atendimento iniciar">Espera</th>
+          <th title="Duração do atendimento">Atend.</th>
+        </tr>
+      </thead>
+      <tbody id="ag-tbody"></tbody>
+    </table>
+  </div>
 </div>
+
+<script>
+(function () {
+  function fmtMins(m) {
+    if (m === null || m === undefined) return '<span class="text-muted">—</span>';
+    if (m < 60) return m + ' min';
+    const h = Math.floor(m / 60), r = m % 60;
+    return r > 0 ? h + 'h ' + r + 'min' : h + 'h';
+  }
+
+  function buildAgenda(registros) {
+    const tbody = document.getElementById('ag-tbody');
+    tbody.innerHTML = '';
+    if (!registros || registros.length === 0) {
+      document.getElementById('ag-empty').style.display = '';
+      return;
+    }
+    document.getElementById('ag-table-wrap').style.display = '';
+
+    registros.forEach(r => {
+      const tr = document.createElement('tr');
+      if (r.status === 'atendido') tr.classList.add('row-atendido');
+
+      tr.innerHTML = `
+        <td>${r.data_hora}</td>
+        <td class="col-tipo">${r.tipo || '—'}</td>
+        <td>${r.profissional || '<span class="text-muted">—</span>'}</td>
+        <td><span class="ag-badge badge-${r.status}">${r.status_display}</span></td>
+        <td>${fmtMins(r.atraso)}</td>
+        <td>${fmtMins(r.espera)}</td>
+        <td>${fmtMins(r.atendimento)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function loadAgenda() {
+    const petId = window.CURRENT_PET_ID;
+    if (!petId) return;
+
+    document.getElementById('ag-loading').style.display = '';
+    document.getElementById('ag-empty').style.display = 'none';
+    document.getElementById('ag-table-wrap').style.display = 'none';
+
+    fetch(`/atendimento/api/${petId}/agenda/`, { credentials: 'same-origin' })
+      .then(r => r.json())
+      .then(data => {
+        document.getElementById('ag-loading').style.display = 'none';
+        if (data.success) {
+          if (!data.registros || data.registros.length === 0) {
+            document.getElementById('ag-empty').style.display = '';
+          } else {
+            buildAgenda(data.registros);
+          }
+        } else {
+          document.getElementById('ag-empty').innerHTML =
+            '<i class="ti ti-alert-circle" style="font-size:2rem;display:block;margin-bottom:8px;color:#dc3545;"></i>Erro ao carregar dados.';
+          document.getElementById('ag-empty').style.display = '';
+        }
+      })
+      .catch(() => {
+        document.getElementById('ag-loading').style.display = 'none';
+        document.getElementById('ag-empty').innerHTML =
+          '<i class="ti ti-wifi-off" style="font-size:2rem;display:block;margin-bottom:8px;"></i>Erro de conexão.';
+        document.getElementById('ag-empty').style.display = '';
+      });
+  }
+
+  // Lazy-load quando a aba é ativada
+  window._agLoaded = false;
+  const tabTrigger = document.querySelector('[data-bs-target="#tab-agenda"], [href="#tab-agenda"]');
+  if (tabTrigger) {
+    tabTrigger.addEventListener('shown.bs.tab', function () {
+      if (!window._agLoaded) {
+        window._agLoaded = true;
+        loadAgenda();
+      }
+    });
+  }
+
+  // Carregar se já ativo
+  function checkActive() {
+    const pane = document.getElementById('tab-agenda');
+    if (pane && pane.classList.contains('active') && !window._agLoaded) {
+      window._agLoaded = true;
+      loadAgenda();
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkActive);
+  } else {
+    checkActive();
+  }
+})();
+</script>

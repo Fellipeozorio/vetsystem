@@ -1107,14 +1107,13 @@ document.addEventListener('DOMContentLoaded', function() {
               window._preencherFormDose(data);
             }
           } else if (tipo === 'observacoes') {
-            setVal('titulo-observacoes', data.titulo);
-            setVal('texto-observacoes', data.texto);
-            setVal('categoria-observacoes', data.categoria);
+            if (typeof window._preencherFormObservacoes === 'function') {
+              window._preencherFormObservacoes(data);
+            }
           } else if (tipo === 'receita') {
-            setVal('tipo-receita', data.tipo_receita);
-            setVal('prescricao-receita', data.prescricao);
-            setVal('validade-receita', data.validade);
-            setVal('obs-receita', data.observacoes);
+            if (typeof window._carregarModeloReceitaComConteudo === 'function') {
+              window._carregarModeloReceitaComConteudo(data.modelo_receita_id, data.conteudo);
+            }
           } else if (tipo === 'exame') {
             if (typeof window._preencherFormExame === 'function') {
               window._preencherFormExame(data);

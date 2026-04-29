@@ -270,9 +270,18 @@ class Receita(models.Model):
     """Registro de receitas médicas"""
     pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='receitas')
     data_hora = models.DateTimeField()
+    modelo_receita = models.ForeignKey(
+        'cadastros.ModeloReceita',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='receitas_geradas',
+        verbose_name='Modelo de Receita'
+    )
+    conteudo = models.TextField(blank=True, default='', verbose_name='Conteúdo')
     tipo = models.CharField(max_length=100, blank=True)
     validade = models.DateField(blank=True, null=True)
-    prescricao = models.TextField()
+    prescricao = models.TextField(blank=True, default='')
     observacoes = models.TextField(blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -292,7 +301,8 @@ class Observacao(models.Model):
     pet = models.ForeignKey(Pet, on_delete=models.CASCADE, related_name='observacoes')
     data_hora = models.DateTimeField()
     titulo = models.CharField(max_length=200)
-    texto = models.TextField()
+    texto = models.TextField(blank=True, default='')
+    conteudo = models.TextField(blank=True, default='')
     categoria = models.CharField(max_length=100, blank=True)
     usuario = models.ForeignKey(User, on_delete=models.PROTECT)
     criado_em = models.DateTimeField(auto_now_add=True)
@@ -305,6 +315,16 @@ class Observacao(models.Model):
 
     def __str__(self):
         return f"{self.titulo} - {self.pet.nome}"
+
+
+class ObservacaoAnexo(models.Model):
+    """Arquivos anexados a observações"""
+    observacao = models.ForeignKey(Observacao, on_delete=models.CASCADE, related_name='anexos')
+    arquivo = models.FileField(upload_to='observacoes_anexos/')
+    nome_original = models.CharField(max_length=255, blank=True)
+
+    def __str__(self):
+        return f"Anexo de {self.observacao.titulo}"
 
 
 class Video(models.Model):

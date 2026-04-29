@@ -4,7 +4,7 @@ from django.db.models import Q
 from django.core.paginator import Paginator
 from patients.models import Pet
 from clients.models import Client
-from cadastros.models import Especie, Raca, Pelagem, Patologia as PatologiaCadastro, ModeloDocumento as ModeloDocumentoCadastro
+from cadastros.models import Especie, Raca, Pelagem, Patologia as PatologiaCadastro, ModeloDocumento as ModeloDocumentoCadastro, ModeloReceita as ModeloReceitaCadastro
 
 
 @login_required
@@ -166,7 +166,7 @@ from datetime import datetime
 import json
 from .models import (
     Atendimento, Peso, Patologia, Documento, Exame, ExameArquivo,
-    Foto, FotoArquivo, VacinaRegistro, Receita, Observacao, Video, Internacao,
+    Foto, FotoArquivo, VacinaRegistro, Receita, Observacao, ObservacaoAnexo, Video, Internacao,
     ProtocoloVacinaRegistro, DoseVacinaRegistro
 )
 
@@ -641,28 +641,29 @@ def salvar_receita(request, pet_id):
             data_hora = timezone.make_aware(datetime.strptime(data_hora_str[:16], '%Y-%m-%dT%H:%M'))
         else:
             data_hora = timezone.now()
-        
+
+        modelo_receita_id = request.POST.get('modelo_receita_id') or None
+        modelo = None
+        if modelo_receita_id:
+            modelo = ModeloReceitaCadastro.objects.filter(id=modelo_receita_id, ativo=True).first()
+
+        conteudo = request.POST.get('conteudo', '')
+
         receita_id = request.POST.get('receita_id')
         if receita_id:
             receita = get_object_or_404(Receita, id=receita_id, pet=pet)
             receita.data_hora = data_hora
-            receita.tipo = request.POST.get('tipo', '')
-            receita.prescricao = request.POST.get('prescricao')
-            receita.observacoes = request.POST.get('observacoes', '')
-            receita.validade = request.POST.get('validade') or None
+            receita.modelo_receita = modelo
+            receita.conteudo = conteudo
             receita.save()
         else:
             receita = Receita.objects.create(
                 pet=pet,
                 data_hora=data_hora,
-                tipo=request.POST.get('tipo', ''),
-                prescricao=request.POST.get('prescricao'),
-                observacoes=request.POST.get('observacoes', ''),
+                modelo_receita=modelo,
+                conteudo=conteudo,
                 usuario=request.user
             )
-            if request.POST.get('validade'):
-                receita.validade = request.POST.get('validade')
-                receita.save()
 
         return JsonResponse({
             'success': True,
@@ -683,29 +684,51 @@ def salvar_observacao(request, pet_id):
     """Salvar observação"""
     try:
         pet = get_object_or_404(Pet, id=pet_id)
-        
+
         data_hora_str = request.POST.get('data_hora')
         if data_hora_str:
             data_hora = timezone.make_aware(datetime.strptime(data_hora_str[:16], '%Y-%m-%dT%H:%M'))
         else:
             data_hora = timezone.now()
-        
+
+        titulo = request.POST.get('titulo', '')
+        conteudo = request.POST.get('conteudo', '')
+
         observacoes_id = request.POST.get('observacoes_id')
         if observacoes_id:
             observacao = get_object_or_404(Observacao, id=observacoes_id, pet=pet)
             observacao.data_hora = data_hora
-            observacao.titulo = request.POST.get('titulo')
-            observacao.texto = request.POST.get('texto')
-            observacao.categoria = request.POST.get('categoria', '')
+            observacao.titulo = titulo
+            observacao.conteudo = conteudo
             observacao.save()
         else:
             observacao = Observacao.objects.create(
                 pet=pet,
                 data_hora=data_hora,
-                titulo=request.POST.get('titulo'),
-                texto=request.POST.get('texto'),
-                categoria=request.POST.get('categoria', ''),
+                titulo=titulo,
+                conteudo=conteudo,
                 usuario=request.user
+            )
+
+        # Processar anexos removidos
+        anexos_remover = request.POST.get('anexos_remover', '')
+        if anexos_remover:
+            for anexo_id in anexos_remover.split(','):
+                anexo_id = anexo_id.strip()
+                if anexo_id:
+                    try:
+                        anexo = ObservacaoAnexo.objects.get(id=anexo_id, observacao=observacao)
+                        anexo.arquivo.delete(save=False)
+                        anexo.delete()
+                    except ObservacaoAnexo.DoesNotExist:
+                        pass
+
+        # Processar novos anexos
+        for arquivo in request.FILES.getlist('anexos'):
+            ObservacaoAnexo.objects.create(
+                observacao=observacao,
+                arquivo=arquivo,
+                nome_original=arquivo.name
             )
 
         return JsonResponse({
@@ -713,7 +736,7 @@ def salvar_observacao(request, pet_id):
             'id': observacao.id,
             'message': 'Observação salva com sucesso!'
         })
-        
+
     except Exception as e:
         return JsonResponse({
             'success': False,
@@ -954,12 +977,13 @@ def listar_timeline(request, pet_id):
                 'usuario_avatar': vacina.usuario.userprofile.avatar.url if hasattr(vacina.usuario, 'userprofile') and vacina.usuario.userprofile.avatar else None
             })
         
-        for receita in Receita.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+        for receita in Receita.objects.filter(pet=pet).select_related('usuario', 'modelo_receita').order_by('-data_hora'):
+            titulo = receita.modelo_receita.nome if receita.modelo_receita else 'Receita'
             registros.append({
                 'tipo': 'receita',
                 'id': receita.id,
-                'titulo': f'Receita: {receita.tipo}',
-                'descricao': receita.prescricao[:100] if receita.prescricao else 'Receita',
+                'titulo': titulo,
+                'descricao': titulo,
                 'data': timezone.localtime(receita.data_hora).isoformat(),
                 'usuario': receita.usuario.get_full_name() or receita.usuario.username,
                 'usuario_avatar': receita.usuario.userprofile.avatar.url if hasattr(receita.usuario, 'userprofile') and receita.usuario.userprofile.avatar else None
@@ -1067,6 +1091,441 @@ def listar_timeline(request, pet_id):
 
 @require_http_methods(["GET"])
 @login_required
+def listar_agenda_pet(request, pet_id):
+    """Retorna todos os agendamentos do pet para a aba Agenda."""
+    from scheduling.models import Agendamento
+    from datetime import datetime as _dt_cls, timedelta
+
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+
+        def _mins(delta):
+            if delta is None:
+                return None
+            total = int(delta.total_seconds() // 60)
+            return total if total >= 0 else None
+
+        registros = []
+        for a in Agendamento.objects.filter(animal=pet).select_related(
+            'tipo_atendimento', 'veterinario', 'fila'
+        ).order_by('-data', '-horario'):
+            # Data/hora agendada
+            if a.horario:
+                data_hora_str = f"{a.data.strftime('%d/%m/%Y')} às {a.horario.strftime('%H:%M')}"
+            else:
+                data_hora_str = a.data.strftime('%d/%m/%Y')
+
+            # Atraso: chegada - horário agendado
+            atraso = None
+            if a.horario and a.data_hora_chegada:
+                agendado_dt = timezone.make_aware(
+                    _dt_cls.combine(a.data, a.horario)
+                )
+                atraso = _mins(a.data_hora_chegada - agendado_dt)
+
+            # Espera: início do atendimento - chegada
+            espera = None
+            if a.data_hora_chegada and a.data_hora_inicio_atendimento:
+                espera = _mins(a.data_hora_inicio_atendimento - a.data_hora_chegada)
+
+            # Atend.: fim - início do atendimento
+            duracao_atend = None
+            if a.data_hora_inicio_atendimento and a.data_hora_fim_atendimento:
+                duracao_atend = _mins(a.data_hora_fim_atendimento - a.data_hora_inicio_atendimento)
+
+            registros.append({
+                'id': a.id,
+                'data_hora': data_hora_str,
+                'tipo': a.tipo_atendimento.nome if a.tipo_atendimento else '',
+                'profissional': a.veterinario.get_full_name() if a.veterinario else '',
+                'status': a.status,
+                'status_display': a.get_status_display(),
+                'atraso': atraso,
+                'espera': espera,
+                'atendimento': duracao_atend,
+            })
+
+        return JsonResponse({'success': True, 'registros': registros})
+
+    except Exception as e:
+        import traceback
+        return JsonResponse({'success': False, 'error': str(e), 'trace': traceback.format_exc()}, status=400)
+
+
+@require_http_methods(["GET"])
+@login_required
+def listar_timeline_completa(request, pet_id):
+    """Retorna todos os registros com dados completos para a aba Linha do Tempo."""
+    try:
+        pet = get_object_or_404(Pet, id=pet_id)
+        registros = []
+
+        def _avatar(user):
+            try:
+                return user.userprofile.avatar.url if user.userprofile.avatar else None
+            except Exception:
+                return None
+
+        def _usuario(user):
+            return user.get_full_name() or user.username
+
+        def _dt(dt):
+            return timezone.localtime(dt).isoformat()
+
+        # Atendimentos
+        for r in Atendimento.objects.filter(pet=pet).select_related('tipo_atendimento', 'usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'atendimento',
+                'id': r.id,
+                'titulo': r.tipo_atendimento.nome if r.tipo_atendimento else 'Atendimento',
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Tipo', 'valor': r.tipo_atendimento.nome if r.tipo_atendimento else ''},
+                    {'label': 'Observações', 'valor': r.observacoes or '', 'html': True},
+                    {'label': 'Detalhes', 'valor': r.detalhes or '', 'html': True},
+                    {'label': 'Retorno', 'valor': str(r.data_retorno.strftime('%d/%m/%Y') if r.data_retorno else '')},
+                    {'label': 'Obs. Retorno', 'valor': r.obs_retorno or ''},
+                ],
+            })
+
+        # Pesos
+        for r in Peso.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'peso',
+                'id': r.id,
+                'titulo': f'{str(r.peso).replace(".", ",")} kg',
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Peso', 'valor': f'{str(r.peso).replace(".", ",")} kg'},
+                    {'label': 'Condição Corporal', 'valor': r.condicao_corporal or ''},
+                    {'label': 'Observações', 'valor': r.observacoes or ''},
+                ],
+            })
+
+        # Patologias
+        for r in Patologia.objects.filter(pet=pet).select_related('usuario', 'patologia_cadastro').order_by('-data_hora'):
+            protocolo_padrao = (r.patologia_cadastro.descricao or '') if r.patologia_cadastro else ''
+            registros.append({
+                'tipo': 'patologia',
+                'id': r.id,
+                'titulo': r.diagnostico,
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Diagnóstico', 'valor': r.diagnostico},
+                    {'label': 'CID', 'valor': r.cid or ''},
+                    {'label': 'Gravidade', 'valor': r.gravidade or ''},
+                    {'label': 'Protocolo padrão', 'valor': protocolo_padrao},
+                    {'label': 'Observações', 'valor': r.observacoes or ''},
+                ],
+            })
+
+        # Documentos
+        for r in Documento.objects.filter(pet=pet).select_related('usuario', 'modelo_documento').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'documento',
+                'id': r.id,
+                'titulo': r.modelo_documento.nome if r.modelo_documento else r.titulo or 'Documento',
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Modelo', 'valor': r.modelo_documento.nome if r.modelo_documento else r.titulo or ''},
+                    {'label': 'Conteúdo', 'valor': r.conteudo or '', 'html': True},
+                ],
+            })
+
+        # Exames
+        from cadastros.models import ReferenciaExame as RefExameCadastro
+        from datetime import date as _date
+        import json as _json
+
+        # Calcular idade do pet em meses (para buscar referência correta)
+        _idade_meses = 0
+        if pet.data_nascimento:
+            _hoje = _date.today()
+            _idade_meses = (_hoje.year - pet.data_nascimento.year) * 12 + (_hoje.month - pet.data_nascimento.month)
+        _especie_id = pet.especie_id or (pet.raca.especie_id if hasattr(pet, 'raca') and pet.raca else None)
+
+        for r in Exame.objects.filter(pet=pet).select_related('usuario', 'exame_cadastro').order_by('-data_hora'):
+            # Montar tabela de itens resultado
+            tabela_html = ''
+            if r.itens_resultado:
+                try:
+                    itens = _json.loads(r.itens_resultado)
+                    if itens:
+                        # Buscar referências para este exame/pet
+                        ref_map = {}
+                        if r.exame_cadastro_id:
+                            referencia = None
+                            if _especie_id:
+                                referencia = RefExameCadastro.objects.filter(
+                                    exame_id=r.exame_cadastro_id,
+                                    especie_id=_especie_id,
+                                    idade_inicial__lte=_idade_meses,
+                                    idade_final__gte=_idade_meses,
+                                ).prefetch_related('itens__atributo').first()
+                            if not referencia:
+                                referencia = RefExameCadastro.objects.filter(
+                                    exame_id=r.exame_cadastro_id
+                                ).prefetch_related('itens__atributo').order_by('id').first()
+                            if referencia:
+                                for item in referencia.itens.all():
+                                    ref_inicio = item.ref_inicio or ''
+                                    ref_fim = item.ref_fim or ''
+                                    if ref_inicio and ref_fim:
+                                        ref_map[item.atributo_id] = f'{ref_inicio} – {ref_fim}'
+                                    elif ref_inicio:
+                                        ref_map[item.atributo_id] = ref_inicio
+                                    elif ref_fim:
+                                        ref_map[item.atributo_id] = ref_fim
+
+                        linhas = ''
+                        for item in itens:
+                            nome = item.get('nome', '')
+                            resultado_val = item.get('resultado', '')
+                            unidade = item.get('unidade', '')
+                            atributo_id = item.get('atributo_id')
+                            ref_val = ref_map.get(atributo_id, '') if atributo_id else ''
+                            resultado_com_unidade = f'{resultado_val} {unidade}'.strip() if unidade else resultado_val
+                            linhas += (
+                                f'<tr>'
+                                f'<td style="padding:3px 6px;border:1px solid #dee2e6;">{nome}</td>'
+                                f'<td style="padding:3px 6px;border:1px solid #dee2e6;">{resultado_com_unidade}</td>'
+                                f'<td style="padding:3px 6px;border:1px solid #dee2e6;color:#6c757d;">{ref_val}</td>'
+                                f'</tr>'
+                            )
+                        tabela_html = (
+                            '<table style="width:100%;border-collapse:collapse;font-size:0.78rem;">'
+                            '<thead><tr style="background:#f8f9fa;">'
+                            '<th style="padding:3px 6px;border:1px solid #dee2e6;text-align:left;">Atributo</th>'
+                            '<th style="padding:3px 6px;border:1px solid #dee2e6;text-align:left;">Resultado</th>'
+                            '<th style="padding:3px 6px;border:1px solid #dee2e6;text-align:left;">Referência</th>'
+                            '</tr></thead>'
+                            f'<tbody>{linhas}</tbody>'
+                            '</table>'
+                        )
+                except Exception:
+                    pass
+
+            campos = [
+                {'label': 'Nome', 'valor': r.nome},
+                {'label': 'Tipo', 'valor': r.tipo or ''},
+            ]
+            if tabela_html:
+                campos.append({'label': 'Atributos', 'valor': tabela_html, 'html': True})
+            if r.conclusoes:
+                campos.append({'label': 'Conclusões', 'valor': r.conclusoes, 'html': True})
+
+            registros.append({
+                'tipo': 'exame',
+                'id': r.id,
+                'titulo': r.nome or r.tipo or 'Exame',
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': campos,
+            })
+
+        # Fotos
+        for r in Foto.objects.filter(pet=pet).select_related('usuario').prefetch_related('arquivos').order_by('-data_hora'):
+            fotos_list = [a.arquivo.url for a in r.arquivos.all()]
+            registros.append({
+                'tipo': 'fotos',
+                'id': r.id,
+                'titulo': r.titulo,
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Título', 'valor': r.titulo},
+                    {'label': 'Descrição', 'valor': r.descricao or ''},
+                ],
+                'fotos': fotos_list,
+            })
+
+        # Vacinas
+        for r in VacinaRegistro.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'vacina',
+                'id': r.id,
+                'titulo': r.nome,
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Vacina', 'valor': r.nome},
+                    {'label': 'Fabricante', 'valor': r.fabricante or ''},
+                    {'label': 'Aplicação', 'valor': timezone.localtime(r.data_hora).strftime('%d/%m/%Y %H:%M')},
+                    {'label': 'Lote', 'valor': r.lote or ''},
+                    {'label': 'Próxima Dose', 'valor': r.proxima_dose.strftime('%d/%m/%Y') if r.proxima_dose else ''},
+                    {'label': 'Observações', 'valor': r.observacoes or ''},
+                ],
+            })
+
+        # Receitas
+        for r in Receita.objects.filter(pet=pet).select_related('usuario', 'modelo_receita').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'receita',
+                'id': r.id,
+                'titulo': r.modelo_receita.nome if r.modelo_receita else 'Receita',
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Modelo', 'valor': r.modelo_receita.nome if r.modelo_receita else ''},
+                    {'label': 'Conteúdo', 'valor': r.conteudo or r.prescricao or '', 'html': True},
+                ],
+            })
+
+        # Observações
+        for r in Observacao.objects.filter(pet=pet).select_related('usuario').prefetch_related('anexos').order_by('-data_hora'):
+            anexos_list = [
+                {'url': a.arquivo.url, 'nome': a.nome_original or a.arquivo.name.split('/')[-1]}
+                for a in r.anexos.all()
+            ]
+            registros.append({
+                'tipo': 'observacoes',
+                'id': r.id,
+                'titulo': r.titulo,
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Título', 'valor': r.titulo},
+                    {'label': 'Observação', 'valor': r.conteudo or r.texto or '', 'html': True},
+                ],
+                'anexos': anexos_list,
+            })
+
+        # Vídeos
+        for r in Video.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            try:
+                arquivo_url = r.arquivo.url if r.arquivo else ''
+            except Exception:
+                arquivo_url = ''
+            registros.append({
+                'tipo': 'video',
+                'id': r.id,
+                'titulo': r.titulo,
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Título', 'valor': r.titulo},
+                    {'label': 'Descrição', 'valor': r.descricao or ''},
+                ],
+                'video_url': arquivo_url,
+            })
+
+        # Internações
+        for r in Internacao.objects.filter(pet=pet).select_related('usuario').order_by('-data_hora'):
+            registros.append({
+                'tipo': 'internacao',
+                'id': r.id,
+                'titulo': f'Internação – {r.get_status_display() if hasattr(r, "get_status_display") else r.status}',
+                'data': _dt(r.data_hora),
+                'usuario': _usuario(r.usuario),
+                'usuario_avatar': _avatar(r.usuario),
+                'campos': [
+                    {'label': 'Status', 'valor': r.status or ''},
+                    {'label': 'Gravidade', 'valor': r.gravidade or ''},
+                    {'label': 'Motivo', 'valor': r.motivo or ''},
+                    {'label': 'Entrada', 'valor': str(r.data_entrada) if r.data_entrada else ''},
+                    {'label': 'Previsão Alta', 'valor': str(r.previsao_alta) if r.previsao_alta else ''},
+                    {'label': 'Observações', 'valor': r.observacoes or ''},
+                ],
+            })
+
+        # Protocolos de vacina (aplicados via protocolo)
+        today = timezone.localdate()
+        for reg in ProtocoloVacinaRegistro.objects.filter(pet=pet).select_related(
+            'protocolo__vacina', 'usuario'
+        ).prefetch_related('doses').order_by('-data_inicial'):
+            usuario_obj = reg.usuario
+            vacina_nome = reg.protocolo.vacina.nome
+            protocolo_nome = reg.protocolo.nome
+            doses = list(reg.doses.all())
+
+            if reg.status == 'interrompida':
+                status_display = 'Interrompida'
+            elif not doses:
+                status_display = 'Programada'
+            elif all(d.data_aplicacao for d in doses):
+                status_display = 'Aplicada'
+            elif any(not d.data_aplicacao and d.data_programada < today for d in doses):
+                status_display = 'Atrasada'
+            else:
+                status_display = 'Programada'
+
+            datas_aplicacao = [d.data_aplicacao for d in doses if d.data_aplicacao]
+            if datas_aplicacao:
+                ref_dt = timezone.localtime(max(datas_aplicacao)).isoformat()
+            else:
+                ref_dt = timezone.localtime(reg.criado_em).isoformat()
+
+            # Frequency info
+            aplicacao_val = reg.protocolo.aplicacao
+            intervalo_dias = reg.protocolo.intervalo_dias
+            if aplicacao_val == 'indeterminado':
+                freq_text = f'Tempo indeterminado, a cada {intervalo_dias} dias'
+            else:
+                freq_text = f'{aplicacao_val} doses a cada {intervalo_dias} dias'
+
+            # Doses table
+            dose_rows = ''
+            for d in sorted(doses, key=lambda x: x.numero_dose):
+                prog = d.data_programada.strftime('%d/%m/%Y') if d.data_programada else ''
+                aplic = timezone.localtime(d.data_aplicacao).strftime('%d/%m/%Y %H:%M') if d.data_aplicacao else ''
+                dose_rows += (
+                    f'<tr>'
+                    f'<td>{d.numero_dose}\u00aa</td>'
+                    f'<td>{prog}</td>'
+                    f'<td>{aplic}</td>'
+                    f'<td>{d.laboratorio or ""}</td>'
+                    f'<td>{d.lote or ""}</td>'
+                    f'<td></td>'
+                    f'</tr>'
+                )
+            tabela_html = (
+                f'<p style="margin:0 0 6px 0"><strong>Posologia:</strong> {freq_text}</p>'
+                f'<table class="lt-exam-table"><thead><tr>'
+                f'<th>Dose</th><th>Programa\u00e7\u00e3o</th><th>Aplica\u00e7\u00e3o</th>'
+                f'<th>Laborat\u00f3rio</th><th>Lote</th><th>A\u00e7\u00f5es</th>'
+                f'</tr></thead><tbody>{dose_rows}</tbody></table>'
+            )
+
+            try:
+                avatar_url = usuario_obj.userprofile.avatar.url if usuario_obj.userprofile.avatar else None
+            except Exception:
+                avatar_url = None
+
+            registros.append({
+                'tipo': 'vacina-dose',
+                'id': reg.id,
+                'titulo': f'{vacina_nome} \u2013 {protocolo_nome}',
+                'data': ref_dt,
+                'usuario': usuario_obj.get_full_name() or usuario_obj.username,
+                'usuario_avatar': avatar_url,
+                'campos': [{'label': 'Doses', 'valor': tabela_html, 'html': True}],
+                'status': status_display.lower(),
+            })
+
+        registros.sort(key=lambda x: x['data'], reverse=True)
+        return JsonResponse({'success': True, 'registros': registros})
+
+    except Exception as e:
+        import traceback
+        return JsonResponse({'success': False, 'error': str(e), 'trace': traceback.format_exc()}, status=400)
+
+
+@require_http_methods(["GET"])
+@login_required
 def obter_registro(request, pet_id, tipo, registro_id):
     """Obter detalhes de um registro específico para edição"""
     try:
@@ -1165,16 +1624,18 @@ def obter_registro(request, pet_id, tipo, registro_id):
             })
         elif tipo == 'receita':
             dados.update({
-                'tipo_receita': registro.tipo or '',
-                'prescricao': registro.prescricao,
-                'validade': registro.validade or '',
-                'observacoes': registro.observacoes or ''
+                'modelo_receita_id': registro.modelo_receita_id or '',
+                'conteudo': registro.conteudo or '',
             })
         elif tipo == 'observacoes':
+            anexos_list = [
+                {'id': a.id, 'url': a.arquivo.url, 'nome': a.nome_original or a.arquivo.name.split('/')[-1]}
+                for a in registro.anexos.all()
+            ]
             dados.update({
                 'titulo': registro.titulo,
-                'texto': registro.texto,
-                'categoria': registro.categoria or ''
+                'conteudo': registro.conteudo or registro.texto or '',
+                'anexos': anexos_list,
             })
         elif tipo == 'video':
             try:
@@ -1465,6 +1926,232 @@ def servir_pdf_temp_view(request, token, filename):
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="{filename}"'
     return response
+
+
+@require_http_methods(["POST"])
+@login_required
+def imprimir_receita_view(request):
+    """Gera PDF de receita usando xhtml2pdf (igual ao de documento)."""
+    try:
+        from xhtml2pdf import pisa
+        from io import BytesIO
+        import base64
+        import os
+        import re
+        from django.utils import timezone as tz
+
+        data = json.loads(request.body)
+        modelo   = data.get('modelo', {})
+        pet      = data.get('pet', {})
+        cliente  = data.get('cliente', {})
+        dc       = data.get('clinica', {})
+        conteudo = data.get('conteudo', '')
+        encerramento = data.get('encerramento', '')
+        agora = tz.localtime(tz.now())
+
+        logo_tag = ''
+        try:
+            from cadastros.models import DadosUnidade
+            du = DadosUnidade.objects.first()
+            if du and du.logomarca:
+                logo_path = du.logomarca.path
+                if os.path.exists(logo_path):
+                    ext = os.path.splitext(logo_path)[1].lower().lstrip('.')
+                    mime = 'jpeg' if ext in ('jpg', 'jpeg') else ext
+                    with open(logo_path, 'rb') as f:
+                        logo_bytes = f.read()
+                    b64 = base64.b64encode(logo_bytes).decode()
+                    try:
+                        from PIL import Image as _PILImg
+                        from io import BytesIO as _PILBuf
+                        _pil = _PILImg.open(_PILBuf(logo_bytes))
+                        _iw, _ih = _pil.size
+                        _scale = min(120 / _iw, 60 / _ih, 1.0)
+                        _lw, _lh = int(_iw * _scale), int(_ih * _scale)
+                        logo_tag = f'<img src="data:image/{mime};base64,{b64}" width="{_lw}" height="{_lh}">'
+                    except Exception:
+                        logo_tag = f'<img src="data:image/{mime};base64,{b64}" style="max-width:120px;max-height:80px;">'
+        except Exception:
+            pass
+
+        fones  = ' / '.join(filter(None, [dc.get('telefone'), dc.get('celular')]))
+        end_parts = [dc.get('endereco'), dc.get('bairro')]
+        if dc.get('cidade') and dc.get('estado'):
+            end_parts.append(f"{dc['cidade']}/{dc['estado']}")
+        elif dc.get('cidade') or dc.get('estado'):
+            end_parts.append(dc.get('cidade') or dc.get('estado'))
+        end_str = ', '.join(filter(None, end_parts))
+
+        mc = modelo.get('modelo_cabecalho', 0)
+        if mc == 1:
+            cab_html = f'''<table width="100%" style="border:0.5px solid #ccc;margin-bottom:8px;"><tr>
+                <td style="padding:3px 4px;vertical-align:top;">{logo_tag}</td>
+                <td style="padding:3px 4px;vertical-align:top;" align="right">
+                    <p style="font-size:19px;font-weight:bold;color:#333;margin:0 0 1px 0;">{dc.get("nome","")}</p>
+                    <p style="font-size:13px;color:#666;margin:0 0 0.3px 0;">{end_str}</p>
+                    {f'<p style="font-size:13px;color:#666;margin:0 0 0.3px 0;">{fones}</p>' if fones else ''}
+                </td>
+            </tr></table>'''
+        elif mc == 2:
+            cab_html = f'''<table width="100%" style="border:0.5px solid #ccc;margin-bottom:8px;"><tr>
+                <td style="padding:3px 4px;vertical-align:top;">{logo_tag}</td>
+                <td style="padding:3px 4px;vertical-align:top;" align="right">
+                    <p style="font-size:19px;font-weight:bold;color:#333;margin:0 0 1px 0;">{dc.get("nome","")}</p>
+                    {f'<p style="font-size:13px;color:#666;margin:0 0 0.3px 0;">{dc["cnpj"]}</p>' if dc.get("cnpj") else ''}
+                    {f'<p style="font-size:13px;color:#666;margin:0 0 0.3px 0;">{dc["crmv"]}</p>' if dc.get("crmv") else ''}
+                    <p style="font-size:13px;color:#666;margin:0 0 0.3px 0;">{end_str}</p>
+                    {f'<p style="font-size:13px;color:#666;margin:0 0 0.3px 0;">{fones}</p>' if fones else ''}
+                    {f'<p style="font-size:13px;color:#666;margin:0;">{dc["email"]}</p>' if dc.get("email") else ''}
+                </td>
+            </tr></table>'''
+        elif mc == 3:
+            cab_html = f'<table width="100%" style="border:0.5px solid #ccc;margin-bottom:8px;"><tr><td style="padding:3px 4px;text-align:center;">{logo_tag}</td></tr></table>'
+        else:
+            cab_html = ''
+
+        idade_animal = 'não informada'
+        if pet.get('data_nascimento'):
+            from datetime import date
+            try:
+                nasc = date.fromisoformat(pet['data_nascimento'])
+                hoje = agora.date()
+                anos  = hoje.year - nasc.year - ((hoje.month, hoje.day) < (nasc.month, nasc.day))
+                meses = (hoje.month - nasc.month) % 12
+                txt = ''
+                if anos > 0:
+                    txt = f"{anos} {'anos' if anos > 1 else 'ano'}"
+                if meses > 0:
+                    txt += (' e ' if txt else '') + f"{meses} {'meses' if meses > 1 else 'mês'}"
+                idade_animal = txt or 'Menos de 1 mês'
+            except Exception:
+                pass
+        elif pet.get('idade_estimada'):
+            idade_animal = f"{pet['idade_estimada']} ano(s) estimado(s)"
+
+        mip = modelo.get('modelo_info_paciente', 0)
+        if mip == 1:
+            info_html = f'''<table width="100%" style="border:0.5px solid #ccc;margin-bottom:30px;"><tr>
+                <td width="50%" style="padding:3px 5px;vertical-align:top;">
+                    <p style="font-size:13px;font-weight:600;color:#333;margin:0;line-height:1;">Dados do Animal</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Nome:</b> {pet.get("nome","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Espécie:</b> {pet.get("especie_nome","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Raça:</b> {pet.get("raca_nome","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Sexo:</b> {pet.get("sexo_display","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Idade:</b> {idade_animal}</p>
+                </td>
+                <td width="50%" style="padding:3px 5px;vertical-align:top;">
+                    <p style="font-size:13px;font-weight:600;color:#333;margin:0;line-height:1;">Responsável</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Nome:</b> {cliente.get("nome_completo","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>CPF:</b> {cliente.get("cpf","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Celular:</b> {cliente.get("celular","")}</p>
+                </td>
+            </tr></table>'''
+        elif mip == 2:
+            info_html = f'''<table width="100%" style="border:0.5px solid #ccc;margin-bottom:30px;"><tr>
+                <td width="50%" style="padding:3px 5px;vertical-align:top;">
+                    <p style="font-size:13px;font-weight:600;color:#333;margin:0;line-height:1;">Dados do Animal</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Nome:</b> {pet.get("nome","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Espécie:</b> {pet.get("especie_nome","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Raça:</b> {pet.get("raca_nome","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Sexo:</b> {pet.get("sexo_display","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Idade:</b> {idade_animal}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Peso:</b> {pet.get("peso","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Microchip:</b> {pet.get("microchip","")}</p>
+                </td>
+                <td width="50%" style="padding:3px 5px;vertical-align:top;">
+                    <p style="font-size:13px;font-weight:600;color:#333;margin:0;line-height:1;">Dados do Responsável</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Nome:</b> {cliente.get("nome_completo","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>CPF:</b> {cliente.get("cpf","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Celular:</b> {cliente.get("celular","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Endereço:</b> {cliente.get("endereco_completo","")}</p>
+                    <p style="font-size:11px;color:#555;margin:0;line-height:1;"><b>Cidade/UF:</b> {cliente.get("cidade","")}/{cliente.get("estado","")}</p>
+                </td>
+            </tr></table>'''
+        else:
+            info_html = ''
+
+        mr = modelo.get('modelo_rodape', 0)
+        if mr == 1:
+            rodape_html = f'''<table width="100%" style="border-top:1px solid #aaa;border-collapse:collapse;"><tr>
+  <td style="font-size:12px;color:#666;padding:3px 0 0 0;">Impresso em: {agora.strftime("%d/%m/%Y")} às {agora.strftime("%H:%M")}</td>
+  <td align="center" style="font-size:12px;color:#666;padding:3px 0 0 0;">Por: {request.user.get_full_name() or request.user.username}</td>
+  <td align="right" style="font-size:12px;color:#666;padding:3px 0 0 0;">P&#225;gina <pdf:pagenumber/> de <pdf:pagecount/></td>
+</tr></table>'''
+        else:
+            rodape_html = ''
+
+        nome_doc = modelo.get('nome', 'Receita')
+        _titulo_table = f'<table width="100%" style="border:0.5px solid #ccc;margin-bottom:0;"><tr><td style="padding:5px 8px;text-align:center;font-size:19px;font-weight:bold;text-transform:uppercase;color:#333;">RECEITA</td></tr></table>'
+        if cab_html:
+            _header_content = cab_html + '<div style="height:1mm;font-size:1px;line-height:1px;"> </div>' + _titulo_table
+            _header_frame_height = '44mm'
+            _page_margin_top = '38mm'
+        else:
+            _header_content = _titulo_table
+            _header_frame_height = '13mm'
+            _page_margin_top = '18mm'
+
+        html = f'''<!DOCTYPE html>
+<html xmlns:pdf="http://namespaces.reportlab.com/reportlab/html/pdf/1">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    @page {{
+      size: A4;
+      margin: {_page_margin_top} 15mm 18mm 15mm;
+            @frame header_frame {{
+                -pdf-frame-content: header_content;
+                left: 15mm;
+                width: 180mm;
+                top: 4mm;
+                height: {_header_frame_height};
+            }}
+      @frame footer_frame {{
+        -pdf-frame-content: footer_content;
+        left: 15mm;
+        width: 180mm;
+        top: 279mm;
+        height: 15mm;
+      }}
+    }}
+    body {{ font-family: Helvetica, Arial, sans-serif; font-size: 13px; color: #333; line-height:0.5; }}
+    table {{ border-collapse: collapse; }}
+    td, th {{ border: none; vertical-align: top; padding: 0; }}
+    p {{ margin: 0; }}
+    #footer_content {{ font-size: 12px; color: #666; }}
+  </style>
+</head>
+<body>
+    <div id="header_content">{_header_content}</div>
+    {info_html if info_html else ''}
+  <div style="font-size:13px;margin-bottom:10px;">{conteudo}</div>
+  {f'<div style="font-size:13px;">{encerramento}</div>' if encerramento else ''}
+  {f'<div id="footer_content">{rodape_html}</div>' if rodape_html else ''}
+</body>
+</html>'''
+
+        buffer = BytesIO()
+        status = pisa.CreatePDF(html, dest=buffer, encoding='utf-8')
+        if status.err:
+            return JsonResponse({'error': 'Erro ao gerar PDF'}, status=500)
+
+        _modelo_nome = (modelo.get('nome') if isinstance(modelo, dict) else None) or nome_doc or 'Receita'
+        _animal_nome = (pet.get('nome') if isinstance(pet, dict) else '') or ''
+        _file_base = re.sub(r'[\\/*?:"<>|]', '', f'{_modelo_nome} - {_animal_nome}'.strip())
+        filename = f'{_file_base or "Receita"}.pdf'
+
+        import uuid as _uuid
+        from django.core.cache import cache as _cache
+        _token = str(_uuid.uuid4())
+        buffer.seek(0)
+        _cache.set(f'pdf_temp_{_token}', buffer.read(), timeout=300)
+        from urllib.parse import quote as _quote
+        pdf_url = f'/atendimento/pdf/{_token}/{_quote(filename)}'
+        return JsonResponse({'url': pdf_url})
+
+    except Exception as e:
+        import traceback
+        return JsonResponse({'error': str(e), 'trace': traceback.format_exc()}, status=500)
 
 
 # ========== VACCINE PROTOCOL VIEWS ==========

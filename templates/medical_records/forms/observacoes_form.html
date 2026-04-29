@@ -1,3 +1,4 @@
+{% load static %}
 <!-- Formulário de Observações -->
 <div id="form-observacoes" class="form-record">
   <!-- Cabeçalho -->
@@ -5,7 +6,7 @@
     <div class="form-record-title-section">
       <div class="form-record-icon-title">
         <i class="ti ti-message form-record-icon" style="color: #6c757d;"></i>
-        <h4 class="form-record-title" style="color: #6c757d;">Observações em</h4>
+        <h4 class="form-record-title" style="color: #6c757d;">Observações</h4>
         <span id="observacoes-datetime" class="form-record-datetime" style="color: #6c757d;">{{ now|date:"d/m/Y H:i" }}</span>
         <button type="button" class="btn btn-link btn-sm p-0" onclick="editDatetime('observacoes-datetime')" title="Editar data/hora" style="color: #6c757d;">
           <i class="ti ti-pencil" style="font-size: 20px;"></i>
@@ -16,36 +17,34 @@
     <button type="button" class="btn-close" onclick="hideAllForms()"></button>
   </div>
 
-  <!-- Campo hidden para ID do registro (usado na edição) -->
-  <input type="hidden" id="observacoes-id" name="observacoes_id" value="">
+  <input type="hidden" id="observacoes-id" value="">
 
-  <!-- Campos do formulário -->
   <div class="mb-3">
     <label class="form-label">Título <span class="text-danger">*</span></label>
-    <input type="text" class="form-control" id="titulo-observacoes" required placeholder="Título da observação">
+    <input type="text" class="form-control" id="titulo-observacoes" placeholder="Título da observação">
   </div>
 
   <div class="mb-3">
-    <label class="form-label">Observação <span class="text-danger">*</span></label>
-    <textarea class="form-control" id="texto-observacoes" rows="6" required placeholder="Digite sua observação"></textarea>
+    <label class="form-label">Observação</label>
+    <div id="loading-editor-obs" style="height:300px;border:1px solid #e2e8f0;border-radius:6px;display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#64748b;font-size:14px;">
+      Carregando editor...
+    </div>
+    <div id="editor-container-obs" style="display:none;">
+      <textarea id="editor-observacoes"></textarea>
+    </div>
   </div>
 
+  <!-- Anexos -->
   <div class="mb-3">
-    <label class="form-label">Categoria</label>
-    <select class="form-select" id="categoria-observacoes">
-      <option value="">Selecione...</option>
-      <option value="comportamento">Comportamento</option>
-      <option value="alimentacao">Alimentação</option>
-      <option value="geral">Geral</option>
-      <option value="importante">Importante</option>
-    </select>
+    <label class="form-label">Anexos</label>
+    <div id="obs-anexos-existentes" class="d-flex flex-wrap gap-2 mb-2"></div>
+    <input type="file" class="form-control" id="obs-anexos-input" multiple>
+    <small class="text-muted">Adicione arquivos (PDF, imagens, etc.)</small>
   </div>
 
-  <!-- Botões de ação -->
   <div class="d-flex justify-content-between align-items-center mt-4">
-    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display: none;">
-      <i class="ti ti-trash"></i>
-      Excluir
+    <button type="button" class="btn btn-danger btn-delete-record" onclick="deleteCurrentRecord()" style="display:none;">
+      <i class="ti ti-trash"></i> Excluir
     </button>
     <div class="d-flex gap-2 ms-auto">
       <button type="button" class="btn btn-secondary" onclick="hideAllForms()">Cancelar</button>
@@ -56,44 +55,125 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  let _obsEditorInited = false;
+  let _obsAnexosRemover = [];
+
   function toLocalISOString(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+    const p = n => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${p(date.getMonth()+1)}-${p(date.getDate())}T${p(date.getHours())}:${p(date.getMinutes())}:${p(date.getSeconds())}`;
   }
 
-  const usuarioAvatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+  function initEditorObs() {
+    const loading   = document.getElementById('loading-editor-obs');
+    const container = document.getElementById('editor-container-obs');
+    if (loading) loading.style.display = 'flex';
+    if (container) container.style.display = 'none';
+
+    if (!window.HugeRTEEditor) {
+      if (loading) loading.style.display = 'none';
+      if (container) container.style.display = 'block';
+      _obsEditorInited = true;
+      return Promise.resolve();
+    }
+
+    return HugeRTEEditor.init('#editor-observacoes', { height: 350, min_height: 350 }, 'editor-observacoes')
+      .then(() => {
+        if (loading) loading.style.display = 'none';
+        if (container) container.style.display = 'block';
+        _obsEditorInited = true;
+      })
+      .catch(() => {
+        if (loading) loading.style.display = 'none';
+        if (container) container.style.display = 'block';
+        _obsEditorInited = true;
+      });
+  }
+
+  function getEditorConteudo() {
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('editor-observacoes')) {
+      return HugeRTEEditor.getContent('editor-observacoes');
+    }
+    const ta = document.getElementById('editor-observacoes');
+    return ta ? ta.value : '';
+  }
+
+  function setEditorConteudo(conteudo) {
+    if (window.HugeRTEEditor && HugeRTEEditor.getEditor('editor-observacoes')) {
+      HugeRTEEditor.setContent('editor-observacoes', conteudo);
+    } else {
+      const ta = document.getElementById('editor-observacoes');
+      if (ta) ta.value = conteudo;
+    }
+  }
+
+  function renderizarAnexosExistentes(anexos) {
+    const container = document.getElementById('obs-anexos-existentes');
+    if (!container) return;
+    container.innerHTML = '';
+    _obsAnexosRemover = [];
+    (anexos || []).forEach(a => {
+      const badge = document.createElement('span');
+      badge.className = 'badge bg-light text-dark border d-flex align-items-center gap-1';
+      badge.style.fontSize = '0.85rem';
+      badge.innerHTML = `<a href="${a.url}" target="_blank" class="text-decoration-none text-dark">${a.nome}</a>
+        <button type="button" class="btn-close btn-close-sm" style="font-size:0.6rem;" data-id="${a.id}" title="Remover"></button>`;
+      badge.querySelector('button').addEventListener('click', function() {
+        _obsAnexosRemover.push(this.dataset.id);
+        badge.remove();
+      });
+      container.appendChild(badge);
+    });
+  }
+
+  // Exposto para historico_base ao editar registro existente
+  window._preencherFormObservacoes = function(data) {
+    document.getElementById('titulo-observacoes').value = data.titulo || '';
+    const conteudo = data.conteudo || '';
+    if (!_obsEditorInited) {
+      initEditorObs().then(() => setEditorConteudo(conteudo));
+    } else {
+      setEditorConteudo(conteudo);
+    }
+    renderizarAnexosExistentes(data.anexos || []);
+    // Limpar input de novos arquivos
+    const input = document.getElementById('obs-anexos-input');
+    if (input) input.value = '';
+  };
+
+  // Inicializar editor quando o form abrir (botão Observações)
+  document.querySelectorAll('[data-tipo="observacoes"]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      if (!_obsEditorInited) initEditorObs();
+    });
+  });
 
   document.getElementById('save-observacoes')?.addEventListener('click', function() {
-    const titulo = document.getElementById('titulo-observacoes').value;
-    const texto = document.getElementById('texto-observacoes').value;
-    if (!titulo || !texto) {
-      showDangerModal('Erro de Validação', 'Por favor, preencha os campos obrigatórios');
+    const titulo = document.getElementById('titulo-observacoes').value.trim();
+    if (!titulo) {
+      showDangerModal('Erro de Validação', 'Preencha o título da observação.');
       return;
     }
+
+    const conteudo = getEditorConteudo();
+    const observacoesId = document.getElementById('observacoes-id')?.value;
+    const datetimeSpan  = document.getElementById('observacoes-datetime');
+    const now = new Date();
+    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
 
     const formData = new FormData();
     formData.append('titulo', titulo);
-    formData.append('texto', texto);
-    formData.append('categoria', document.getElementById('categoria-observacoes').value);
-
-    const datetimeSpan = document.getElementById('observacoes-datetime');
-    const now = new Date();
-    const isoDate = datetimeSpan?.dataset.isoDate || toLocalISOString(now);
+    formData.append('conteudo', conteudo);
     formData.append('data_hora', isoDate.slice(0, 16));
-
-    const observacoesId = document.getElementById('observacoes-id')?.value;
     if (observacoesId) formData.append('observacoes_id', observacoesId);
+    if (_obsAnexosRemover.length) formData.append('anexos_remover', _obsAnexosRemover.join(','));
+
+    const input = document.getElementById('obs-anexos-input');
+    if (input && input.files.length) {
+      Array.from(input.files).forEach(f => formData.append('anexos', f));
+    }
 
     const petId = window.CURRENT_PET_ID;
-    if (!petId) {
-      showDangerModal('Erro de Configuração', 'ID do animal não encontrado');
-      return;
-    }
+    if (!petId) { showDangerModal('Erro', 'ID do animal não encontrado.'); return; }
 
     fetch(`/atendimento/api/${petId}/observacao/`, {
       method: 'POST',
@@ -101,31 +181,22 @@ document.addEventListener('DOMContentLoaded', function() {
       body: formData,
       credentials: 'same-origin'
     })
-    .then(response => {
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        return response.text().then(() => { throw new Error('Servidor retornou HTML ao invés de JSON. Verifique autenticação.'); });
-      }
-      return response.json();
-    })
+    .then(r => r.json())
     .then(data => {
       if (data.success) {
         if (observacoesId) {
-          const timeline = document.querySelector('#timeline-list');
-          if (timeline) timeline.innerHTML = '';
           carregarTimeline();
         } else {
-          adicionarItemTimeline('observacoes', titulo, isoDate, texto.substring(0, 100), '{{ user.get_full_name|default:user.username }}', usuarioAvatar, data.id);
+          const avatar = '{% if user.userprofile.avatar %}{{ user.userprofile.avatar.url }}{% else %}{{ user.userprofile.get_avatar_url }}{% endif %}';
+          adicionarItemTimeline('observacoes', titulo, isoDate, titulo, '{{ user.get_full_name|default:user.username }}', avatar, data.id);
         }
         hideAllForms();
-        showSuccessModal('Sucesso!', observacoesId ? 'Observação atualizada com sucesso!' : 'Observação salva com sucesso!');
+        showSuccessModal('Sucesso!', observacoesId ? 'Observação atualizada!' : 'Observação salva com sucesso!');
       } else {
-        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a observação');
+        showDangerModal('Erro ao Salvar', data.error || 'Ocorreu um erro ao salvar a observação.');
       }
     })
-    .catch(error => {
-      showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + error.message);
-    });
+    .catch(err => showDangerModal('Erro de Conexão', 'Não foi possível conectar ao servidor: ' + err.message));
   });
 });
 </script>
