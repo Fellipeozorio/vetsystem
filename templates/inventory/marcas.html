@@ -1,0 +1,380 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Marcas - VetSystem{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Estoque e Serviços</div>
+        <h2 class="page-title">Marcas</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page Body -->
+<div class="page-body">
+  <div class="container-xl">
+
+    <!-- Filtros -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <form method="get" id="search-form">
+          {% for key, value in active_filters.items %}
+          <input type="hidden" name="filter_{{ key }}" value="{{ value }}">
+          {% endfor %}
+          <div class="input-group">
+            <input type="text" class="form-control" name="q"
+                   placeholder="Buscar por nome..." value="{{ query }}">
+            <button class="btn btn-primary" type="submit">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
+              Buscar
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100" type="button"
+                onclick="openFilterOffcanvas()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z"/></svg>
+          Filtros Avançados
+        </button>
+      </div>
+      <div class="col-md-6 text-end">
+        <button type="button" class="btn btn-primary" onclick="openAddOffcanvas()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+          Adicionar
+        </button>
+      </div>
+    </div>
+
+    <!-- Filtros Ativos -->
+    {% if active_filters or query %}
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="text-muted">Filtros ativos:</span>
+          {% if query %}
+          <span class="tag">
+            Busca: "{{ query }}"
+            <a href="?{% for key, value in active_filters.items %}filter_{{ key }}={{ value }}&{% endfor %}" class="btn-close" style="font-size:0.65rem;margin-left:0.5rem;"></a>
+          </span>
+          {% endif %}
+          {% for key, value in active_filters.items %}
+          <span class="tag tag-blue">
+            {% if key == 'ativo' %}Status: {% if value == 'True' %}Ativo{% else %}Inativo{% endif %}
+            {% else %}{{ key|title }}: "{{ value }}"
+            {% endif %}
+            <a href="?{% if query %}q={{ query }}&{% endif %}{% for k, v in active_filters.items %}{% if k != key %}filter_{{ k }}={{ v }}&{% endif %}{% endfor %}" class="btn-close" style="font-size:0.65rem;margin-left:0.5rem;"></a>
+          </span>
+          {% endfor %}
+          <a href="?" class="btn btn-sm btn-ghost-secondary">Limpar todos os filtros</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Tabela -->
+    <div class="row row-cards">
+      <div class="col-12">
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Status</th>
+                  <th class="w-1">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for marca in page_obj %}
+                <tr class="cursor-pointer" onclick="editItem({{ marca.id }})">
+                  <td><div class="font-weight-medium">{{ marca.nome }}</div></td>
+                  <td>
+                    {% if marca.ativo %}
+                    <span class="badge bg-success text-white">Ativo</span>
+                    {% else %}
+                    <span class="badge bg-danger text-white">Inativo</span>
+                    {% endif %}
+                  </td>
+                  <td onclick="event.stopPropagation()">
+                    <div class="btn-list flex-nowrap">
+                      <button class="btn btn-sm btn-icon btn-ghost-secondary"
+                              onclick="editItem({{ marca.id }})" title="Editar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"/><path d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.385v3h3l8.385 -8.415z"/><path d="M16 5l3 3"/></svg>
+                      </button>
+                      <button class="btn btn-sm btn-icon btn-ghost-danger"
+                              onclick="deleteItem({{ marca.id }}, '{{ marca.nome|escapejs }}')" title="Excluir">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="3" class="text-center text-muted py-5">
+                    <div class="empty">
+                      <div class="empty-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z"/></svg>
+                      </div>
+                      <p class="empty-title">Nenhuma marca encontrada</p>
+                      <p class="empty-subtitle text-secondary">Adicione a primeira marca clicando no botão acima.</p>
+                      <div class="empty-action">
+                        <button type="button" class="btn btn-primary" onclick="openAddOffcanvas()">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+                          Adicionar primeira marca
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Paginação -->
+          {% if page_obj.has_other_pages %}
+          <div class="card-footer d-flex align-items-center">
+            <p class="m-0 text-secondary">
+              Mostrando <span>{{ page_obj.start_index }}</span> a <span>{{ page_obj.end_index }}</span>
+              de <span>{{ page_obj.paginator.count }}</span> registros
+            </p>
+            <ul class="pagination m-0 ms-auto">
+              {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 7l-5 5l5 5"/><path d="M17 7l-5 5l5 5"/></svg>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+                </a>
+              </li>
+              {% endif %}
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">{{ num }}</a></li>
+                {% endif %}
+              {% endfor %}
+              {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7l5 5l-5 5"/><path d="M13 7l5 5l-5 5"/></svg>
+                </a>
+              </li>
+              {% endif %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ OFFCANVAS FILTROS -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filtros" style="width:600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="filter_ativo">
+          <option value="">Todos</option>
+          <option value="True" {% if active_filters.ativo == 'True' %}selected{% endif %}>Ativo</option>
+          <option value="False" {% if active_filters.ativo == 'False' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z"/></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ OFFCANVAS ADICIONAR -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-add" style="width:600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Adicionar Marca</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-create">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label class="form-label required">Nome</label>
+        <input type="text" class="form-control" id="add-nome" name="nome" required>
+        <div class="invalid-feedback"></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="add-ativo" name="ativo" checked>
+          <span class="form-check-label">Ativo</span>
+        </label>
+      </div>
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg>
+          Salvar
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ OFFCANVAS EDITAR -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-edit" style="width:600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Editar Marca</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form id="form-edit">
+      {% csrf_token %}
+      <input type="hidden" id="edit-id" name="id" value="">
+      <div class="mb-3">
+        <label class="form-label required">Nome</label>
+        <input type="text" class="form-control" id="edit-nome" name="nome" required>
+        <div class="invalid-feedback"></div>
+      </div>
+      <div class="mb-3">
+        <label class="form-check form-switch">
+          <input class="form-check-input" type="checkbox" id="edit-ativo" name="ativo">
+          <span class="form-check-label">Ativo</span>
+        </label>
+      </div>
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg>
+          Salvar Alterações
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ MODAL DELETE -->
+<div class="modal modal-blur fade" id="modal-delete" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title">Confirmar Exclusão</div>
+        <div>Deseja excluir a marca <strong id="delete-nome"></strong>?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary me-auto" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete">Excluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  let deleteId = null;
+
+  function getCsrf() {
+    return document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+  }
+
+  window.openFilterOffcanvas = function () {
+    new bootstrap.Offcanvas(document.getElementById('offcanvas-filtros')).show();
+  };
+
+  window.openAddOffcanvas = function () {
+    document.getElementById('form-create').reset();
+    new bootstrap.Offcanvas(document.getElementById('offcanvas-add')).show();
+  };
+
+  window.editItem = async function (id) {
+    const resp = await fetch(`/estoque/marcas/${id}/`);
+    if (!resp.ok) return;
+    const d = await resp.json();
+    document.getElementById('edit-id').value = d.id;
+    document.getElementById('edit-nome').value = d.nome;
+    document.getElementById('edit-ativo').checked = d.ativo;
+    new bootstrap.Offcanvas(document.getElementById('offcanvas-edit')).show();
+  };
+
+  window.deleteItem = function (id, nome) {
+    deleteId = id;
+    document.getElementById('delete-nome').textContent = nome;
+    new bootstrap.Modal(document.getElementById('modal-delete')).show();
+  };
+
+  async function salvarMarca(id, nome, ativo) {
+    const resp = await fetch('/estoque/marcas/salvar/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+      body: JSON.stringify({ id: id || null, nome, ativo })
+    });
+    const data = await resp.json();
+    if (data.success) {
+      location.reload();
+    } else {
+      alert(data.error || 'Erro ao salvar.');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('form-create').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const nome = document.getElementById('add-nome').value.trim();
+      const ativo = document.getElementById('add-ativo').checked;
+      if (!nome) { document.getElementById('add-nome').classList.add('is-invalid'); return; }
+      salvarMarca(null, nome, ativo);
+    });
+
+    document.getElementById('form-edit').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      const nome = document.getElementById('edit-nome').value.trim();
+      const ativo = document.getElementById('edit-ativo').checked;
+      if (!nome) { document.getElementById('edit-nome').classList.add('is-invalid'); return; }
+      salvarMarca(id, nome, ativo);
+    });
+
+    document.getElementById('btn-confirm-delete').addEventListener('click', async function () {
+      if (!deleteId) return;
+      const resp = await fetch(`/estoque/marcas/${deleteId}/deletar/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() }
+      });
+      if (resp.ok) {
+        bootstrap.Modal.getInstance(document.getElementById('modal-delete')).hide();
+        location.reload();
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}

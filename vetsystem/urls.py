@@ -50,6 +50,9 @@ urlpatterns = [
     path('scheduling/', include('scheduling.urls')),
     path('animais/', include('patients.urls')),
     path('atendimento/', include('medical_records.urls')),
+    path('consultas/', include('queries.urls')),
+    path('vendas/', include('sales.urls')),
+    path('estoque/', include('inventory.urls')),
 ]
 
 # Servir arquivos de mídia no desenvolvimento

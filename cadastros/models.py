@@ -266,6 +266,8 @@ class ProtocoloVacina(models.Model):
         Especie,
         on_delete=models.CASCADE,
         related_name='protocolos_vacina',
+        null=True,
+        blank=True,
         verbose_name='Espécie'
     )
     aplicacao = models.CharField(

@@ -1,0 +1,1065 @@
+{% extends 'core/base.html' %}
+
+{% load static %}
+
+
+
+{% block title %}Vacinas - VetSystem{% endblock %}
+
+
+
+{% block extra_css %}
+
+<style>
+
+  /* Tabela */
+
+  #tabela-programacao {
+
+    font-size: .85rem;
+
+  }
+
+  #tabela-programacao th {
+
+    font-weight: 600;
+
+    white-space: nowrap;
+
+    background: #f4f6fb;
+
+  }
+
+  #tabela-programacao td {
+
+    vertical-align: middle;
+
+  }
+
+  .badge-programada {
+
+    background-color: #206bc4;
+
+    color: #fff;
+
+    font-size: .75rem;
+
+    padding: 3px 8px;
+
+    border-radius: 4px;
+
+    font-weight: 500;
+
+  }
+
+  .badge-aplicada {
+
+    background-color: #2fb344;
+
+    color: #fff;
+
+    font-size: .75rem;
+
+    padding: 3px 8px;
+
+    border-radius: 4px;
+
+    font-weight: 500;
+
+  }
+
+  .badge-atrasada {
+
+    background-color: #d63939;
+
+    color: #fff;
+
+    font-size: .75rem;
+
+    padding: 3px 8px;
+
+    border-radius: 4px;
+
+    font-weight: 500;
+
+  }
+
+  tr.row-atrasada td {
+
+    background-color: #fde8e8;
+
+    color: #d63939;
+
+  }
+
+  tr.row-atrasada td .text-secondary,
+  tr.row-atrasada td .text-muted {
+    color: #d63939 !important;
+  }
+
+  tr.row-aplicada td {
+
+    background-color: #d1f0da;
+
+    color: #1a7a35;
+
+  }
+
+  tr.row-aplicada td .text-secondary,
+  tr.row-aplicada td .text-muted {
+    color: #1a7a35 !important;
+  }
+
+  /* Remove border-top que Tabler adiciona no 2º card-body */
+  #aba-programacao {
+    border-top: none;
+  }
+
+  /* Cards do Resumo — estilo inspirado no lt-card da linha do tempo */
+  .resumo-card {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,.09);
+    background: #fff;
+    margin-bottom: 1.25rem;
+  }
+  .resumo-card-header {
+    padding: 10px 14px;
+    background: #206bc4;
+    color: #fff;
+    font-size: .9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+  }
+  .resumo-card-body {
+    padding: 0;
+  }
+  .resumo-card-body .table {
+    margin-bottom: 0;
+    font-size: .85rem;
+  }
+  .resumo-card-body .table thead th {
+    background: #f8f9fa;
+    font-weight: 600;
+    font-size: .8rem;
+    padding: 6px 10px;
+  }
+  .resumo-card-body .table td {
+    padding: 6px 10px;
+    color: #212529;
+  }
+
+
+</style>
+
+{% endblock %}
+
+
+
+{% block content %}
+
+<!-- Page Header -->
+
+<div class="page-header d-print-none">
+
+  <div class="container-xl">
+
+    <div class="row g-2 align-items-center">
+
+      <div class="col">
+
+        <h2 class="page-title">Vacinas</h2>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+<!-- Page Body -->
+
+<div class="page-body">
+
+  <div class="container-xl">
+
+
+
+    <!-- Barra de Filtros (fora de card) -->
+
+    <div class="row mb-3">
+
+      <div class="col-12">
+
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+
+
+
+          <!-- Período (dropdown estilo histórico) -->
+
+          <div class="dropdown">
+
+            <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="btn-periodo" data-bs-toggle="dropdown" aria-expanded="false">
+
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="16" rx="2"/><line x1="16" y1="3" x2="16" y2="7"/><line x1="8" y1="3" x2="8" y2="7"/><line x1="4" y1="11" x2="20" y2="11"/></svg>
+
+              <span id="period-text">Período...</span>
+
+            </button>
+
+            <ul class="dropdown-menu">
+
+              <li><a class="dropdown-item" href="#" data-period="today">Hoje</a></li>
+
+              <li><a class="dropdown-item" href="#" data-period="yesterday">Ontem</a></li>
+
+              <li><a class="dropdown-item" href="#" data-period="last7days">Últimos 7 dias</a></li>
+
+              <li><a class="dropdown-item" href="#" data-period="7days">Próximos 7 dias</a></li>
+
+              <li><a class="dropdown-item" href="#" data-period="thismonth">Este mês</a></li>
+
+              <li><a class="dropdown-item" href="#" data-period="lastmonth">Mês anterior</a></li>
+
+              <li><hr class="dropdown-divider"></li>
+
+              <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#modal-periodo">Selecionar período</a></li>
+
+            </ul>
+
+          </div>
+
+
+
+          <!-- Status -->
+
+          <select class="form-select" id="filtro-status" style="width:160px;">
+
+            <option value="">Todos os status</option>
+
+            <option value="programada">Programada</option>
+
+            <option value="aplicada">Aplicada</option>
+
+            <option value="atrasada">Atrasada</option>
+
+          </select>
+
+
+
+          <!-- Tipo -->
+
+          <select class="form-select" id="filtro-tipo" style="width:160px;">
+
+            <option value="">Todos os tipos</option>
+
+            <option value="vacinas">Vacina</option>
+
+            <option value="antiparasitario">Antiparasitário</option>
+
+            <option value="vermifugos">Vermífugo</option>
+
+          </select>
+
+
+
+          <!-- Protocolo -->
+
+          <select class="form-select" id="filtro-protocolo" style="width:220px;">
+
+            <option value="">Todos os protocolos</option>
+
+            {% for p in protocolos %}
+
+            <option value="{{ p.id }}">{{ p.vacina.nome }} — {{ p.nome }}</option>
+
+            {% endfor %}
+
+          </select>
+
+
+
+          <!-- Botão Pesquisar (azul, ícone) -->
+
+          <button class="btn btn-primary" type="button" onclick="buscarDados()" title="Pesquisar">
+
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon m-0" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
+
+          </button>
+
+
+
+          <!-- Botão Limpar -->
+
+          <button class="btn btn-outline-secondary" type="button" onclick="limparFiltros()" title="Limpar filtros">
+
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon m-0" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 14l-4 -4l4 -4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+
+          </button>
+
+
+
+          <!-- Relatório alinhado à direita -->
+
+          <div class="ms-auto">
+
+            <button class="btn btn-outline-secondary" type="button" onclick="window.print()" title="Relatório">
+
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 17h6"/><path d="M9 13h6"/></svg>
+
+              Relatório
+
+            </button>
+
+          </div>
+
+
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+    <!-- Card principal com abas -->
+
+    <div class="card">
+
+      <div class="card-header">
+
+        <ul class="nav nav-tabs card-header-tabs" id="abas-vacinacao">
+
+          <li class="nav-item">
+
+            <a class="nav-link" id="tab-resumo-link" href="#" onclick="mudarAba('resumo'); return false;">Resumo</a>
+
+          </li>
+
+          <li class="nav-item">
+
+            <a class="nav-link active" id="tab-programacao-link" href="#" onclick="mudarAba('programacao'); return false;">Programação</a>
+
+          </li>
+
+        </ul>
+
+      </div>
+
+
+
+      <!-- ABA: Resumo -->
+
+      <div class="card-body" id="aba-resumo" style="display:none;">
+
+        <!-- Card: Por Data -->
+        <div class="resumo-card">
+          <div class="resumo-card-header">
+            <i class="ti ti-calendar me-2"></i>Por Data
+          </div>
+          <div class="resumo-card-body">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                  <th>Data</th>
+                  <th class="text-center">Total</th>
+                  <th class="text-center">Aplicado</th>
+                  <th class="text-center">%</th>
+                  <th class="text-center">Pendente</th>
+                  <th class="text-center">%</th>
+                </tr></thead>
+                <tbody id="tbody-resumo-datas">
+                  <tr><td colspan="6" class="text-center text-secondary py-3">Clique em Pesquisar para carregar</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: Por Tipo de Vacina -->
+        <div class="resumo-card">
+          <div class="resumo-card-header">
+            <i class="ti ti-category me-2"></i>Por Tipo de Vacina
+          </div>
+          <div class="resumo-card-body">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                  <th>Tipo</th>
+                  <th class="text-center">Total</th>
+                  <th class="text-center">Aplicado</th>
+                  <th class="text-center">%</th>
+                  <th class="text-center">Pendente</th>
+                  <th class="text-center">%</th>
+                </tr></thead>
+                <tbody id="tbody-resumo-tipos">
+                  <tr><td colspan="6" class="text-center text-secondary py-3">Clique em Pesquisar para carregar</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card: Por Vacina -->
+        <div class="resumo-card">
+          <div class="resumo-card-header">
+            <i class="ti ti-vaccine me-2"></i>Por Vacina
+          </div>
+          <div class="resumo-card-body">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover mb-0">
+                <thead><tr>
+                  <th>Vacina</th>
+                  <th class="text-center">Total</th>
+                  <th class="text-center">Aplicado</th>
+                  <th class="text-center">%</th>
+                  <th class="text-center">Pendente</th>
+                  <th class="text-center">%</th>
+                </tr></thead>
+                <tbody id="tbody-resumo-vacinas">
+                  <tr><td colspan="6" class="text-center text-secondary py-3">Clique em Pesquisar para carregar</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+
+
+      <!-- ABA: Programação -->
+
+      <div class="card-body" id="aba-programacao">
+
+        <div class="table-responsive">
+
+          <table class="table table-hover mb-0" id="tabela-programacao">
+
+            <thead>
+
+              <tr>
+
+                <th>Programação</th>
+
+                <th>Cliente</th>
+
+                <th>Animal</th>
+
+                <th>Vacina</th>
+
+                <th>Status</th>
+
+                <th>Aplicação</th>
+
+              </tr>
+
+            </thead>
+
+            <tbody id="tbody-programacao">
+
+              <tr><td colspan="6" class="text-center text-secondary py-4">Use os filtros acima e clique em pesquisar</td></tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+
+    </div><!-- /card -->
+
+
+
+  </div>
+
+</div>
+
+
+
+<!-- Modal selecionar período -->
+
+<div class="modal fade" id="modal-periodo" tabindex="-1">
+
+  <div class="modal-dialog modal-sm">
+
+    <div class="modal-content">
+
+      <div class="modal-header">
+
+        <h5 class="modal-title">Selecionar Período</h5>
+
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+
+      </div>
+
+      <div class="modal-body">
+
+        <div class="mb-3">
+
+          <label class="form-label">Data inicial</label>
+
+          <input type="date" class="form-control" id="modal-data-inicio">
+
+        </div>
+
+        <div class="mb-3">
+
+          <label class="form-label">Data final</label>
+
+          <input type="date" class="form-control" id="modal-data-fim">
+
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+
+        <button type="button" class="btn" data-bs-dismiss="modal">Cancelar</button>
+
+        <button type="button" class="btn btn-primary" id="btn-aplicar-periodo" data-bs-dismiss="modal">Filtrar</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+
+{% endblock %}
+
+
+
+{% block extra_js %}
+
+<script>
+
+(function() {
+
+  // -------------------------
+
+  // Estado
+
+  // -------------------------
+
+  let dadosAtuais = [];
+
+  let abaAtiva = 'programacao';
+
+  let dataInicio = null;
+
+  let dataFim = null;
+
+
+
+  // -------------------------
+
+  // Utilidades de data
+
+  // -------------------------
+
+  function toISO(d) { return d.toISOString().split('T')[0]; }
+
+  function toBR(d) {
+
+    return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+  }
+
+  function fromISO(s) {
+
+    const [y, m, d] = s.split('-').map(Number);
+
+    return new Date(y, m - 1, d);
+
+  }
+
+
+
+  function setPeriodo(inicio, fim, label) {
+
+    dataInicio = inicio;
+
+    dataFim = fim;
+
+    const txt = label || (toBR(inicio) + ' até ' + toBR(fim));
+
+    document.getElementById('period-text').textContent = txt;
+
+  }
+
+
+
+  // Período padrão: próximos 7 dias
+
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+
+  const fimSemana = new Date(hoje); fimSemana.setDate(hoje.getDate() + 6);
+
+  setPeriodo(hoje, fimSemana, 'Próximos 7 dias');
+
+
+
+  // -------------------------
+
+  // Dropdown de período
+
+  // -------------------------
+
+  document.querySelectorAll('[data-period]').forEach(function(el) {
+
+    el.addEventListener('click', function(e) {
+
+      e.preventDefault();
+
+      const p = this.getAttribute('data-period');
+
+      const h = new Date(); h.setHours(0,0,0,0);
+
+      if (p === 'today') {
+
+        setPeriodo(h, h, 'Hoje');
+
+      } else if (p === 'yesterday') {
+
+        const d = new Date(h); d.setDate(h.getDate() - 1);
+
+        setPeriodo(d, d, 'Ontem');
+
+      } else if (p === 'last7days') {
+
+        const f2 = new Date(h); f2.setDate(h.getDate() - 6);
+
+        setPeriodo(f2, h, 'Últimos 7 dias');
+
+      } else if (p === '7days') {
+
+        const f = new Date(h); f.setDate(h.getDate() + 6);
+
+        setPeriodo(h, f, 'Próximos 7 dias');
+
+      } else if (p === 'thismonth') {
+
+        const ini = new Date(h.getFullYear(), h.getMonth(), 1);
+
+        const fim = new Date(h.getFullYear(), h.getMonth() + 1, 0);
+
+        setPeriodo(ini, fim, 'Este mês');
+
+      } else if (p === 'lastmonth') {
+
+        const ini = new Date(h.getFullYear(), h.getMonth() - 1, 1);
+
+        const fim = new Date(h.getFullYear(), h.getMonth(), 0);
+
+        setPeriodo(ini, fim, 'Mês anterior');
+
+      }
+
+      buscarDados();
+
+    });
+
+  });
+
+
+
+  // Modal de período personalizado
+
+  document.getElementById('btn-aplicar-periodo').addEventListener('click', function() {
+
+    const ini = document.getElementById('modal-data-inicio').value;
+
+    const fim = document.getElementById('modal-data-fim').value;
+
+    if (ini && fim) {
+
+      setPeriodo(fromISO(ini), fromISO(fim));
+
+      buscarDados();
+
+    }
+
+  });
+
+
+
+  // Preenche os campos do modal ao abrir
+
+  document.getElementById('modal-periodo').addEventListener('show.bs.modal', function() {
+
+    document.getElementById('modal-data-inicio').value = dataInicio ? toISO(dataInicio) : '';
+
+    document.getElementById('modal-data-fim').value = dataFim ? toISO(dataFim) : '';
+
+  });
+
+
+
+  // -------------------------
+
+  // Troca de abas
+
+  // -------------------------
+
+  window.mudarAba = function(aba) {
+
+    abaAtiva = aba;
+
+    ['resumo', 'programacao'].forEach(function(a) {
+
+      document.getElementById('aba-' + a).style.display = 'none';
+
+      document.getElementById('tab-' + a + '-link').classList.remove('active');
+
+    });
+
+    document.getElementById('aba-' + aba).style.display = '';
+
+    document.getElementById('tab-' + aba + '-link').classList.add('active');
+
+    if (aba === 'resumo' && dadosAtuais.length > 0) renderizarResumo(dadosAtuais);
+
+  };
+
+
+
+  // -------------------------
+
+  // Limpar filtros
+
+  // -------------------------
+
+  window.limparFiltros = function() {
+
+    document.getElementById('filtro-status').value = '';
+
+    document.getElementById('filtro-tipo').value = '';
+
+    document.getElementById('filtro-protocolo').value = '';
+
+    const h = new Date(); h.setHours(0,0,0,0);
+
+    const f = new Date(h); f.setDate(h.getDate() + 6);
+
+    setPeriodo(h, f, 'Próximos 7 dias');
+
+    buscarDados();
+
+  };
+
+
+
+  // -------------------------
+
+  // Buscar dados
+
+  // -------------------------
+
+  window.buscarDados = function() {
+
+    if (!dataInicio || !dataFim) return;
+
+
+
+    const status = document.getElementById('filtro-status').value;
+
+    const tipo = document.getElementById('filtro-tipo').value;
+
+    const protocolo = document.getElementById('filtro-protocolo').value;
+
+
+
+    const tbody = document.getElementById('tbody-programacao');
+
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div> Carregando...</td></tr>';
+
+
+
+    const params = new URLSearchParams({
+
+      data_inicio: toISO(dataInicio),
+
+      data_fim: toISO(dataFim),
+
+      status: status,
+
+      tipo: tipo,
+
+      protocolo_id: protocolo,
+
+    });
+
+
+
+    fetch('/consultas/api/vacinacao/?' + params)
+
+      .then(function(r) { return r.json(); })
+
+      .then(function(data) {
+
+        if (!data.success) { mostrarErro(); return; }
+
+        dadosAtuais = data.resultados;
+
+        renderizarProgramacao(dadosAtuais);
+
+        if (abaAtiva === 'resumo') renderizarResumo(dadosAtuais);
+
+      })
+
+      .catch(function() { mostrarErro(); });
+
+  };
+
+
+
+  function mostrarErro() {
+
+    document.getElementById('tbody-programacao').innerHTML =
+
+      '<tr><td colspan="6" class="text-center text-danger py-3">Erro ao carregar dados</td></tr>';
+
+  }
+
+
+
+  // -------------------------
+
+  // Renderizar Programação
+
+  // -------------------------
+
+  function renderizarProgramacao(dados) {
+
+    const tbody = document.getElementById('tbody-programacao');
+
+    const agora = new Date(); agora.setHours(0,0,0,0);
+
+
+
+    if (!dados.length) {
+
+      tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary py-4">Nenhum registro encontrado</td></tr>';
+
+      return;
+
+    }
+
+
+
+    tbody.innerHTML = '';
+
+    dados.forEach(function(d) {
+
+      const tr = document.createElement('tr');
+      tr.style.cursor = 'pointer';
+      tr.addEventListener('click', function() {
+        window.location.href = '/atendimento/animal/' + d.animal_id + '/?open_dose=' + d.id;
+      });
+
+      const partes = d.data_programada.split('/');
+
+      const dataProg = new Date(+partes[2], +partes[1] - 1, +partes[0]);
+
+
+
+      if (d.status === 'aplicada') {
+
+        tr.classList.add('row-aplicada');
+
+      } else if (dataProg < agora) {
+
+        tr.classList.add('row-atrasada');
+
+      }
+
+
+
+      let badgeHtml;
+
+      if (d.status === 'aplicada') {
+
+        badgeHtml = '<span class="badge-aplicada">Aplicada</span>';
+
+      } else if (dataProg < agora) {
+
+        badgeHtml = '<span class="badge-atrasada">Atrasada</span>';
+
+      } else {
+
+        badgeHtml = '<span class="badge-programada">Programada</span>';
+
+      }
+
+
+
+      const clienteHtml = d.cliente_codigo
+
+        ? escHtml(d.cliente_nome) + ' <span class="text-secondary">(' + escHtml(d.cliente_codigo) + ')</span>'
+
+        : escHtml(d.cliente_nome);
+
+
+
+      const animalHtml = d.animal_codigo
+
+        ? escHtml(d.animal_nome) + ' <span class="text-secondary">(' + escHtml(d.animal_codigo) + ')</span>'
+
+        : escHtml(d.animal_nome);
+
+
+
+      tr.innerHTML =
+
+        '<td>' + escHtml(d.data_programada) + '</td>' +
+
+        '<td>' + clienteHtml + '</td>' +
+
+        '<td>' + animalHtml + '</td>' +
+
+        '<td>' + escHtml(d.vacina_nome) + (d.protocolo_nome ? ' — <span class="text-secondary">' + escHtml(d.protocolo_nome) + '</span>' : '') +
+          (d.numero_dose ? '<br><span class="text-muted" style="font-size:.8rem">' + (d.qtd_doses === '1' ? 'Dose única' : d.numero_dose + 'ª dose') + '</span>' : '') +
+          '</td>' +
+
+        '<td>' + badgeHtml + '</td>' +
+
+        '<td>' + (function() {
+          if (!d.data_aplicacao) return '<span class="text-muted">—</span>';
+          const partesProg = d.data_programada.split('/');
+          const progDate = new Date(+partesProg[2], +partesProg[1] - 1, +partesProg[0]);
+          const partesAplic = d.data_aplicacao.split(' ')[0].split('/');
+          const aplicDate = new Date(+partesAplic[2], +partesAplic[1] - 1, +partesAplic[0]);
+          const diffDias = Math.round((aplicDate - progDate) / 86400000);
+          if (diffDias === 0) return escHtml(d.data_aplicacao);
+          const sinal = diffDias > 0 ? '+' : '';
+          return escHtml(d.data_aplicacao) + ' <span class="badge" style="background:#6c757d;color:#fff;font-size:.7em;">' + sinal + diffDias + 'd</span>';
+        })() + '</td>';
+
+      tbody.appendChild(tr);
+
+    });
+
+  }
+
+
+
+  // -------------------------
+
+  // Renderizar Resumo
+
+  // -------------------------
+
+  function renderizarResumo(dados) {
+
+    function buildMap(keyFn) {
+      const map = {};
+      dados.forEach(function(d) {
+        const key = keyFn(d);
+        if (!map[key]) map[key] = { total: 0, aplicado: 0, pendente: 0 };
+        map[key].total++;
+        if (d.status === 'aplicada') map[key].aplicado++;
+        else map[key].pendente++;
+      });
+      return map;
+    }
+
+    function pct(num, total) {
+      if (!total) return '—';
+      return Math.round(num / total * 100) + '%';
+    }
+
+    function renderTable(tbodyId, map, sortFn) {
+      const tbody = document.getElementById(tbodyId);
+      const entries = Object.entries(map).sort(sortFn || function(a, b) { return a[0].localeCompare(b[0]); });
+      if (!entries.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-secondary py-3">Nenhum dado</td></tr>';
+        return;
+      }
+      tbody.innerHTML = '';
+      entries.forEach(function(entry) {
+        const nome = entry[0], v = entry[1];
+        tbody.innerHTML +=
+          '<tr>' +
+          '<td>' + escHtml(nome) + '</td>' +
+          '<td class="text-center">' + v.total + '</td>' +
+          '<td class="text-center">' + v.aplicado + '</td>' +
+          '<td class="text-center">' + pct(v.aplicado, v.total) + '</td>' +
+          '<td class="text-center">' + v.pendente + '</td>' +
+          '<td class="text-center">' + pct(v.pendente, v.total) + '</td>' +
+          '</tr>';
+      });
+    }
+
+    if (!dados.length) {
+      ['tbody-resumo-datas', 'tbody-resumo-tipos', 'tbody-resumo-vacinas'].forEach(function(id) {
+        document.getElementById(id).innerHTML =
+          '<tr><td colspan="6" class="text-center text-secondary py-3">Nenhum dado no período</td></tr>';
+      });
+      return;
+    }
+
+    // Tabela 1: Por Data
+    const dataMap = buildMap(function(d) { return d.data_programada; });
+    renderTable('tbody-resumo-datas', dataMap, function(a, b) {
+      const p = function(s) { const x = s.split('/'); return new Date(+x[2], +x[1] - 1, +x[0]); };
+      return p(a[0]) - p(b[0]);
+    });
+
+    // Tabela 2: Por Tipo de Vacina
+    const tipoMap = buildMap(function(d) { return d.tipo_display || d.tipo || '—'; });
+    renderTable('tbody-resumo-tipos', tipoMap);
+
+    // Tabela 3: Por Vacina
+    const vacinaMap = buildMap(function(d) { return d.vacina_nome; });
+    renderTable('tbody-resumo-vacinas', vacinaMap);
+
+  }
+
+
+
+  // -------------------------
+
+  // Utilitário XSS
+
+  // -------------------------
+
+  function escHtml(str) {
+
+    if (!str) return '';
+
+    return String(str)
+
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  }
+
+
+
+  // Busca automática ao carregar
+
+  document.addEventListener('DOMContentLoaded', function() { buscarDados(); });
+
+
+
+})();
+
+</script>
+
+{% endblock %}
+
+
+

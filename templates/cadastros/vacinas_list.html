@@ -65,6 +65,22 @@
     <span class="form-check-label">Ativo</span>
   </label>
 </div>
+
+<hr class="my-4">
+
+<!-- Seção de Protocolos (adição) -->
+<div class="mb-3">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h3 class="mb-0">Protocolos <span class="text-danger">*</span></h3>
+    <button type="button" class="btn btn-primary btn-sm" onclick="openAddModeProtocolModal()">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14" /><path d="M5 12l14 0" /></svg>
+      Adicionar Protocolo
+    </button>
+  </div>
+  <div id="add-protocolos-list" class="list-group">
+    <div class="text-muted text-center py-3">Nenhum protocolo adicionado. Adicione pelo menos um protocolo.</div>
+  </div>
+</div>
 {% endblock %}
 
 {% block form_fields_edit %}
@@ -121,6 +137,16 @@ let currentVacinaId = null;
 let editingProtocolId = null;
 let protocolos = [];
 let deleteProtocoloId = null;
+
+// Estado de adição de nova vacina (fila local de protocolos)
+let isAddMode = false;
+let editingAddModeIndex = null;
+let addModeProtocolos = [];
+
+// Escapar HTML
+function escHtml(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
 // Função para renderizar tags de laboratórios
 function renderLaboratorioTags(labs, containerId, isEdit = false) {
@@ -266,6 +292,8 @@ function renderProtocolos() {
 
 // Abrir modal de protocolo
 function openProtocolModal(protocoloId = null) {
+  isAddMode = false;
+  editingAddModeIndex = null;
   editingProtocolId = protocoloId;
   
   // Resetar form
@@ -281,7 +309,7 @@ function openProtocolModal(protocoloId = null) {
     if (protocolo) {
       document.getElementById('protocolo-id').value = protocolo.id;
       document.getElementById('protocolo-nome').value = protocolo.nome;
-      document.getElementById('protocolo-especie').value = protocolo.especie;
+      document.getElementById('protocolo-especie').value = protocolo.especie || 'todas';
       document.getElementById('protocolo-aplicacao').value = protocolo.aplicacao;
       document.getElementById('protocolo-intervalo').value = protocolo.intervalo_dias;
       // Aguardar um pouco para garantir que as opções foram carregadas
@@ -372,6 +400,100 @@ function loadVemAposOptions() {
     select.appendChild(option);
   });
 }
+
+// Abrir modal de protocolo no contexto de adição de nova vacina
+function openAddModeProtocolModal(index = null) {
+  isAddMode = true;
+  editingAddModeIndex = index;
+
+  document.getElementById('form-protocolo').reset();
+  document.getElementById('protocolo-id').value = '';
+
+  // Carregar opções de vem_apos a partir da fila local (índice como valor)
+  const select = document.getElementById('protocolo-vem-apos');
+  select.innerHTML = '<option value="">Nenhum</option>';
+  addModeProtocolos.forEach((p, i) => {
+    if (i === index) return;
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = p.nome;
+    select.appendChild(opt);
+  });
+
+  if (index !== null) {
+    const p = addModeProtocolos[index];
+    document.getElementById('protocolo-nome').value = p.nome;
+    document.getElementById('protocolo-especie').value = p.especie || 'todas';
+    document.getElementById('protocolo-aplicacao').value = p.aplicacao;
+    document.getElementById('protocolo-intervalo').value = p.intervalo_dias;
+    setTimeout(() => {
+      const vemAposVal = (p.vem_apos !== null && p.vem_apos !== undefined && p.vem_apos !== '') ? String(p.vem_apos) : '';
+      document.getElementById('protocolo-vem-apos').value = vemAposVal;
+    }, 50);
+    document.getElementById('modal-protocolo-title').textContent = 'Editar Protocolo';
+    document.getElementById('btn-delete-protocolo').style.display = 'block';
+  } else {
+    document.getElementById('modal-protocolo-title').textContent = 'Adicionar Protocolo';
+    document.getElementById('btn-delete-protocolo').style.display = 'none';
+  }
+
+  const modal = new bootstrap.Modal(document.getElementById('modal-protocolo'));
+  modal.show();
+}
+
+// Remover protocolo da fila de adição
+function removeAddModeProtocolo(index) {
+  addModeProtocolos.splice(index, 1);
+  renderAddModeProtocolos();
+}
+
+// Renderizar a lista de protocolos na fila de adição
+function renderAddModeProtocolos() {
+  const container = document.getElementById('add-protocolos-list');
+  if (!container) return;
+
+  if (addModeProtocolos.length === 0) {
+    container.innerHTML = '<div class="text-muted text-center py-3">Nenhum protocolo adicionado. Adicione pelo menos um protocolo.</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  addModeProtocolos.forEach((p, i) => {
+    const item = document.createElement('a');
+    item.href = '#';
+    item.className = 'list-group-item list-group-item-action mb-2 border';
+    item.style.transition = 'all 0.2s ease';
+    item.onmouseenter = function() {
+      this.style.boxShadow = '0 0.125rem 0.25rem rgba(0,0,0,0.075)';
+      this.style.backgroundColor = 'rgba(0,0,0,0.02)';
+    };
+    item.onmouseleave = function() {
+      this.style.boxShadow = 'none';
+      this.style.backgroundColor = '';
+    };
+    item.onclick = (e) => { e.preventDefault(); openAddModeProtocolModal(i); };
+
+    const vemAposNome = (p.vem_apos !== null && p.vem_apos !== '' && p.vem_apos !== undefined)
+      ? (addModeProtocolos[parseInt(p.vem_apos)]?.nome || '')
+      : '';
+
+    item.innerHTML = `
+      <div class="d-flex justify-content-between align-items-start">
+        <div class="flex-fill">
+          <div><strong>${escHtml(p.nome)}</strong></div>
+          <div class="text-secondary small">Espécie: ${escHtml(p.especie_display)}</div>
+          <div class="text-secondary small">Aplicação: ${escHtml(p.aplicacao_display)}</div>
+          <div class="text-secondary small">Intervalo: ${p.intervalo_dias} dias</div>
+          ${vemAposNome ? '<div class="text-secondary small">Vem após: ' + escHtml(vemAposNome) + '</div>' : ''}
+        </div>
+        <button class="btn btn-icon btn-ghost-danger" title="Excluir" onclick="removeAddModeProtocolo(${i}); event.stopPropagation(); return false;">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="32" height="32" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 7l16 0" /><path d="M10 11l0 6" /><path d="M14 11l0 6" /><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12" /><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3" /></svg>
+        </button>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
 </script>
 {% endblock %}
 
@@ -459,6 +581,7 @@ function loadVemAposOptions() {
             <label class="form-label required">Espécie</label>
             <select class="form-select" id="protocolo-especie" name="especie" required>
               <option value="">Selecione...</option>
+              <option value="todas">Todas as espécies</option>
               {% for especie in especies %}
               <option value="{{ especie.id }}">{{ especie.nome }}</option>
               {% endfor %}
@@ -498,7 +621,7 @@ function loadVemAposOptions() {
         </div>
         
         <div class="modal-footer">
-          <button type="button" id="btn-delete-protocolo" class="btn btn-danger" style="display: none;" onclick="showDeleteProtocoloModal(document.getElementById('protocolo-id').value)">
+          <button type="button" id="btn-delete-protocolo" class="btn btn-danger" style="display: none;">
             Excluir
           </button>
           <div class="ms-auto">
@@ -552,7 +675,38 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Anexando event listener ao form-protocolo');
     formProtocolo.addEventListener('submit', function(e) {
       e.preventDefault();
-      
+
+      // --- Modo de adição de nova vacina: enfileirar localmente ---
+      if (isAddMode) {
+        const especieSelect = document.getElementById('protocolo-especie');
+        const aplicacaoSelect = document.getElementById('protocolo-aplicacao');
+        const vemAposVal = document.getElementById('protocolo-vem-apos').value;
+
+        const p = {
+          nome: document.getElementById('protocolo-nome').value,
+          especie: document.getElementById('protocolo-especie').value,
+          especie_display: especieSelect.options[especieSelect.selectedIndex].text,
+          aplicacao: document.getElementById('protocolo-aplicacao').value,
+          aplicacao_display: aplicacaoSelect.options[aplicacaoSelect.selectedIndex].text,
+          intervalo_dias: document.getElementById('protocolo-intervalo').value,
+          vem_apos: (vemAposVal !== '' && vemAposVal !== null) ? vemAposVal : null,
+        };
+
+        if (editingAddModeIndex !== null) {
+          addModeProtocolos[editingAddModeIndex] = p;
+        } else {
+          addModeProtocolos.push(p);
+        }
+
+        renderAddModeProtocolos();
+
+        const modalEl = document.getElementById('modal-protocolo');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+        return;
+      }
+
+      // --- Modo de edição de vacina existente: salvar via API ---
       console.log('Form protocolo submetido');
       console.log('currentVacinaId:', currentVacinaId);
       
@@ -620,6 +774,23 @@ document.addEventListener('DOMContentLoaded', function() {
     console.error('ERRO: Form protocolo não encontrado no DOM!');
   }
 
+  // Botão excluir protocolo: comportamento depende do contexto
+  const btnDeleteProtocolo = document.getElementById('btn-delete-protocolo');
+  if (btnDeleteProtocolo) {
+    btnDeleteProtocolo.addEventListener('click', function() {
+      if (isAddMode && editingAddModeIndex !== null) {
+        // Remover da fila local
+        addModeProtocolos.splice(editingAddModeIndex, 1);
+        renderAddModeProtocolos();
+        const modalEl = document.getElementById('modal-protocolo');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+      } else {
+        showDeleteProtocoloModal(document.getElementById('protocolo-id').value);
+      }
+    });
+  }
+
   // Prevenir que o modal feche o offcanvas
   const modalProtocolo = document.getElementById('modal-protocolo');
   if (modalProtocolo) {
@@ -634,6 +805,187 @@ document.addEventListener('DOMContentLoaded', function() {
       // Não precisamos reabrir o offcanvas, ele deve permanecer aberto
     });
   }
+
+  // Limpar fila ao fechar offcanvas de adição
+  const offcanvasAdd = document.getElementById('offcanvas-add');
+  if (offcanvasAdd) {
+    offcanvasAdd.addEventListener('hidden.bs.offcanvas', function() {
+      addModeProtocolos = [];
+      isAddMode = false;
+      editingAddModeIndex = null;
+      renderAddModeProtocolos();
+      addLaboratorios = [];
+      renderLaboratorioTags(addLaboratorios, 'add-laboratorios-tags', false);
+      document.getElementById('add-laboratorios-json').value = '';
+    });
+  }
+
+  // Override do submit de form-create para validar e salvar protocolos
+  const oldFormCreate = document.getElementById('form-create');
+  const newFormCreate = oldFormCreate.cloneNode(true);
+  oldFormCreate.parentNode.replaceChild(newFormCreate, oldFormCreate);
+
+  // Re-anexar listener de laboratórios no input clonado
+  document.getElementById('add-laboratorios-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = this.value.trim();
+      if (value && !addLaboratorios.includes(value)) {
+        addLaboratorios.push(value);
+        renderLaboratorioTags(addLaboratorios, 'add-laboratorios-tags', false);
+        document.getElementById('add-laboratorios-json').value = JSON.stringify(addLaboratorios);
+        this.value = '';
+      }
+    }
+  });
+
+  document.getElementById('form-create').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    if (addModeProtocolos.length === 0) {
+      showErrorModal('Adicione pelo menos um protocolo antes de salvar.');
+      return;
+    }
+
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    if (submitBtn) submitBtn.disabled = true;
+
+    fetch("{% url 'cadastros:create' tipo %}", {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.success) {
+        if (submitBtn) submitBtn.disabled = false;
+        showErrorModal(data.error || 'Erro ao salvar vacina');
+        return;
+      }
+
+      const vacinaId = data.id;
+      if (!vacinaId) {
+        if (submitBtn) submitBtn.disabled = false;
+        showErrorModal('Vacina criada, mas não foi possível salvar os protocolos (ID não retornado).');
+        return;
+      }
+
+      // Salvar protocolos sequencialmente para resolver referências vem_apos
+      const savedIds = [];
+      const protocolosParaSalvar = [...addModeProtocolos];
+
+      function salvarProximo(index) {
+        if (index >= protocolosParaSalvar.length) {
+          // Tudo salvo
+          if (submitBtn) submitBtn.disabled = false;
+          const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-add'));
+          if (offcanvas) offcanvas.hide();
+          showSuccessModal(data.message || 'Vacina cadastrada com sucesso!');
+          return;
+        }
+
+        const p = protocolosParaSalvar[index];
+        const fd = new FormData();
+        fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+        fd.append('vacina_id', vacinaId);
+        fd.append('nome', p.nome);
+        fd.append('especie', p.especie);
+        fd.append('aplicacao', p.aplicacao);
+        fd.append('intervalo_dias', p.intervalo_dias);
+
+        // Resolver referência vem_apos (índice → ID real)
+        if (p.vem_apos !== null && p.vem_apos !== '' && p.vem_apos !== undefined) {
+          const refIdx = parseInt(p.vem_apos);
+          if (!isNaN(refIdx) && savedIds[refIdx]) {
+            fd.append('vem_apos', savedIds[refIdx]);
+          }
+        }
+
+        fetch('/cadastros/protocolos/create/', {
+          method: 'POST',
+          body: fd,
+          headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+        })
+        .then(r => r.json())
+        .then(pData => {
+          if (!pData.success) {
+            if (submitBtn) submitBtn.disabled = false;
+            showErrorModal('Vacina criada, mas erro ao salvar protocolo "' + escHtml(p.nome) + '": ' + (pData.error || 'Erro desconhecido'));
+            return;
+          }
+          savedIds[index] = pData.id;
+          salvarProximo(index + 1);
+        })
+        .catch(err => {
+          if (submitBtn) submitBtn.disabled = false;
+          showErrorModal('Vacina criada, mas houve erro ao salvar os protocolos.');
+        });
+      }
+
+      salvarProximo(0);
+    })
+    .catch(err => {
+      if (submitBtn) submitBtn.disabled = false;
+      console.error('Erro:', err);
+      showErrorModal('Erro ao salvar vacina.');
+    });
+  });
+
+  // Override do submit de form-edit para validar protocolos
+  const oldFormEdit = document.getElementById('form-edit');
+  const newFormEdit = oldFormEdit.cloneNode(true);
+  oldFormEdit.parentNode.replaceChild(newFormEdit, oldFormEdit);
+
+  // Re-anexar listener de laboratórios no input clonado (edit)
+  document.getElementById('edit-laboratorios-input').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const value = this.value.trim();
+      if (value && !editLaboratorios.includes(value)) {
+        editLaboratorios.push(value);
+        renderLaboratorioTags(editLaboratorios, 'edit-laboratorios-tags', true);
+        document.getElementById('edit-laboratorios-json').value = JSON.stringify(editLaboratorios);
+        this.value = '';
+      }
+    }
+  });
+
+  document.getElementById('form-edit').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    if (protocolos.length === 0) {
+      showErrorModal('Adicione pelo menos um protocolo antes de salvar.');
+      return;
+    }
+
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const itemId = document.getElementById('edit-id').value;
+    if (submitBtn) submitBtn.disabled = true;
+
+    fetch(`{% url 'cadastros:update' tipo 0 %}`.replace('/0/', `/${itemId}/`), {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-CSRFToken': formData.get('csrfmiddlewaretoken') }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (submitBtn) submitBtn.disabled = false;
+      if (data.success) {
+        const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvas-edit'));
+        if (offcanvas) offcanvas.hide();
+        location.reload();
+      } else {
+        showErrorModal(data.error || 'Erro ao atualizar registro');
+      }
+    })
+    .catch(err => {
+      if (submitBtn) submitBtn.disabled = false;
+      console.error('Erro:', err);
+      showErrorModal('Erro ao atualizar registro');
+    });
+  });
 });
 </script>
 {% endblock %}

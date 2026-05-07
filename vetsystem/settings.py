@@ -44,11 +44,11 @@ INSTALLED_APPS = [
     'patients',
     'scheduling',
     'medical_records',
-    'billing',
     'inventory',
     'sales',
     'cadastros',
     'vetsystem',
+    'queries',
 ]
 
 MIDDLEWARE = [

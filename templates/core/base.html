@@ -241,6 +241,64 @@
               </div>
             </div>
           </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#navbar-consultas" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+              <span class="nav-link-icon d-md-none d-lg-inline-block">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><circle cx="10" cy="10" r="7"/><line x1="21" y1="21" x2="15" y2="15"/></svg>
+              </span>
+              <span class="nav-link-title">Consultas</span>
+            </a>
+            <div class="dropdown-menu">
+              <div class="dropdown-menu-columns">
+                <div class="dropdown-menu-column">
+                  <a class="dropdown-item" href="{% url 'queries:vacinacao' %}">Vacinação</a>
+                  <a class="dropdown-item" href="{% url 'queries:aniversarios' %}">Aniversários</a>
+                </div>
+              </div>
+            </div>
+          </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#navbar-vendas" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+              <span class="nav-link-icon d-md-none d-lg-inline-block">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2 -1.61l1.6 -8.39h-16.32"/></svg>
+              </span>
+              <span class="nav-link-title">Vendas</span>
+            </a>
+            <div class="dropdown-menu">
+              <div class="dropdown-menu-columns">
+                <div class="dropdown-menu-column">
+                  <a class="dropdown-item" href="{% url 'sales:ponto_de_venda' %}">Ponto de Venda</a>
+                  <a class="dropdown-item" href="{% url 'sales:minhas_vendas' %}">Minhas Vendas</a>
+                  <a class="dropdown-item" href="{% url 'sales:consulta_vendas' %}">Consulta Vendas</a>
+                  <a class="dropdown-item" href="{% url 'sales:pacotes_vendidos' %}">Pacotes Vendidos</a>
+                  <a class="dropdown-item" href="{% url 'sales:lista_de_precos' %}">Lista de Preços</a>
+                  <a class="dropdown-item" href="{% url 'sales:ranking_de_precos' %}">Ranking de Preços</a>
+                  <a class="dropdown-item" href="{% url 'sales:modelo_orcamento' %}">Modelo de Orçamento</a>
+                  <a class="dropdown-item" href="{% url 'sales:modelo_demonstrativo' %}">Modelo de Demonstrativo</a>
+                  <a class="dropdown-item" href="{% url 'sales:configuracoes' %}">Configurações</a>
+                </div>
+              </div>
+            </div>
+          </li>
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#navbar-estoque" data-bs-toggle="dropdown" data-bs-auto-close="false" role="button" aria-expanded="false">
+              <span class="nav-link-icon d-md-none d-lg-inline-block">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 8m0 1a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v2a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1z"/><path d="M12 8l0 13"/><path d="M19 12v7a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0 -5a4.8 8 0 0 1 4.5 5a4.8 8 0 0 1 4.5 -5a2.5 2.5 0 0 1 0 5"/></svg>
+              </span>
+              <span class="nav-link-title">Estoque e Serviços</span>
+            </a>
+            <div class="dropdown-menu">
+              <div class="dropdown-menu-columns">
+                <div class="dropdown-menu-column">
+                  <a class="dropdown-item" href="{% url 'inventory:produtos' %}">Produtos e Serviços</a>
+                  <a class="dropdown-item" href="{% url 'inventory:marcas' %}">Marcas</a>
+                </div>
+              </div>
+            </div>
+          </li>
           {% endblock %}
         </ul>
       </div>

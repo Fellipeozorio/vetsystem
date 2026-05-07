@@ -1,0 +1,1394 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Produtos e Serviços - VetSystem{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Estoque e Serviços</div>
+        <h2 class="page-title">Produtos e Serviços</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page Body -->
+<div class="page-body">
+  <div class="container-xl">
+
+    <!-- Filtros -->
+    <div class="row mb-3">
+      <div class="col-md-4">
+        <form method="get" id="search-form">
+          {% for key, value in active_filters.items %}
+          <input type="hidden" name="filter_{{ key }}" value="{{ value }}">
+          {% endfor %}
+          <div class="input-group">
+            <input type="text" class="form-control" name="q"
+                   placeholder="Buscar por nome, código ou código de barra..."
+                   value="{{ query }}">
+            <button class="btn btn-primary" type="submit">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
+              Buscar
+            </button>
+          </div>
+        </form>
+      </div>
+      <div class="col-md-2">
+        <button class="btn btn-outline-primary w-100" type="button"
+                onclick="openFilterOffcanvas()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z"/></svg>
+          Filtros Avançados
+        </button>
+      </div>
+      <div class="col-md-6 text-end">
+        <button type="button" class="btn btn-primary" onclick="openWizard()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+          Adicionar
+        </button>
+        <a href="?relatorio=pdf{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}"
+           class="btn btn-outline-secondary ms-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 17h6"/><path d="M9 13h6"/></svg>
+          Relatório
+        </a>
+      </div>
+    </div>
+
+    <!-- Filtros Ativos -->
+    {% if active_filters or query %}
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="text-muted">Filtros ativos:</span>
+          {% if query %}
+          <span class="tag">
+            Busca: "{{ query }}"
+            <a href="?{% for key, value in active_filters.items %}filter_{{ key }}={{ value }}&{% endfor %}" class="btn-close" style="font-size:0.65rem;margin-left:0.5rem;"></a>
+          </span>
+          {% endif %}
+          {% for key, value in active_filters.items %}
+          <span class="tag tag-blue">
+            {% if key == 'ativo' %}Status: {% if value == 'True' %}Ativo{% else %}Inativo{% endif %}
+            {% elif key == 'nome' %}Nome: "{{ value }}"
+            {% elif key == 'codigo' %}Código: "{{ value }}"
+            {% elif key == 'codigo_barras' %}Código de Barra: "{{ value }}"
+            {% elif key == 'marca' %}Marca: {{ value }}
+            {% elif key == 'tipo' %}Tipo: {% if value == 'produto' %}Produto{% else %}Serviço{% endif %}
+            {% elif key == 'situacao' %}Situação: {{ value|title }}
+            {% else %}{{ key|title }}: "{{ value }}"
+            {% endif %}
+            <a href="?{% if query %}q={{ query }}&{% endif %}{% for k, v in active_filters.items %}{% if k != key %}filter_{{ k }}={{ v }}&{% endif %}{% endfor %}" class="btn-close" style="font-size:0.65rem;margin-left:0.5rem;"></a>
+          </span>
+          {% endfor %}
+          <a href="?" class="btn btn-sm btn-ghost-secondary">Limpar todos os filtros</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Cards de Estatísticas -->
+    <div class="row mb-3 inventory-stats">
+      <div class="col-sm-6 col-md-4 col-lg-4">
+        <div class="card bg-red-lt" onclick="applyCardFilter('pendencia')" style="cursor:pointer;">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="subheader text-red">Com pendência fiscal</div>
+              <div class="ms-auto">
+                <span class="badge bg-red text-white">Crítico</span>
+              </div>
+            </div>
+            <div class="h1 mb-2 small-stat text-red">{{ qtd_pendencia_fiscal }}</div>
+            <div class="d-flex mb-1 text-muted small">
+              <div>Produto(s) com pendência fiscal</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-4 col-lg-4">
+        <div class="card bg-red-lt" onclick="applyCardFilter('validade_vencida')" style="cursor:pointer;">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="subheader text-red">Com validade vencida</div>
+              <div class="ms-auto">
+                <span class="badge bg-red text-white">Crítico</span>
+              </div>
+            </div>
+            <div class="h1 mb-2 small-stat text-red">{{ qtd_validade_vencida }}</div>
+            <div class="d-flex mb-1 text-muted small">
+              <div>Produto(s) com validade expirada</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="col-sm-6 col-md-4 col-lg-4">
+        <div class="card bg-orange-lt" onclick="applyCardFilter('vencendo')" style="cursor:pointer;">
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <div class="subheader text-orange">Vencendo em até 60 dias</div>
+              <div class="ms-auto">
+                <span class="badge bg-orange text-white">Aviso</span>
+              </div>
+            </div>
+            <div class="h1 mb-2 small-stat text-orange">{{ qtd_vencendo_60 }}</div>
+            <div class="d-flex mb-1 text-muted small">
+              <div>Produto(s) vencendo em breve</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="row row-cards">
+      <div class="col-12">
+        <div class="card">
+          <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th style="width:9%">Código</th>
+                  <th style="width:10%">Validade</th>
+                  <th style="width:7%">Estoque</th>
+                  <th style="width:9%">Custo</th>
+                  <th style="width:7%">Markup</th>
+                  <th style="width:11%">Preço de Venda</th>
+                  <th style="width:13%">Situação do estoque</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for produto in page_obj %}
+                {% with sit=produto.situacao_estoque sit_label=produto.situacao_estoque_label %}
+                <tr class="cursor-pointer" onclick="viewProduto({{ produto.id }})">
+                  <td>
+                    <div class="font-weight-medium">{{ produto.nome }}</div>
+                    {% if produto.tipo == 'servico' %}
+                    <small class="text-muted">Serviço</small>
+                    {% endif %}
+                    {% if produto.marca %}
+                    <small class="text-muted d-block">{{ produto.marca.nome }}</small>
+                    {% endif %}
+                  </td>
+                  <td>{{ produto.codigo|default:"—" }}</td>
+                  <td>
+                    {% if produto.validade %}
+                      {% if produto.validade_vencida %}
+                        <span class="text-danger">{{ produto.validade|date:"d/m/Y" }}</span>
+                      {% elif produto.vencendo_em_60_dias %}
+                        <span class="text-warning">{{ produto.validade|date:"d/m/Y" }}</span>
+                      {% else %}
+                        {{ produto.validade|date:"d/m/Y" }}
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if produto.tipo == 'servico' %}
+                      <span class="text-muted">—</span>
+                    {% else %}
+                      {{ produto.estoque_atual }}
+                    {% endif %}
+                  </td>
+                  <td>R$ {{ produto.preco_custo|floatformat:2 }}</td>
+                  <td>{{ produto.markup|floatformat:2 }}%</td>
+                  <td>R$ {{ produto.preco_venda|floatformat:2 }}</td>
+                  <td>
+                    {% if produto.tipo == 'servico' %}
+                      <span class="badge bg-blue-lt">Serviço</span>
+                    {% elif sit %}
+                      <span class="badge bg-{{ sit_label.1 }}-lt">{{ sit_label.0 }}</span>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endwith %}
+                {% empty %}
+                <tr>
+                  <td colspan="8" class="text-center text-muted py-5">
+                    <div class="empty">
+                      <div class="empty-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 7a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3z"/><path d="M3 17a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v2a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/></svg>
+                      </div>
+                      <p class="empty-title">Nenhum produto ou serviço encontrado</p>
+                      <p class="empty-subtitle text-secondary">Adicione o primeiro item clicando no botão acima.</p>
+                      <div class="empty-action">
+                        <button type="button" class="btn btn-primary" onclick="openWizard()">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5l0 14"/><path d="M5 12l14 0"/></svg>
+                          Adicionar primeiro item
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Paginação -->
+          {% if page_obj.has_other_pages %}
+          <div class="card-footer d-flex align-items-center">
+            <p class="m-0 text-secondary">
+              Mostrando <span>{{ page_obj.start_index }}</span> a <span>{{ page_obj.end_index }}</span>
+              de <span>{{ page_obj.paginator.count }}</span> registros
+            </p>
+            <ul class="pagination m-0 ms-auto">
+              {% if page_obj.has_previous %}
+              <li class="page-item">
+                <a class="page-link" href="?page=1{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M11 7l-5 5l5 5"/><path d="M17 7l-5 5l5 5"/></svg>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+                </a>
+              </li>
+              {% endif %}
+              {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active"><a class="page-link" href="#">{{ num }}</a></li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">{{ num }}</a></li>
+                {% endif %}
+              {% endfor %}
+              {% if page_obj.has_next %}
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+                </a>
+              </li>
+              <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if query %}&q={{ query }}{% endif %}{% for key, value in active_filters.items %}&filter_{{ key }}={{ value }}{% endfor %}">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M7 7l5 5l-5 5"/><path d="M13 7l5 5l-5 5"/></svg>
+                </a>
+              </li>
+              {% endif %}
+            </ul>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ OFFCANVAS FILTROS -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvas-filtros" style="width:600px;">
+  <div class="offcanvas-header">
+    <h2 class="offcanvas-title">Filtros Avançados</h2>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+  </div>
+  <div class="offcanvas-body">
+    <form method="get" id="form-filters">
+      {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+      <p class="text-muted mb-3">Preencha os campos que deseja filtrar:</p>
+
+      <div class="mb-3">
+        <label class="form-label">Nome</label>
+        <input type="text" class="form-control" name="filter_nome"
+               placeholder="Digite o nome" value="{{ active_filters.nome }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Código</label>
+        <input type="text" class="form-control" name="filter_codigo"
+               placeholder="Digite o código" value="{{ active_filters.codigo }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Código de Barras</label>
+        <input type="text" class="form-control" name="filter_codigo_barras"
+               placeholder="Digite o código de barras" value="{{ active_filters.codigo_barras }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Marca</label>
+        <select class="form-select" name="filter_marca">
+          <option value="">Todas</option>
+          {% for m in marcas %}
+          <option value="{{ m.id }}" {% if active_filters.marca == m.id|stringformat:'s' %}selected{% endif %}>{{ m.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Tipo</label>
+        <select class="form-select" name="filter_tipo">
+          <option value="">Todos</option>
+          <option value="produto" {% if active_filters.tipo == 'produto' %}selected{% endif %}>Produto</option>
+          <option value="servico" {% if active_filters.tipo == 'servico' %}selected{% endif %}>Serviço</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Situação do Estoque</label>
+        <select class="form-select" name="filter_situacao">
+          <option value="">Todas</option>
+          <option value="adequado" {% if active_filters.situacao == 'adequado' %}selected{% endif %}>Adequado</option>
+          <option value="repor" {% if active_filters.situacao == 'repor' %}selected{% endif %}>Repor</option>
+          <option value="excesso" {% if active_filters.situacao == 'excesso' %}selected{% endif %}>Excesso</option>
+        </select>
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Status</label>
+        <select class="form-select" name="filter_ativo">
+          <option value="">Todos</option>
+          <option value="True" {% if active_filters.ativo == 'True' %}selected{% endif %}>Ativo</option>
+          <option value="False" {% if active_filters.ativo == 'False' %}selected{% endif %}>Inativo</option>
+        </select>
+      </div>
+
+      <div class="d-grid gap-2 mt-4">
+        <button type="submit" class="btn btn-primary">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M4 4h16v2.172a2 2 0 0 1 -.586 1.414l-4.414 4.414v7l-6 2v-8.5l-4.48 -4.928a2 2 0 0 1 -.52 -1.345v-2.227z"/></svg>
+          Aplicar Filtros
+        </button>
+        <button type="button" class="btn" data-bs-dismiss="offcanvas">Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ WIZARD ADICIONAR/EDITAR -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="wizard-produto" style="width:600px;"
+     data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="wizard-titulo">Novo Produto / Serviço</h5>
+    <button type="button" class="btn-close" id="wizard-close-btn"></button>
+  </div>
+  <div class="offcanvas-body p-0">
+    <form id="form-wizard-produto">
+      {% csrf_token %}
+      <input type="hidden" id="wizard-produto-id" name="id" value="">
+      <input type="hidden" id="w-codigo" name="codigo" value="">
+
+      <!-- Steps -->
+      <div class="modern-steps-container py-2 px-3 bg-light border-bottom">
+        <div class="modern-steps">
+          <div class="step-item" data-step="1">
+            <div class="step-circle">
+              <span class="step-num">1</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Identificação</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="2">
+            <div class="step-circle">
+              <span class="step-num">2</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Custo e Preço</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="3">
+            <div class="step-circle">
+              <span class="step-num">3</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Fiscal</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="4">
+            <div class="step-circle">
+              <span class="step-num">4</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Estoque</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="5">
+            <div class="step-circle">
+              <span class="step-num">5</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Comissões</div>
+            <div class="step-line"></div>
+          </div>
+          <div class="step-item" data-step="6">
+            <div class="step-circle">
+              <span class="step-num">6</span>
+              <svg class="step-check" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </div>
+            <div class="step-label">Áreas</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Conteúdo -->
+      <div class="wizard-content p-4" style="height:calc(100vh - 200px);overflow-y:auto;">
+
+        <!-- Step 1: Identificação -->
+        <div class="wizard-step" id="step-1">
+          <h4 class="mb-4 text-center">Identificação</h4>
+
+          <!-- Tipo -->
+          <div class="mb-4">
+            <label class="form-label required">Tipo</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="tipo" id="tipo-produto" value="produto" checked>
+                <label class="btn btn-outline-primary w-100" for="tipo-produto">Produto</label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="tipo" id="tipo-servico" value="servico">
+                <label class="btn btn-outline-primary w-100" for="tipo-servico">Serviço</label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="tipo" id="tipo-pacote" value="pacote">
+                <label class="btn btn-outline-primary w-100" for="tipo-pacote">Pacote</label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="tipo" id="tipo-kit" value="kit">
+                <label class="btn btn-outline-primary w-100" for="tipo-kit">Kit</label>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── PRODUTO ── -->
+          <div id="campos-tipo-produto">
+            <div class="mb-3">
+              <label class="form-label">Código de Barras</label>
+              <input type="text" class="form-control" id="w-codigo-barras" name="codigo_barras" placeholder="Código de barras">
+            </div>
+            <div class="mb-3">
+              <label class="form-label required">Nome</label>
+              <input type="text" class="form-control" id="w-nome" required placeholder="Nome do produto">
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label required">Unidade de Venda</label>
+              <input type="text" class="form-control" id="w-unidade" name="unidade" required placeholder="Ex.: UN">
+              <div class="form-hint">Exemplos: UN, KG, ML</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Marca</label>
+              <select class="form-select" id="w-marca" name="marca">
+                <option value="">Selecione uma marca...</option>
+                {% for m in marcas %}
+                <option value="{{ m.id }}">{{ m.nome }}</option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Grupo</label>
+              <input type="text" class="form-control" id="w-grupo-display" readonly
+                     placeholder="Selecione um grupo..." style="cursor:pointer;"
+                     onclick="openGrupoModal('produto')">
+              <input type="hidden" id="w-grupo" name="grupo">
+            </div>
+          </div>
+
+          <!-- ── SERVIÇO ── -->
+          <div id="campos-tipo-servico" style="display:none;">
+            <div class="mb-3">
+              <label class="form-label required">Nome</label>
+              <input type="text" class="form-control" id="w-nome-servico" required placeholder="Nome do serviço">
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label required">Unidade de Venda</label>
+              <input type="text" class="form-control" id="w-unidade-servico" name="unidade_servico" required placeholder="Ex.: UN">
+              <div class="form-hint">Exemplos: UN, KG, ML</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Grupo</label>
+              <input type="text" class="form-control" id="w-grupo-servico-display" readonly
+                     placeholder="Selecione um grupo..." style="cursor:pointer;"
+                     onclick="openGrupoModal('servico')">
+              <input type="hidden" id="w-grupo-servico" name="grupo_servico">
+            </div>
+          </div>
+
+          <!-- ── PACOTE ── -->
+          <div id="campos-tipo-pacote" style="display:none;">
+            <div class="alert alert-light border small mb-3 py-2">
+              Em pacotes, o cliente compra um conjunto de serviços para consumir posteriormente
+            </div>
+            <div class="mb-3">
+              <label class="form-label required">Nome</label>
+              <input type="text" class="form-control" id="w-nome-pacote" required placeholder="Nome do pacote">
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Grupo</label>
+              <input type="text" class="form-control" id="w-grupo-pacote-display" readonly
+                     placeholder="Selecione um grupo..." style="cursor:pointer;"
+                     onclick="openGrupoModal('pacote')">
+              <input type="hidden" id="w-grupo-pacote" name="grupo_pacote">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Controla validade?</label>
+              <div class="row g-2 mb-1">
+                <div class="col-6">
+                  <input type="radio" class="btn-check" name="controla-validade" id="controla-sim" value="sim">
+                  <label class="btn btn-outline-secondary w-100" for="controla-sim">Sim</label>
+                </div>
+                <div class="col-6">
+                  <input type="radio" class="btn-check" name="controla-validade" id="controla-nao" value="nao" checked>
+                  <label class="btn btn-outline-secondary w-100" for="controla-nao">Não</label>
+                </div>
+              </div>
+              <div class="form-hint">O cliente precisa consumir todos os itens do pacote antes do prazo de validade.</div>
+            </div>
+            <div class="mb-3" id="campo-validade-dias" style="display:none;">
+              <label class="form-label required">Validade em dias</label>
+              <input type="number" class="form-control" id="w-validade-dias" name="validade_dias" min="1" placeholder="Ex.: 365">
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-check">
+                <input class="form-check-input" type="checkbox" id="w-exibe-lista-preco-pacote" name="exibe_lista_preco">
+                <span class="form-check-label">Exibe na lista de preço</span>
+              </label>
+              <div class="form-hint">Exibe o item em Vendas &gt; Lista de preço</div>
+            </div>
+          </div>
+
+          <!-- ── KIT ── -->
+          <div id="campos-tipo-kit" style="display:none;">
+            <div class="alert alert-light border small mb-3 py-2">
+              Kits são agrupadores de produtos e/ou serviços que o cliente compra e consome imediatamente
+            </div>
+            <div class="mb-3">
+              <label class="form-label required">Nome</label>
+              <input type="text" class="form-control" id="w-nome-kit" required placeholder="Nome do kit">
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Grupo</label>
+              <input type="text" class="form-control" id="w-grupo-kit-display" readonly
+                     placeholder="Selecione um grupo..." style="cursor:pointer;"
+                     onclick="openGrupoModal('kit')">
+              <input type="hidden" id="w-grupo-kit" name="grupo_kit">
+            </div>
+            <div class="mb-3">
+              <label class="form-check">
+                <input class="form-check-input" type="checkbox" id="w-exibe-lista-preco-kit" name="exibe_lista_preco_kit">
+                <span class="form-check-label">Exibe na lista de preço</span>
+              </label>
+              <div class="form-hint">Exibe o item em Vendas &gt; Lista de preço</div>
+            </div>
+          </div>
+
+          <!-- Status (comum) -->
+          <div class="mb-1 mt-2 pt-2 border-top">
+            <label class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="w-ativo" name="ativo" checked>
+              <span class="form-check-label">Ativo</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Step 2: Custo e Preço -->
+        <div class="wizard-step" id="step-2" style="display:none;">
+          <h4 class="mb-4 text-center">Custo e Preço</h4>
+
+          <!-- Propósito -->
+          <div class="mb-4">
+            <label class="form-label required">Propósito</label>
+            <div class="d-flex flex-column gap-2">
+              <div>
+                <input type="radio" class="btn-check" name="proposito" id="proposito-venda-consumo" value="venda_consumo" checked>
+                <label class="btn btn-outline-primary w-100" for="proposito-venda-consumo">Venda e consumo interno</label>
+              </div>
+              <div>
+                <input type="radio" class="btn-check" name="proposito" id="proposito-apenas-venda" value="apenas_venda">
+                <label class="btn btn-outline-primary w-100" for="proposito-apenas-venda">Apenas venda</label>
+              </div>
+              <div>
+                <input type="radio" class="btn-check" name="proposito" id="proposito-apenas-consumo" value="apenas_consumo">
+                <label class="btn btn-outline-primary w-100" for="proposito-apenas-consumo">Apenas consumo interno</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Custo de aquisição (R$)</label>
+            <input type="number" class="form-control" id="w-custo-aquisicao" step="0.01" min="0" placeholder="0,00">
+            <div class="form-hint">Custo do produto incluindo impostos e frete</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Markup desejado (%)</label>
+            <div class="input-group">
+              <input type="number" class="form-control" id="w-markup-desejado" step="0.01" min="0" placeholder="0,00">
+              <span class="input-group-text">%</span>
+            </div>
+            <div class="form-hint">Percentual aplicado sobre o custo do item para a formação do preço de venda</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Preço de venda sugerido (R$)</label>
+            <input type="number" class="form-control" id="w-preco-venda-sugerido" step="0.01" min="0" placeholder="0,00" readonly style="background:#f8f9fa;">
+            <div class="form-hint">O preço de venda sugerido é calculado com base no custo de aquisição e no markup desejado</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required">Preço de venda (R$)</label>
+            <input type="number" class="form-control" id="w-preco-venda" step="0.01" min="0" placeholder="0,00" required>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="w-exibe-lista-preco">
+              <span class="form-check-label">Exibe na lista de preço</span>
+            </label>
+            <div class="form-hint">Exibe o item em Vendas &gt; Lista de preço</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-check">
+              <input class="form-check-input" type="checkbox" id="w-permite-alterar-preco">
+              <span class="form-check-label">Permite alterar preço na venda</span>
+            </label>
+            <div class="form-hint">Usuários autorizados poderão alterar o preço do item na venda</div>
+          </div>
+        </div>
+
+        <!-- Step 3: Fiscal -->
+        <div class="wizard-step" id="step-3" style="display:none;">
+          <h4 class="mb-4 text-center">Fiscal</h4>
+
+          <div class="mb-3">
+            <label class="form-label required">Código NCM</label>
+            <input type="text" class="form-control" id="w-ncm" placeholder="Ex.: 4901.99.00" required>
+            <div class="form-hint">Nomenclatura Comum Mercosul. Obrigatório para emitir NFC-e</div>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">EX TIPI</label>
+            <input type="text" class="form-control" id="w-ex-tipi" placeholder="Ex.: 00">
+            <div class="form-hint">Exceção da regra que é aplicada ao NCM</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required">Perfil tributário</label>
+            <select class="form-select" id="w-perfil-tributario" required>
+              <option value="">Selecione um perfil...</option>
+              <option value="com_st">Produtos COM substituição tributária</option>
+              <option value="sem_icms_pis_cofins">Produtos SEM tributação ICMS PIS COFINS</option>
+              <option value="pis_cofins_0_icms_normal">PIS E COFINS Alíquota 0 - ICMS normal</option>
+              <option value="com_icms_pis_cofins">Produtos COM tributação ICMS PIS COFINS</option>
+              <option value="monofasico_icms_st">PIS E COFINS MONOFÁSICO - ICMS ST</option>
+              <option value="pis_cofins_normal_icms_st">PIS E COFINS NORMAL - ICMS ST</option>
+              <option value="pis_cofins_normal_icms_normal">PIS E COFINS NORMAL - ICMS NORMAL</option>
+            </select>
+            <div class="form-hint">Serve para facilitar a configuração da tributação de cada produto</div>
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required">Origem</label>
+            <input type="text" class="form-control" id="w-origem-display" readonly
+                   placeholder="Selecione a origem..." style="cursor:pointer;"
+                   onclick="openOrigemModal()" required>
+            <input type="hidden" id="w-origem">
+            <div class="invalid-feedback"></div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label required">Forma de aquisição</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="forma-aquisicao" id="forma-produzida" value="produzida_importada" checked>
+                <label class="btn btn-outline-primary w-100" for="forma-produzida">Produzida / Importada</label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="forma-aquisicao" id="forma-terceiros" value="terceiros">
+                <label class="btn btn-outline-primary w-100" for="forma-terceiros">Adquirida de terceiros</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">CEST</label>
+            <input type="text" class="form-control" id="w-cest" placeholder="Ex.: 01.001.00">
+            <div class="form-hint">Código Especificador da Substituição Tributária. Obrigatório para emissão de NFC-e dos produtos com Substituição Tributária</div>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">NVE</label>
+            <input type="text" class="form-control" id="w-nve" placeholder="Ex.: AA0001">
+            <div class="form-hint">Nomenclatura de Valor Aduaneiro e Estatística. Identifica mercadorias importadas de forma detalhada</div>
+          </div>
+
+          <div class="alert alert-light border mt-3">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg>
+            Recomendamos que preencha as informações fiscais junto com o seu contador
+          </div>
+        </div>
+
+        <!-- Step 4: Estoque e Validade -->
+        <div class="wizard-step" id="step-4" style="display:none;">
+          <h4 class="mb-4 text-center">Estoque e Validade</h4>
+
+          <h5 class="mb-3">Estoque</h5>
+          <div class="mb-3">
+            <label class="form-label">Controla estoque?</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="controla-estoque" id="controla-estoque-sim" value="sim" checked>
+                <label class="btn btn-outline-primary w-100" for="controla-estoque-sim">Sim</label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="controla-estoque" id="controla-estoque-nao" value="nao">
+                <label class="btn btn-outline-primary w-100" for="controla-estoque-nao">Não</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="campo-estoque-atual">
+            <div class="mb-3">
+              <label class="form-label">Estoque atual</label>
+              <input type="number" class="form-control" id="w-estoque-atual" min="0" value="0">
+            </div>
+          </div>
+
+          <div id="aviso-sem-estoque" class="alert alert-light border mb-3" style="display:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 9h.01"/><path d="M11 12h1v4h1"/></svg>
+            Você pode realizar normalmente a venda do item mas ele não aparecerá nos relatórios de estoque
+          </div>
+
+          <h5 class="mt-4 mb-3">Validade</h5>
+          <div class="mb-3">
+            <label class="form-label">Controla validade?</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="controla-validade-estoque" id="controla-val-est-sim" value="sim">
+                <label class="btn btn-outline-secondary w-100" for="controla-val-est-sim">Sim</label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="controla-validade-estoque" id="controla-val-est-nao" value="nao" checked>
+                <label class="btn btn-outline-secondary w-100" for="controla-val-est-nao">Não</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="campo-validade-mais-antiga" style="display:none;">
+            <div class="mb-3">
+              <label class="form-label">Validade mais antiga</label>
+              <input type="date" class="form-control" id="w-validade-mais-antiga">
+              <div class="form-hint">Utilizamos a metodologia PEPS (primeiro que entra, primeiro que sai)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 5: Comissões -->
+        <div class="wizard-step" id="step-5" style="display:none;">
+          <h4 class="mb-4 text-center">Comissões</h4>
+
+          <div class="mb-4">
+            <label class="form-label required">O produto é comissionado?</label>
+            <div class="row g-2">
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="comissionado" id="comissionado-sim" value="sim">
+                <label class="btn btn-outline-primary w-100" for="comissionado-sim">Sim</label>
+              </div>
+              <div class="col-6">
+                <input type="radio" class="btn-check" name="comissionado" id="comissionado-nao" value="nao" checked>
+                <label class="btn btn-outline-primary w-100" for="comissionado-nao">Não</label>
+              </div>
+            </div>
+          </div>
+
+          <div id="campos-comissao" style="display:none;">
+            <div class="mb-3">
+              <label class="form-label">Comissão padrão</label>
+              <div class="input-group">
+                <input type="number" class="form-control" id="w-comissao-valor" step="0.01" min="0" placeholder="0,00">
+                <div class="btn-group" role="group">
+                  <input type="radio" class="btn-check" name="comissao-tipo" id="comissao-percentual" value="percentual" checked>
+                  <label class="btn btn-outline-secondary" for="comissao-percentual">%</label>
+                  <input type="radio" class="btn-check" name="comissao-tipo" id="comissao-valor-tipo" value="valor">
+                  <label class="btn btn-outline-secondary" for="comissao-valor-tipo">R$</label>
+                </div>
+              </div>
+            </div>
+
+            <div class="alert alert-light border small py-2 mb-3">
+              Sem comissões diferenciadas. Clique no botão abaixo para adicionar comissões diferentes da padrão para funcionários específicos
+            </div>
+
+            <button type="button" class="btn btn-outline-primary w-100">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1" width="18" height="18" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M12 5v14m-7-7h14"/></svg>
+              Adicionar comissão diferenciada
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 6: Áreas -->
+        <div class="wizard-step" id="step-6" style="display:none;">
+          <h4 class="mb-4 text-center">Áreas</h4>
+
+          <div class="mb-4">
+            <label class="form-label required">O produto pode ser vendido por usuários de quais áreas?</label>
+            <div class="mb-2">
+              <label class="form-check">
+                <input class="form-check-input" type="checkbox" id="w-area-banho-tosa" value="banho_tosa">
+                <span class="form-check-label">Banho e Tosa</span>
+              </label>
+            </div>
+            <div class="mb-2">
+              <label class="form-check">
+                <input class="form-check-input" type="checkbox" id="w-area-clinica" value="clinica">
+                <span class="form-check-label">Clínica</span>
+              </label>
+            </div>
+            <div class="mb-2">
+              <label class="form-check">
+                <input class="form-check-input" type="checkbox" id="w-area-petshop" value="petshop">
+                <span class="form-check-label">Petshop</span>
+              </label>
+            </div>
+            <div class="form-hint">Apenas os usuários que estão vinculados às áreas marcadas acima conseguirão vender o produto</div>
+          </div>
+        </div>
+
+      </div><!-- /wizard-content -->
+
+      <!-- Footer -->
+      <div class="p-3 border-top d-flex justify-content-between align-items-center bg-white">
+        <button type="button" class="btn btn-ghost-secondary" id="btn-prev-step" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+          Anterior
+        </button>
+        <span></span>
+        <div>
+          <button type="button" class="btn btn-primary" id="btn-next-step">
+            Próximo
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 6l6 6l-6 6"/></svg>
+          </button>
+          <button type="submit" class="btn btn-success" id="btn-submit" style="display:none;">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2"/><path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M14 4l0 4l-6 0l0 -4"/></svg>
+            Salvar
+          </button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ MODAL CONFIRMAR EXCLUSÃO -->
+<div class="modal modal-blur fade" id="modal-delete" tabindex="-1">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body">
+        <div class="modal-title">Confirmar Exclusão</div>
+        <div>Deseja excluir <strong id="delete-nome"></strong>?</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary me-auto" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="btn-confirm-delete">Excluir</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ PAINEL SELECIONAR GRUPO -->
+<div id="modal-grupo-overlay" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.15);">
+  <div style="position:fixed; top:0; right:0; width:600px; height:100vh; background:#fff; display:flex; flex-direction:column; box-shadow:-4px 0 20px rgba(0,0,0,0.15);">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-sm btn-ghost-secondary p-1" onclick="closeGrupoModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+        Voltar
+      </button>
+      <h5 class="mb-0">Selecionar Grupo</h5>
+    </div>
+    <div class="p-3 border-bottom">
+      <input type="text" class="form-control" id="grupo-search" placeholder="Buscar grupo..." oninput="filterGrupos(this.value)">
+    </div>
+    <div class="overflow-auto flex-fill" id="grupo-list-container"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════ PAINEL SELECIONAR ORIGEM -->
+<div id="modal-origem-overlay" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.15);">
+  <div style="position:fixed; top:0; right:0; width:600px; height:100vh; background:#fff; display:flex; flex-direction:column; box-shadow:-4px 0 20px rgba(0,0,0,0.15);">
+    <div class="p-3 border-bottom d-flex align-items-center gap-2">
+      <button type="button" class="btn btn-sm btn-ghost-secondary p-1" onclick="closeOrigemModal()">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="20" height="20" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M15 6l-6 6l6 6"/></svg>
+        Voltar
+      </button>
+      <h5 class="mb-0">Selecionar Origem</h5>
+    </div>
+    <div class="p-3 border-bottom">
+      <input type="text" class="form-control" id="origem-search" placeholder="Buscar origem..." oninput="filterOrigens(this.value)">
+    </div>
+    <div class="overflow-auto flex-fill" id="origem-list-container"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+/* Modern Steps */
+.modern-steps-container { background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%); }
+.modern-steps { display: flex; justify-content: space-between; align-items: flex-start; position: relative; }
+.step-item { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.step-circle { width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 2px solid #dee2e6; display: flex; align-items: center; justify-content: center; position: relative; z-index: 2; transition: all 0.3s ease; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.step-num { font-size: 15px; font-weight: 600; color: #6c757d; transition: all 0.3s ease; }
+.step-check { display: none; color: #fff; }
+.step-label { margin-top: 6px; font-size: 11px; font-weight: 500; color: #6c757d; text-align: center; transition: all 0.3s ease; }
+  .step-line { position: absolute; top: 18px; left: -50%; width: 200%; height: 2px; background: #dee2e6; z-index: 1; transition: all 0.4s ease; }
+.step-item:last-child .step-line { display: none; }
+.step-item.active .step-circle { background: #206bc4; border-color: #206bc4; transform: scale(1.1); box-shadow: 0 4px 12px rgba(32,107,196,0.3); }
+.step-item.active .step-num { color: #fff; }
+.step-item.active .step-label { color: #206bc4; font-weight: 600; }
+.step-item.completed .step-circle { background: #2fb344; border-color: #2fb344; }
+.step-item.completed .step-num { display: none; }
+.step-item.completed .step-check { display: block; }
+.step-item.completed .step-label { color: #2fb344; }
+.step-item.completed .step-line { background: #2fb344; }
+</style>
+
+<style>
+/* Table row hover */
+.table tbody tr.cursor-pointer { transition: background .12s ease; }
+.table tbody tr.cursor-pointer:hover { background-color: #f3f4f6; }
+
+/* Smaller stat cards */
+.inventory-stats .card .card-body { padding: .65rem; }
+.inventory-stats .small-stat { font-size: 1.6rem; line-height: 1; }
+.inventory-stats .subheader { font-size: .9rem; }
+.inventory-stats .badge { font-size: .7rem; padding: .35rem .5rem; }
+</style>
+
+<script>
+(function () {
+  const TOTAL_STEPS = 6;
+  let currentStep = 1;
+  let deleteId = null;
+  let wizardOffcanvas = null;
+
+  // ── Init ──────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function () {
+    wizardOffcanvas = new bootstrap.Offcanvas(document.getElementById('wizard-produto'));
+
+    // Markup auto-calc (custo + markup → preço sugerido)
+    document.getElementById('w-custo-aquisicao').addEventListener('input', calcPrecoSugerido);
+    document.getElementById('w-markup-desejado').addEventListener('input', calcPrecoSugerido);
+
+    // Tipo radio — toggle conditional fields
+    document.querySelectorAll('input[name="tipo"]').forEach(r => r.addEventListener('change', () => { toggleTipoFields(); toggleEstoqueFields(); }));
+    document.querySelectorAll('input[name="controla-validade"]').forEach(r => r.addEventListener('change', toggleValidadeDias));
+    document.querySelectorAll('input[name="controla-estoque"]').forEach(r => r.addEventListener('change', toggleControlaEstoque));
+    document.querySelectorAll('input[name="controla-validade-estoque"]').forEach(r => r.addEventListener('change', toggleControlaValidadeEstoque));
+    document.querySelectorAll('input[name="comissionado"]').forEach(r => r.addEventListener('change', toggleComissionado));
+    toggleTipoFields();
+
+    // Wizard nav
+    document.getElementById('btn-next-step').addEventListener('click', nextStep);
+    document.getElementById('btn-prev-step').addEventListener('click', prevStep);
+    document.getElementById('btn-submit').addEventListener('click', salvarProduto);
+    document.getElementById('wizard-close-btn').addEventListener('click', () => {
+      wizardOffcanvas.hide();
+      resetWizard();
+    });
+
+    // Delete modal
+    document.getElementById('btn-confirm-delete').addEventListener('click', confirmarDelete);
+
+    updateStepDisplay();
+  });
+
+  // ── Utility ───────────────────────────────────────────────────────────────
+  function openFilterOffcanvas() {
+    new bootstrap.Offcanvas(document.getElementById('offcanvas-filtros')).show();
+  }
+  window.openFilterOffcanvas = openFilterOffcanvas;
+
+  function openWizard() {
+    resetWizard();
+    document.getElementById('wizard-titulo').textContent = 'Novo Produto / Serviço';
+    wizardOffcanvas.show();
+  }
+  window.openWizard = openWizard;
+
+  function viewProduto(id) { editProduto(id); }
+  window.viewProduto = viewProduto;
+
+  async function editProduto(id) {
+    resetWizard();
+    const resp = await fetch(`/estoque/produtos/${id}/`);
+    if (!resp.ok) return;
+    const d = await resp.json();
+
+    document.getElementById('wizard-titulo').textContent = 'Editar Produto / Serviço';
+    document.getElementById('wizard-produto-id').value = d.id;
+
+    // Step 1
+    const tipoRadioEl = document.querySelector(`input[name="tipo"][value="${d.tipo}"]`);
+    if (tipoRadioEl) tipoRadioEl.checked = true;
+    toggleTipoFields();
+    const _nLoadIds = {produto:'w-nome',servico:'w-nome-servico',pacote:'w-nome-pacote',kit:'w-nome-kit'};
+    const nomeLoadEl = document.getElementById(_nLoadIds[d.tipo] || 'w-nome');
+    if (nomeLoadEl) nomeLoadEl.value = d.nome || '';
+    if (document.getElementById('w-codigo')) document.getElementById('w-codigo').value = d.codigo || '';
+    if (document.getElementById('w-codigo-barras')) document.getElementById('w-codigo-barras').value = d.codigo_barras || '';
+    if (document.getElementById('w-marca')) document.getElementById('w-marca').value = d.marca || '';
+    document.getElementById('w-ativo').checked = d.ativo;
+
+    // Step 2
+    const propEl = document.querySelector(`input[name="proposito"][value="${d.proposito || 'venda_consumo'}"]`);
+    if (propEl) propEl.checked = true;
+    document.getElementById('w-custo-aquisicao').value = d.preco_custo || '';
+    document.getElementById('w-markup-desejado').value = d.markup || '';
+    document.getElementById('w-preco-venda').value = d.preco_venda || '';
+    calcPrecoSugerido();
+    document.getElementById('w-exibe-lista-preco').checked = !!d.exibe_lista_preco;
+    document.getElementById('w-permite-alterar-preco').checked = !!d.permite_alterar_preco;
+
+    // Step 3
+    document.getElementById('w-ncm').value = d.ncm || '';
+    document.getElementById('w-ex-tipi').value = d.ex_tipi || '';
+    document.getElementById('w-perfil-tributario').value = d.perfil_tributario || '';
+    document.getElementById('w-origem-display').value = d.origem_display || '';
+    document.getElementById('w-origem').value = d.origem || '';
+    const formaEl = document.querySelector(`input[name="forma-aquisicao"][value="${d.forma_aquisicao || 'produzida_importada'}"]`);
+    if (formaEl) formaEl.checked = true;
+    document.getElementById('w-cest').value = d.cest || '';
+    document.getElementById('w-nve').value = d.nve || '';
+
+    // Step 4
+    const ctrEstEl = document.querySelector(`input[name="controla-estoque"][value="${d.controla_estoque || 'sim'}"]`);
+    if (ctrEstEl) ctrEstEl.checked = true;
+    toggleControlaEstoque();
+    document.getElementById('w-estoque-atual').value = d.estoque_atual || 0;
+    const ctrValEl = document.querySelector(`input[name="controla-validade-estoque"][value="${d.controla_validade_estoque || 'nao'}"]`);
+    if (ctrValEl) ctrValEl.checked = true;
+    toggleControlaValidadeEstoque();
+    document.getElementById('w-validade-mais-antiga').value = d.validade || '';
+
+    // Step 5
+    const comissEl = document.querySelector(`input[name="comissionado"][value="${d.comissionado || 'nao'}"]`);
+    if (comissEl) comissEl.checked = true;
+    toggleComissionado();
+    document.getElementById('w-comissao-valor').value = d.comissao_valor || '';
+    const comTipoEl = document.querySelector(`input[name="comissao-tipo"][value="${d.comissao_tipo || 'percentual'}"]`);
+    if (comTipoEl) comTipoEl.checked = true;
+
+    // Step 6
+    document.getElementById('w-area-banho-tosa').checked = !!d.area_banho_tosa;
+    document.getElementById('w-area-clinica').checked = !!d.area_clinica;
+    document.getElementById('w-area-petshop').checked = !!d.area_petshop;
+
+    wizardOffcanvas.show();
+  }
+  window.editProduto = editProduto;
+
+  function deleteProduto(id, nome) {
+    deleteId = id;
+    document.getElementById('delete-nome').textContent = nome;
+    new bootstrap.Modal(document.getElementById('modal-delete')).show();
+  }
+  window.deleteProduto = deleteProduto;
+
+  async function confirmarDelete() {
+    if (!deleteId) return;
+    const resp = await fetch(`/estoque/produtos/${deleteId}/deletar/`, {
+      method: 'POST',
+      headers: { 'X-CSRFToken': getCsrf() }
+    });
+    if (resp.ok) {
+      bootstrap.Modal.getInstance(document.getElementById('modal-delete')).hide();
+      location.reload();
+    }
+  }
+
+  // ── Wizard Steps ──────────────────────────────────────────────────────────
+  function nextStep() {
+    if (!validateStep()) return;
+    if (currentStep < TOTAL_STEPS) {
+      currentStep++;
+      updateStepDisplay();
+    }
+  }
+
+  function prevStep() {
+    if (currentStep > 1) {
+      currentStep--;
+      updateStepDisplay();
+    }
+  }
+
+  function validateStep() {
+    const stepEl = document.getElementById('step-' + currentStep);
+    let valid = true;
+    stepEl.querySelectorAll('[required]').forEach(input => {
+      if (input.offsetParent !== null && !input.value.trim()) {
+        input.classList.add('is-invalid');
+        valid = false;
+      } else {
+        input.classList.remove('is-invalid');
+      }
+    });
+    return valid;
+  }
+
+  function updateStepDisplay() {
+    document.querySelectorAll('.step-item').forEach(si => {
+      const n = parseInt(si.dataset.step);
+      si.classList.toggle('active', n === currentStep);
+      si.classList.toggle('completed', n < currentStep);
+    });
+    document.querySelectorAll('.wizard-step').forEach(s => s.style.display = 'none');
+    document.getElementById('step-' + currentStep).style.display = 'block';
+    document.getElementById('btn-prev-step').style.display = currentStep === 1 ? 'none' : 'inline-flex';
+    document.getElementById('btn-next-step').style.display = currentStep === TOTAL_STEPS ? 'none' : 'inline-flex';
+    document.getElementById('btn-submit').style.display = currentStep === TOTAL_STEPS ? 'inline-flex' : 'none';
+  }
+
+  function resetWizard() {
+    currentStep = 1;
+    document.getElementById('form-wizard-produto').reset();
+    document.getElementById('wizard-produto-id').value = '';
+    toggleTipoFields();
+    toggleControlaEstoque();
+    toggleComissionado();
+    updateStepDisplay();
+  }
+
+  // ── Preços ────────────────────────────────────────────────────────────────
+  function calcPrecoSugerido() {
+    const custo = parseFloat(document.getElementById('w-custo-aquisicao').value) || 0;
+    const markup = parseFloat(document.getElementById('w-markup-desejado').value) || 0;
+    const sugerido = custo > 0 ? (custo * (1 + markup / 100)).toFixed(2) : '';
+    document.getElementById('w-preco-venda-sugerido').value = sugerido;
+  }
+
+  // ── Step 1: toggle fields per tipo ────────────────────────────────────────
+  function toggleTipoFields() {
+    const tipo = document.querySelector('input[name="tipo"]:checked')?.value || 'produto';
+    ['produto', 'servico', 'pacote', 'kit'].forEach(t => {
+      const el = document.getElementById('campos-tipo-' + t);
+      if (el) el.style.display = tipo === t ? 'block' : 'none';
+    });
+  }
+
+  function toggleValidadeDias() {
+    const show = document.querySelector('input[name="controla-validade"]:checked')?.value === 'sim';
+    const el = document.getElementById('campo-validade-dias');
+    if (el) el.style.display = show ? 'block' : 'none';
+    const input = document.getElementById('w-validade-dias');
+    if (input) input.required = show;
+  }
+
+  // ── Estoque toggle (produto vs serviço/pacote/kit) ────────────────────────
+  function toggleEstoqueFields() {
+    const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
+    const isServico = tipo === 'servico' || tipo === 'pacote' || tipo === 'kit';
+    const elServico = document.getElementById('estoque-campos-servico');
+    const elProduto = document.getElementById('estoque-campos-produto');
+    if (elServico) elServico.style.display = isServico ? 'block' : 'none';
+    if (elProduto) elProduto.style.display = isServico ? 'none' : 'block';
+  }
+
+  function toggleControlaEstoque() {
+    const sim = document.querySelector('input[name="controla-estoque"]:checked')?.value === 'sim';
+    const elCampo = document.getElementById('campo-estoque-atual');
+    const elAviso = document.getElementById('aviso-sem-estoque');
+    if (elCampo) elCampo.style.display = sim ? 'block' : 'none';
+    if (elAviso) elAviso.style.display = sim ? 'none' : 'block';
+  }
+
+  function toggleControlaValidadeEstoque() {
+    const sim = document.querySelector('input[name="controla-validade-estoque"]:checked')?.value === 'sim';
+    const el = document.getElementById('campo-validade-mais-antiga');
+    if (el) el.style.display = sim ? 'block' : 'none';
+  }
+
+  function toggleComissionado() {
+    const sim = document.querySelector('input[name="comissionado"]:checked')?.value === 'sim';
+    const el = document.getElementById('campos-comissao');
+    if (el) el.style.display = sim ? 'block' : 'none';
+  }
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  async function salvarProduto(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+
+    const tipoAtual = document.querySelector('input[name="tipo"]:checked')?.value || 'produto';
+    const _nIds = {produto:'w-nome',servico:'w-nome-servico',pacote:'w-nome-pacote',kit:'w-nome-kit'};
+    const _gIds = {produto:'w-grupo',servico:'w-grupo-servico',pacote:'w-grupo-pacote',kit:'w-grupo-kit'};
+    const _uIds = {produto:'w-unidade',servico:'w-unidade-servico'};
+    const payload = {
+      id: document.getElementById('wizard-produto-id').value || null,
+      nome: document.getElementById(_nIds[tipoAtual] || 'w-nome')?.value || '',
+      codigo: document.getElementById('w-codigo')?.value || '',
+      codigo_barras: document.getElementById('w-codigo-barras')?.value || '',
+      tipo: tipoAtual,
+      marca: document.getElementById('w-marca')?.value || null,
+      ativo: document.getElementById('w-ativo').checked,
+      grupo: document.getElementById(_gIds[tipoAtual])?.value || '',
+      unidade: document.getElementById(_uIds[tipoAtual])?.value || '',
+      proposito: document.querySelector('input[name="proposito"]:checked')?.value || '',
+      preco_custo: document.getElementById('w-custo-aquisicao')?.value || '',
+      markup: document.getElementById('w-markup-desejado')?.value || '',
+      preco_venda: document.getElementById('w-preco-venda')?.value || '',
+      exibe_lista_preco: document.getElementById('w-exibe-lista-preco')?.checked || false,
+      permite_alterar_preco: document.getElementById('w-permite-alterar-preco')?.checked || false,
+      ncm: document.getElementById('w-ncm')?.value || '',
+      ex_tipi: document.getElementById('w-ex-tipi')?.value || '',
+      perfil_tributario: document.getElementById('w-perfil-tributario')?.value || '',
+      origem: document.getElementById('w-origem')?.value || '',
+      forma_aquisicao: document.querySelector('input[name="forma-aquisicao"]:checked')?.value || '',
+      cest: document.getElementById('w-cest')?.value || '',
+      nve: document.getElementById('w-nve')?.value || '',
+      controla_estoque: document.querySelector('input[name="controla-estoque"]:checked')?.value || 'sim',
+      estoque_atual: document.getElementById('w-estoque-atual')?.value || 0,
+      controla_validade_estoque: document.querySelector('input[name="controla-validade-estoque"]:checked')?.value || 'nao',
+      validade: document.getElementById('w-validade-mais-antiga')?.value || null,
+      comissionado: document.querySelector('input[name="comissionado"]:checked')?.value || 'nao',
+      comissao_valor: document.getElementById('w-comissao-valor')?.value || '',
+      comissao_tipo: document.querySelector('input[name="comissao-tipo"]:checked')?.value || 'percentual',
+      area_banho_tosa: document.getElementById('w-area-banho-tosa')?.checked || false,
+      area_clinica: document.getElementById('w-area-clinica')?.checked || false,
+      area_petshop: document.getElementById('w-area-petshop')?.checked || false,
+    };
+
+    try {
+      const resp = await fetch('/estoque/produtos/salvar/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': getCsrf() },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (data.success) {
+        wizardOffcanvas.hide();
+        location.reload();
+      } else {
+        alert(data.error || 'Erro ao salvar.');
+      }
+    } catch (err) {
+      alert('Erro de comunicação: ' + err.message);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // ── CSRF ──────────────────────────────────────────────────────────────────
+  function applyCardFilter(type) {
+    const url = new URL(window.location.href);
+    url.searchParams.delete('page');
+    url.searchParams.delete('filter_pendencia');
+    url.searchParams.delete('filter_validade');
+    if (type === 'pendencia') {
+      url.searchParams.set('filter_pendencia', '1');
+    } else if (type === 'validade_vencida') {
+      url.searchParams.set('filter_validade', 'vencida');
+    } else if (type === 'vencendo') {
+      url.searchParams.set('filter_validade', 'vencendo');
+    }
+    window.location = url.toString();
+  }
+  window.applyCardFilter = applyCardFilter;
+
+  // ── CSRF ──────────────────────────────────────────────────────────────────
+  function getCsrf() {
+    return document.cookie.split(';').find(c => c.trim().startsWith('csrftoken='))?.split('=')[1] || '';
+  }
+
+  // ── Origem modal ───────────────────────────────────────────────────────────
+  const ORIGENS = [
+    {code:'0', label:'Nacional (Exceto as indicadas nos códigos 3 a 5)'},
+    {code:'1', label:'Estrangeira (Importação direta, exceto a indicada no código 6)'},
+    {code:'2', label:'Estrangeira (Adquirida no mercado interno, exceto a indicada no código 7)'},
+    {code:'3', label:'Nacional (Mercadoria ou bem com conteúdo de importação superior a 40%)'},
+    {code:'4', label:'Nacional (Produção conforme processos produtivos básicos - Decreto-Lei nº 288/67 e legislações correlatas)'},
+    {code:'5', label:'Nacional (Mercadoria ou bem com conteúdo de importação inferior ou igual a 40%)'},
+    {code:'6', label:'Estrangeira (Importação direta, sem similar nacional, constante em lista de resolução do CAMEX)'},
+    {code:'7', label:'Estrangeira (Adquirida no mercado interno, sem similar nacional, constante em lista de resolução do CAMEX)'},
+    {code:'8', label:'Nacional (Mercadoria ou bem com conteúdo de importação superior a 70%)'},
+  ];
+
+  function openOrigemModal() {
+    document.getElementById('origem-search').value = '';
+    filterOrigens('');
+    document.getElementById('modal-origem-overlay').style.display = 'block';
+  }
+  window.openOrigemModal = openOrigemModal;
+
+  function closeOrigemModal() {
+    document.getElementById('modal-origem-overlay').style.display = 'none';
+  }
+  window.closeOrigemModal = closeOrigemModal;
+
+  function filterOrigens(q) {
+    const query = (q || '').toLowerCase();
+    const filtered = ORIGENS.filter(o => (o.code + ' ' + o.label).toLowerCase().includes(query));
+    const container = document.getElementById('origem-list-container');
+    container.innerHTML = filtered.map(o => {
+      const display = o.code + ' - ' + o.label;
+      const safe = display.replace(/'/g, '&#39;');
+      return `<div class="px-3 py-2 border-bottom" style="cursor:pointer;"
+            onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''"
+            onclick="selectOrigem('${o.code}', '${safe}')">${display}</div>`;
+    }).join('') || '<div class="px-3 py-4 text-muted text-center">Nenhuma origem encontrada</div>';
+  }
+  window.filterOrigens = filterOrigens;
+
+  function selectOrigem(code, display) {
+    document.getElementById('w-origem').value = code;
+    document.getElementById('w-origem-display').value = display;
+    closeOrigemModal();
+  }
+  window.selectOrigem = selectOrigem;
+
+  // ── Grupo modal ────────────────────────────────────────────────────────────
+  const GRUPOS = [
+    'Acessórios','Anestesia','Camas','Cirurgias','Consultório',
+    'Corte de Unha com Veterinário','Cozinha','Escritório','Especialistas',
+    'Estoque','Farmácia Interna','Fisioterapia','Hemodiálise','Imobilizado',
+    'Internação','Laboratório','Limpeza','Manutenção','Material Cirúrgico',
+    'Material Internação','Material Laboratório','Medicamentos Internos',
+    'Pet Shop','Raio X','Tomografia','Transporte','Ultrassonografia','UTI'
+  ];
+  let _grupoTarget = null;
+
+  function openGrupoModal(tipo) {
+    _grupoTarget = tipo;
+    document.getElementById('grupo-search').value = '';
+    filterGrupos('');
+    document.getElementById('modal-grupo-overlay').style.display = 'block';
+  }
+  window.openGrupoModal = openGrupoModal;
+
+  function closeGrupoModal() {
+    document.getElementById('modal-grupo-overlay').style.display = 'none';
+    _grupoTarget = null;
+  }
+  window.closeGrupoModal = closeGrupoModal;
+
+  function filterGrupos(q) {
+    const query = (q || '').toLowerCase();
+    const filtered = GRUPOS.filter(g => g.toLowerCase().includes(query));
+    const container = document.getElementById('grupo-list-container');
+    container.innerHTML = filtered.map(g =>
+      `<div class="px-3 py-2 border-bottom" style="cursor:pointer;"
+            onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background=''"
+            onclick="selectGrupo(this.dataset.val)" data-val="${g.replace(/"/g,'&quot;')}">${g}</div>`
+    ).join('') || '<div class="px-3 py-4 text-muted text-center">Nenhum grupo encontrado</div>';
+  }
+  window.filterGrupos = filterGrupos;
+
+  function selectGrupo(value) {
+    if (!_grupoTarget) return;
+    const _dIds = {produto:'w-grupo-display',servico:'w-grupo-servico-display',pacote:'w-grupo-pacote-display',kit:'w-grupo-kit-display'};
+    const _hIds = {produto:'w-grupo',servico:'w-grupo-servico',pacote:'w-grupo-pacote',kit:'w-grupo-kit'};
+    const dEl = document.getElementById(_dIds[_grupoTarget]);
+    const hEl = document.getElementById(_hIds[_grupoTarget]);
+    if (dEl) dEl.value = value;
+    if (hEl) hEl.value = value;
+    closeGrupoModal();
+  }
+  window.selectGrupo = selectGrupo;
+})();
+</script>
+{% endblock %}

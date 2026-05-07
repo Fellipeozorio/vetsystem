@@ -356,9 +356,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const hoje = new Date(); hoje.setHours(0,0,0,0);
         sl = (prog && prog < hoje) ? 'Vencida' : 'Programada';
       }
-      const numDose = data.numero_dose ? `${data.numero_dose}° dose` : '';
+      let numDose = '';
+      if (data.numero_dose) {
+        numDose = data.aplicacao === '1' ? 'Dose única' : `${data.numero_dose}ª dose`;
+      }
       const tituloEl = document.getElementById('vacina-dose-titulo');
-      tituloEl.textContent = `${data.vacina_nome}${numDose ? ' ' + numDose : ''} (${sl})`;
+      tituloEl.textContent = `${data.vacina_nome}${numDose ? ' — ' + numDose : ''} (${sl})`;
     } else {
       document.getElementById('vacina-dose-titulo').textContent = '';
     }

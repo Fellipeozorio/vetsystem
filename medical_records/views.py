@@ -1054,7 +1054,8 @@ def listar_timeline(request, pet_id):
             else:
                 dose_ref = None
 
-            titulo_display = f'{vacina_nome} {dose_ref.numero_dose}° dose' if dose_ref else vacina_nome
+            protocolo_nome = reg.protocolo.nome
+            titulo_display = f'{vacina_nome} \u2013 {protocolo_nome}'
 
             # Data do item: mais recente entre aplicadas; senão criado_em (horário de adicionado)
             datas_aplicacao = [d.data_aplicacao for d in doses if d.data_aplicacao]
@@ -2178,8 +2179,9 @@ def listar_tipos_vacina(request, pet_id):
 
 
 def listar_vacinas_disponiveis(request, pet_id):
-    """Lista vacinas e protocolos disponíveis para o pet, filtrados por tipo"""
+    """Lista vacinas e protocolos disponíveis para o pet, filtrados por tipo e espécie do pet"""
     from cadastros.models import Vacina
+    pet = get_object_or_404(Pet, id=pet_id)
     tipo = request.GET.get('tipo', '')
 
     vacinas = Vacina.objects.filter(ativo=True)
@@ -2188,7 +2190,9 @@ def listar_vacinas_disponiveis(request, pet_id):
 
     resultados = []
     for vacina in vacinas.order_by('nome'):
-        for protocolo in vacina.protocolos.order_by('nome'):
+        for protocolo in vacina.protocolos.filter(
+            Q(especie=pet.especie) | Q(especie__isnull=True)
+        ).order_by('nome'):
             resultados.append({
                 'protocolo_id': protocolo.id,
                 'vacina_nome': vacina.nome,
@@ -2205,13 +2209,21 @@ def listar_vacinas_disponiveis(request, pet_id):
 @login_required
 def listar_protocolos_vacina(request, pet_id):
     """Lista registros de protocolos de vacina do pet"""
+    from datetime import date as _date
     pet = get_object_or_404(Pet, id=pet_id)
     registros = ProtocoloVacinaRegistro.objects.filter(pet=pet).select_related(
         'protocolo__vacina'
-    ).order_by('-data_inicial')
+    ).prefetch_related('doses').order_by('-data_inicial')
 
+    hoje = _date.today()
     lista = []
     for r in registros:
+        doses_atrasadas = 0
+        if r.status == 'programada':
+            doses_atrasadas = sum(
+                1 for d in r.doses.all()
+                if d.data_aplicacao is None and d.data_programada < hoje
+            )
         lista.append({
             'id': r.id,
             'vacina_nome': r.protocolo.vacina.nome,
@@ -2220,6 +2232,7 @@ def listar_protocolos_vacina(request, pet_id):
             'intervalo_dias': r.protocolo.intervalo_dias,
             'data_inicial': r.data_inicial.strftime('%d/%m/%Y'),
             'status': r.status,
+            'doses_atrasadas': doses_atrasadas,
         })
 
     return JsonResponse({'success': True, 'registros': lista})
@@ -2402,6 +2415,7 @@ def detalhe_dose_vacina(request, pet_id, dose_id):
         'vacina_nome': protocolo.vacina.nome,
         'protocolo_nome': protocolo.nome,
         'numero_dose': dose.numero_dose,
+        'aplicacao': protocolo.aplicacao,
         'data_programada': dose.data_programada.strftime('%Y-%m-%d'),
         'data_programada_display': dose.data_programada.strftime('%d/%m/%Y'),
         'data_aplicacao': timezone.localtime(dose.data_aplicacao).strftime('%Y-%m-%dT%H:%M') if dose.data_aplicacao else '',

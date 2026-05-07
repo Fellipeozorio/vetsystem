@@ -1,0 +1,236 @@
+﻿{% extends 'core/base.html' %}
+{% load static %}
+
+{% block title %}Aniversarios - VetSystem{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.4.1/dist/event-calendar.min.css">
+<style>
+    .ec {
+        max-width: 100%;
+        width: 100%;
+        font-size: 0.875rem;
+        height: 100%;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 560px;
+    }
+    .ec .ec-body,
+    .ec .ec-day-grid {
+        flex: 1 !important;
+    }
+    .ec .ec-day {
+        min-height: 80px;
+    }
+    .event-popover .popover-header {
+        padding: 0;
+        border-bottom: 0;
+        overflow: hidden;
+        border-top-left-radius: .5rem;
+        border-top-right-radius: .5rem;
+    }
+    .event-popover .popover-header > * {
+        padding: 6px 8px;
+        margin: 0;
+        line-height: 1;
+    }
+    .event-popover .popover-body {
+        padding: 8px 10px;
+        margin: 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Page Header -->
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <h2 class="page-title">Aniversários</h2>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Page Body -->
+<div class="page-body">
+  <div class="container-xl">
+
+    <!-- Filtros -->
+    <div class="row mb-3">
+      <div class="col-12">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+
+          <select class="form-select" id="filtro-visita" style="width:250px;">
+            <option value="ultimos_2_anos">Compareceu nos últimos 2 anos</option>
+            <option value="independente">Independente da visita</option>
+            <option value="ultimos_3_meses">Compareceu nos últimos 3 meses</option>
+            <option value="ultimos_6_meses">Compareceu nos últimos 6 meses</option>
+            <option value="ultimo_ano">Compareceu no último ano</option>
+            <option value="ultimos_3_anos">Compareceu nos últimos 3 anos</option>
+            <option value="ultimos_5_anos">Compareceu nos últimos 5 anos</option>
+          </select>
+
+          <select class="form-select" id="filtro-tipo" style="width:140px;">
+            <option value="todos">Todos</option>
+            <option value="pessoas">Pessoas</option>
+            <option value="animais">Animais</option>
+          </select>
+
+          <button class="btn btn-primary" type="button" onclick="recarregarCalendario()" title="Pesquisar">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon m-0" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>
+          </button>
+
+          <button class="btn btn-outline-secondary" type="button" onclick="limparFiltros()" title="Limpar filtros">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon m-0" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M9 14l-4 -4l4 -4"/><path d="M5 10h11a4 4 0 1 1 0 8h-1"/></svg>
+          </button>
+
+          <div class="ms-auto">
+            <button class="btn btn-outline-secondary" type="button" onclick="window.print()" title="Relatório">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z"/><path d="M9 17h6"/><path d="M9 13h6"/></svg>
+              Relatório
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Calendário -->
+    <div class="card">
+      <div class="card-body">
+        <div id="calendar-aniversarios"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/@event-calendar/build@5.4.1/dist/event-calendar.min.js"></script>
+<script>
+(function () {
+    'use strict';
+    var calendar = null;
+
+    function toISO(d) {
+        if (!d) return '';
+        if (typeof d === 'string') return d.split('T')[0];
+        if (d instanceof Date) return d.toISOString().split('T')[0];
+        return '';
+    }
+
+    var currentDatesInfo = null;
+
+    function carregarEventos(info) {
+        currentDatesInfo = info;
+        var qs = new URLSearchParams({
+            data_inicio:   toISO(info.start   || info.startStr),
+            data_fim:      toISO(info.end     || info.endStr),
+            tipo:          document.getElementById('filtro-tipo').value,
+            filtro_visita: document.getElementById('filtro-visita').value,
+        });
+        fetch('/consultas/api/aniversarios/?' + qs)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (data.success && calendar) {
+                    calendar.setOption('events', data.events);
+                }
+            })
+            .catch(function (err) { console.error('Erro ao carregar aniversários:', err); });
+    }
+
+    window.recarregarCalendario = function () {
+        if (calendar && currentDatesInfo) carregarEventos(currentDatesInfo);
+    };
+
+    window.limparFiltros = function () {
+        document.getElementById('filtro-visita').value = 'ultimos_2_anos';
+        document.getElementById('filtro-tipo').value   = 'todos';
+        recarregarCalendario();
+    };
+
+    document.addEventListener('DOMContentLoaded', function () {
+        calendar = EventCalendar.create(
+            document.getElementById('calendar-aniversarios'),
+            {
+                view: 'dayGridWeek',
+                locale: 'pt-BR',
+                editable: false,
+                buttonText: {
+                    today:        'Hoje',
+                    dayGridMonth: 'M\u00eas',
+                    dayGridWeek:  'Semana',
+                },
+                headerToolbar: {
+                    start:  'prev,next today',
+                    center: 'title',
+                    end:    'dayGridMonth,dayGridWeek',
+                },
+                events: [],
+                datesSet: function (info) { carregarEventos(info); },
+
+                eventContent: function (info) {
+                    var ep    = info.event.extendedProps || {};
+                    var nome  = info.event.title || '';
+                    var anos  = ep.idade != null ? ep.idade : null;
+                    var idStr = anos != null ? ' (' + anos + 'a)' : '';
+                    var tutor = (ep.tipo === 'animal' && ep.cliente_nome) ? ' - ' + ep.cliente_nome : '';
+                    return {
+                        html: '<div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-size:0.8rem;padding:1px 3px;line-height:1.4;cursor:pointer;display:block;">'
+                            + nome + '<span style="opacity:.75;">' + idStr + tutor + '</span></div>'
+                    };
+                },
+
+                eventClick: function (info) {
+                    var url = (info.event.extendedProps || {}).url;
+                    if (url) window.location.href = url;
+                },
+
+                eventMouseEnter: function (info) {
+                    var ep   = info.event.extendedProps || {};
+                    var tipo = ep.tipo === 'pessoa' ? 'Pessoa' : 'Animal';
+                    var corBg = info.event.backgroundColor || '#6c757d';
+                    var det  = '';
+                    if (ep.tipo === 'animal') {
+                        det = '<div><strong>Esp\u00e9cie:</strong> ' + (ep.especie || '-') + '</div>'
+                            + '<div><strong>Tutor:</strong> '  + (ep.cliente_nome || '-') + '</div>';
+                    }
+                    var anos = ep.idade != null ? ep.idade + ' ano' + (ep.idade === 1 ? '' : 's') : '-';
+                    var titleHtml = '<div style="background-color:' + corBg + ';color:#fff;padding:6px 8px;font-weight:700;font-size:.9rem;line-height:1;">'
+                        + info.event.title + '</div>';
+                    var bodyHtml = '<div style="min-width:190px;">'
+                        + '<div><strong>Tipo:</strong> ' + tipo + '</div>'
+                        + det
+                        + '<div><strong>Idade:</strong> ' + anos + '</div>'
+                        + '<div style="margin-top:6px;font-size:.8rem;opacity:.8;">Clique para abrir a ficha</div></div>';
+                    var pop = new bootstrap.Popover(info.el, {
+                        title:       titleHtml,
+                        content:     bodyHtml,
+                        html:        true,
+                        sanitize:    false,
+                        placement:   'top',
+                        trigger:     'manual',
+                        customClass: 'event-popover',
+                    });
+                    pop.show();
+                    info.el._anivPop = pop;
+                },
+
+                eventMouseLeave: function (info) {
+                    if (info.el._anivPop) {
+                        info.el._anivPop.dispose();
+                        info.el._anivPop = null;
+                    }
+                },
+            }
+        );
+    });
+})();
+</script>
+{% endblock %}

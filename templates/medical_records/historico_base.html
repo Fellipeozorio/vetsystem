@@ -1441,7 +1441,17 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Carregar registros existentes da timeline
   carregarTimeline();
-  
+
+  // Abrir form de dose diretamente via query param ?open_dose=<id>
+  const openDoseId = new URLSearchParams(window.location.search).get('open_dose');
+  if (openDoseId) {
+    setTimeout(function() {
+      if (typeof showForm === 'function') {
+        showForm('vacina-dose', { id: parseInt(openDoseId), _isDoseId: true });
+      }
+    }, 400);
+  }
+
   console.log('✓ Histórico pronto');
 });
 

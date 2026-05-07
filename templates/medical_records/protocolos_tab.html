@@ -36,31 +36,29 @@
   text-decoration: line-through;
   opacity: .6;
 }
-#protocolos-detail table thead th {
-  font-weight: 600;
+#prot-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 #protocolos-detail table {
-  table-layout: fixed;
   width: 100%;
+  font-size: .8rem;
+}
+#protocolos-detail table thead th {
+  font-weight: 600;
+  white-space: nowrap;
 }
 #protocolos-detail table th,
 #protocolos-detail table td {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 4px 6px;
 }
-#protocolos-detail table th:nth-child(1),
-#protocolos-detail table td:nth-child(1) { width: 10%; }
-#protocolos-detail table th:nth-child(2),
-#protocolos-detail table td:nth-child(2) { width: 18%; }
-#protocolos-detail table th:nth-child(3),
-#protocolos-detail table td:nth-child(3) { width: 18%; }
 #protocolos-detail table th:nth-child(4),
-#protocolos-detail table td:nth-child(4) { width: 28%; }
+#protocolos-detail table td:nth-child(4),
 #protocolos-detail table th:nth-child(5),
-#protocolos-detail table td:nth-child(5) { width: 14%; }
-#protocolos-detail table th:nth-child(6),
-#protocolos-detail table td:nth-child(6) { width: 12%; }
+#protocolos-detail table td:nth-child(5) {
+  white-space: normal;
+}
 </style>
 <div class="row g-0" style="align-items:stretch;margin-top:-0.75rem;">
 
@@ -186,6 +184,7 @@
         </div>
       </div>
 
+      <div id="prot-table-wrapper">
       <table class="table">
         <thead>
           <tr>
@@ -199,6 +198,7 @@
         </thead>
         <tbody id="prot-doses-tbody"></tbody>
       </table>
+      </div><!-- /prot-table-wrapper -->
 
       <div class="d-flex gap-2 mt-3">
         <button type="button" class="btn btn-secondary px-2" id="btn-fechar-detail-prot">
@@ -361,11 +361,15 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.type = 'button';
     btn.className = 'prot-item';
     btn.dataset.id = r.id;
+    const atrasadasBadge = r.doses_atrasadas > 0
+      ? `<span class="badge" style="background:#dc3545;color:#fff;font-size:.65rem;margin-top:2px;">${r.doses_atrasadas} atrasada${r.doses_atrasadas > 1 ? 's' : ''}</span>`
+      : '';
     btn.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:4px;">
         <div style="min-width:0;">
           <div class="fw-semibold text-truncate" style="font-size:.875rem;">${r.vacina_nome}</div>
           <div class="text-truncate" style="font-size:.8rem;color:#6c757d;">${r.protocolo_nome}</div>
+          ${atrasadasBadge}
         </div>
         <div style="flex-shrink:0;text-align:right;">
           <div style="font-size:.75rem;color:#6c757d;">${r.data_inicial}</div>
@@ -411,7 +415,9 @@ document.addEventListener('DOMContentLoaded', function() {
         tr.style.cursor = 'pointer';
         tr.onclick = function() { window._abrirFormDose(dose.id); };
         if (dose.data_aplicacao_iso) {
-          tr.style.color = '#28a745'; tr.style.fontWeight = '600';
+          tr.style.color = '#28a745'; tr.style.fontWeight = '600'; tr.style.background = '#d1f0da';
+        } else if (!isInterrompida && prog && prog < today) {
+          tr.style.color = '#dc3545'; tr.style.background = '#fde8e8';
         } else if (isInterrompida) {
           tr.classList.add('dose-tachada');
         }
@@ -516,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         protSelect.disabled = false;
       } else {
-        protSelect.innerHTML = '<option value="">Nenhum protocolo encontrado para este tipo</option>';
+        protSelect.innerHTML = '<option value="">Nenhum protocolo encontrado para este tipo e espécie</option>';
       }
     })
     .catch(() => { protLoading.style.display = 'none'; });

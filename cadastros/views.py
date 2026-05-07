@@ -861,8 +861,8 @@ def vacina_protocolos_list(request, vacina_id):
         protocolos_data.append({
             'id': protocolo.id,
             'nome': protocolo.nome,
-            'especie': protocolo.especie_id,
-            'especie_nome': protocolo.especie.nome,
+            'especie': protocolo.especie_id if protocolo.especie_id else 'todas',
+            'especie_nome': protocolo.especie.nome if protocolo.especie else 'Todas as espécies',
             'aplicacao': protocolo.aplicacao,
             'aplicacao_display': protocolo.get_aplicacao_display(),
             'intervalo_dias': protocolo.intervalo_dias,
@@ -885,6 +885,8 @@ def protocolo_create(request):
             
             nome = request.POST.get('nome')
             especie_id = request.POST.get('especie')
+            if not especie_id or especie_id == 'todas':
+                especie_id = None
             aplicacao = request.POST.get('aplicacao')
             intervalo_dias = request.POST.get('intervalo_dias')
             vem_apos_id = request.POST.get('vem_apos')
@@ -924,7 +926,8 @@ def protocolo_update(request, pk):
     if request.method == 'POST':
         try:
             protocolo.nome = request.POST.get('nome')
-            protocolo.especie_id = request.POST.get('especie')
+            especie_val = request.POST.get('especie')
+            protocolo.especie_id = None if (not especie_val or especie_val == 'todas') else especie_val
             protocolo.aplicacao = request.POST.get('aplicacao')
             protocolo.intervalo_dias = request.POST.get('intervalo_dias')
             
